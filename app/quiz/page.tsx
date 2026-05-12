@@ -5,7 +5,7 @@ import { QuizClient } from "@/components/quiz/quiz-client";
 import type { User } from "@/types";
 
 export default async function QuizPage() {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");
 

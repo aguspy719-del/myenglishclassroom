@@ -5,7 +5,7 @@ import { ProfileClient } from "@/components/profile/profile-client";
 import type { User } from "@/types";
 
 export default async function ProfilePage() {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");
 

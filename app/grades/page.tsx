@@ -5,7 +5,7 @@ import { GradesClient } from "@/components/grades/grades-client";
 import type { User } from "@/types";
 
 export default async function GradesPage() {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");
 

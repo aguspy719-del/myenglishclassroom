@@ -5,7 +5,7 @@ import { MaterialsClient } from "@/components/materials/materials-client";
 import type { User } from "@/types";
 
 export default async function MaterialsPage() {
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");

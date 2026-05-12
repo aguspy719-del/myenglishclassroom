@@ -5,7 +5,7 @@ import { CreateAssignmentClient } from "@/components/assignments/create-assignme
 import type { User } from "@/types";
 
 export default async function CreateAssignmentPage() {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");
 

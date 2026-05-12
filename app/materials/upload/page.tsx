@@ -5,7 +5,7 @@ import { UploadMaterialClient } from "@/components/materials/upload-material-cli
 import type { User } from "@/types";
 
 export default async function UploadMaterialPage() {
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");

@@ -5,7 +5,7 @@ import { AttendanceClient } from "@/components/attendance/attendance-client";
 import type { User } from "@/types";
 
 export default async function AttendancePage() {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");
 

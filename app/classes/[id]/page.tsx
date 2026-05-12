@@ -10,7 +10,7 @@ export default async function ClassDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");
@@ -23,11 +23,9 @@ export default async function ClassDetailPage({
   if (!profileRes.data) redirect("/login");
   if (!classRes.data) notFound();
 
-  const user: User = profileRes.data;
-
   return (
-    <DashboardLayout user={user}>
-      <ClassDetailClient user={user} classData={classRes.data} />
+    <DashboardLayout user={profileRes.data as User}>
+      <ClassDetailClient user={profileRes.data as User} classData={classRes.data} />
     </DashboardLayout>
   );
 }

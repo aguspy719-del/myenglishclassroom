@@ -5,7 +5,7 @@ import { ClassesClient } from "@/components/classes/classes-client";
 import type { User } from "@/types";
 
 export default async function ClassesPage() {
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");
