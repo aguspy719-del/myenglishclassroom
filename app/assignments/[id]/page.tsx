@@ -4,14 +4,19 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { AssignmentDetailClient } from "@/components/assignments/assignment-detail-client";
 import type { User } from "@/types";
 
-export default async function AssignmentDetailPage({ params }: { params: { id: string } }) {
+export default async function AssignmentDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect("/login");
 
   const [profileRes, assignmentRes] = await Promise.all([
     supabase.from("users").select("*").eq("id", authUser.id).single(),
-    supabase.from("assignments").select("*, class:classes(class_name, major)").eq("id", params.id).single(),
+    supabase.from("assignments").select("*, class:classes(class_name, major)").eq("id", id).single(),
   ]);
 
   if (!profileRes.data) redirect("/login");

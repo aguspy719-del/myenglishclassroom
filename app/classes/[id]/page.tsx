@@ -4,7 +4,12 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ClassDetailClient } from "@/components/classes/class-detail-client";
 import type { User } from "@/types";
 
-export default async function ClassDetailPage({ params }: { params: { id: string } }) {
+export default async function ClassDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -12,7 +17,7 @@ export default async function ClassDetailPage({ params }: { params: { id: string
 
   const [profileRes, classRes] = await Promise.all([
     supabase.from("users").select("*").eq("id", authUser.id).single(),
-    supabase.from("classes").select("*").eq("id", params.id).single(),
+    supabase.from("classes").select("*").eq("id", id).single(),
   ]);
 
   if (!profileRes.data) redirect("/login");
