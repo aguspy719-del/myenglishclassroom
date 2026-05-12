@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { UserCheck, CheckCircle, XCircle, Clock, AlertCircle, Filter, Calendar } from "lucide-react";
+import {
+  UserCheck, CheckCircle, XCircle, Clock, AlertCircle,
+  Calendar, Trash2, RefreshCw,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,11 +19,11 @@ interface AttendanceClientProps {
   user: User;
 }
 
-const statusConfig: Record<AttendanceStatus, { label: string; color: string; icon: React.ElementType }> = {
-  present: { label: "Hadir", color: "success", icon: CheckCircle },
-  absent: { label: "Tidak Hadir", color: "destructive", icon: XCircle },
-  late: { label: "Terlambat", color: "warning", icon: Clock },
-  excused: { label: "Izin", color: "info", icon: AlertCircle },
+const statusConfig: Record<AttendanceStatus, { label: string; color: string; icon: React.ElementType; bg: string; text: string }> = {
+  present: { label: "Present", color: "success", icon: CheckCircle, bg: "bg-green-100 dark:bg-green-900", text: "text-green-600 dark:text-green-400" },
+  absent: { label: "Absent", color: "destructive", icon: XCircle, bg: "bg-red-100 dark:bg-red-900", text: "text-red-600 dark:text-red-400" },
+  late: { label: "Late", color: "warning", icon: Clock, bg: "bg-yellow-100 dark:bg-yellow-900", text: "text-yellow-600 dark:text-yellow-400" },
+  excused: { label: "Excused", color: "info", icon: AlertCircle, bg: "bg-blue-100 dark:bg-blue-900", text: "text-blue-600 dark:text-blue-400" },
 };
 
 export function AttendanceClient({ user }: AttendanceClientProps) {
@@ -37,14 +40,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
 
   const fetchData = async () => {
     const supabase = createClient();
-
-    const [classesRes] = await Promise.all([
-      supabase.from("classes").select("*").order("class_name"),
-    ]);
-    setClasses(classesRes.data || []);
+    const { data: classesData } = await supabase.from("classes").select("*").order("class_name");
+    setClasses(classesData || []);
 
     if (user.role === "student") {
-      // Fetch student's own attendance
       const { data } = await supabase
         .from("attendance")
         .select("*, class:classes(class_name)")
@@ -52,12 +51,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
         .order("date", { ascending: false });
       setAttendance(data || []);
 
-      // Check today's attendance
       const today = new Date().toISOString().split("T")[0];
       const todayRecord = data?.find((a) => a.date === today && a.class_id === user.class_id);
       setTodayAttendance(todayRecord || null);
     } else {
-      // Teacher: fetch all attendance for selected class/date
       let query = supabase
         .from("attendance")
         .select("*, student:users(name, email), class:classes(class_name)")
@@ -69,7 +66,6 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       const { data } = await query;
       setAttendance(data || []);
     }
-
     setLoading(false);
   };
 
@@ -79,10 +75,9 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
 
   const handleMarkAttendance = async (status: AttendanceStatus) => {
     if (!user.class_id) {
-      toast.error("Kamu belum terdaftar di kelas manapun");
+      toast.error("You are not registered in any class");
       return;
     }
-
     setMarking(true);
     const supabase = createClient();
     const today = new Date().toISOString().split("T")[0];
@@ -94,6 +89,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
           .update({ status, timestamp: new Date().toISOString() })
           .eq("id", todayAttendance.id);
         if (error) throw error;
+        toast.success(`Attendance updated: ${statusConfig[status].label}`);
       } else {
         const { error } = await supabase.from("attendance").insert([{
           student_id: user.id,
@@ -103,18 +99,59 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
           timestamp: new Date().toISOString(),
         }]);
         if (error) throw error;
+        toast.success(`Attendance marked: ${statusConfig[status].label}`);
       }
-
-      toast.success(`Absensi berhasil: ${statusConfig[status].label}`);
       fetchData();
     } catch (err: any) {
-      toast.error("Gagal absen: " + err.message);
+      toast.error("Failed: " + err.message);
     } finally {
       setMarking(false);
     }
   };
 
-  // Calculate stats for student
+  // Student: reset today's attendance
+  const handleResetToday = async () => {
+    if (!todayAttendance) return;
+    if (!confirm("Reset today's attendance? You can re-mark it again.")) return;
+
+    const supabase = createClient();
+    const { error } = await supabase.from("attendance").delete().eq("id", todayAttendance.id);
+    if (error) {
+      toast.error("Failed to reset attendance");
+    } else {
+      toast.success("Attendance reset. You can mark again.");
+      fetchData();
+    }
+  };
+
+  // Teacher: delete a record
+  const handleDeleteRecord = async (id: string, studentName: string) => {
+    if (!confirm(`Delete attendance record for ${studentName}?`)) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("attendance").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete record");
+    } else {
+      toast.success("Record deleted");
+      fetchData();
+    }
+  };
+
+  // Teacher: change status of a record
+  const handleChangeStatus = async (id: string, newStatus: AttendanceStatus) => {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("attendance")
+      .update({ status: newStatus, timestamp: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast.error("Failed to update status");
+    } else {
+      toast.success("Status updated");
+      fetchData();
+    }
+  };
+
   const presentCount = attendance.filter((a) => a.status === "present").length;
   const lateCount = attendance.filter((a) => a.status === "late").length;
   const absentCount = attendance.filter((a) => a.status === "absent").length;
@@ -126,10 +163,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {user.role === "teacher" ? "Rekap Absensi" : "Absensi Saya"}
+          {user.role === "teacher" ? "Attendance Records" : "My Attendance"}
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          {user.role === "teacher" ? "Pantau kehadiran siswa" : "Catat dan lihat riwayat kehadiran"}
+          {user.role === "teacher" ? "Monitor and manage student attendance" : "Track your daily attendance"}
         </p>
       </div>
 
@@ -137,38 +174,59 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       {user.role === "student" && (
         <Card className="border-2 border-blue-200 dark:border-blue-800">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-blue-600" />
-              Absen Hari Ini
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-blue-600" />
+                Today&apos;s Attendance
+              </CardTitle>
+              {todayAttendance && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetToday}
+                  className="text-gray-500 hover:text-red-600 gap-1 text-xs"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Reset
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {todayAttendance ? (
-              <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950 rounded-xl">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-                <div>
-                  <p className="font-medium text-green-800 dark:text-green-200">
-                    Sudah absen hari ini
-                  </p>
-                  <p className="text-sm text-green-600 dark:text-green-400">
-                    Status: <strong>{statusConfig[todayAttendance.status as AttendanceStatus]?.label}</strong>
-                    {" • "}{formatDateTime(todayAttendance.timestamp)}
-                  </p>
+              <div className="space-y-3">
+                <div className={`flex items-center gap-3 p-4 rounded-xl ${statusConfig[todayAttendance.status as AttendanceStatus]?.bg}`}>
+                  {(() => {
+                    const config = statusConfig[todayAttendance.status as AttendanceStatus];
+                    const Icon = config?.icon || CheckCircle;
+                    return <Icon className={`w-6 h-6 ${config?.text} flex-shrink-0`} />;
+                  })()}
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      Marked as: <span className="font-bold">{statusConfig[todayAttendance.status as AttendanceStatus]?.label}</span>
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatDateTime(todayAttendance.timestamp)}
+                    </p>
+                  </div>
                 </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  Wrong status? Click <strong>Reset</strong> above to re-mark.
+                </p>
               </div>
             ) : (
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Pilih status kehadiran kamu hari ini:
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 font-medium">
+                  Select your attendance status for today:
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {(Object.entries(statusConfig) as [AttendanceStatus, typeof statusConfig[AttendanceStatus]][]).map(([status, config]) => {
                     const Icon = config.icon;
                     return (
                       <Button
                         key={status}
                         variant="outline"
-                        className={`h-16 flex-col gap-1 ${
+                        className={`h-16 flex-col gap-1.5 rounded-xl border-2 transition-all ${
                           status === "present" ? "hover:bg-green-50 hover:border-green-400 dark:hover:bg-green-950" :
                           status === "absent" ? "hover:bg-red-50 hover:border-red-400 dark:hover:bg-red-950" :
                           status === "late" ? "hover:bg-yellow-50 hover:border-yellow-400 dark:hover:bg-yellow-950" :
@@ -178,7 +236,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                         disabled={marking}
                       >
                         <Icon className="w-5 h-5" />
-                        <span className="text-xs">{config.label}</span>
+                        <span className="text-xs font-medium">{config.label}</span>
                       </Button>
                     );
                   })}
@@ -191,31 +249,20 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
 
       {/* Student: Stats */}
       {user.role === "student" && total > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-4 pb-4 text-center">
-              <p className="text-2xl font-bold text-green-600">{presentCount}</p>
-              <p className="text-xs text-gray-500">Hadir</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-4 text-center">
-              <p className="text-2xl font-bold text-yellow-600">{lateCount}</p>
-              <p className="text-xs text-gray-500">Terlambat</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-4 text-center">
-              <p className="text-2xl font-bold text-red-600">{absentCount}</p>
-              <p className="text-xs text-gray-500">Tidak Hadir</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-4 text-center">
-              <p className="text-2xl font-bold text-blue-600">{attendanceRate}%</p>
-              <p className="text-xs text-gray-500">Kehadiran</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Present", value: presentCount, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950" },
+            { label: "Late", value: lateCount, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950" },
+            { label: "Absent", value: absentCount, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950" },
+            { label: "Rate", value: `${attendanceRate}%`, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+          ].map((stat) => (
+            <Card key={stat.label} className="border-0 shadow-sm">
+              <CardContent className={`pt-4 pb-4 text-center rounded-xl ${stat.bg}`}>
+                <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
@@ -224,22 +271,22 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
         <div className="flex flex-col sm:flex-row gap-3">
           <Select value={selectedClass} onValueChange={setSelectedClass}>
             <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Semua Kelas" />
+              <SelectValue placeholder="All Classes" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua Kelas</SelectItem>
+              <SelectItem value="all">All Classes</SelectItem>
               {classes.map((cls) => (
                 <SelectItem key={cls.id} value={cls.id}>{cls.class_name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center gap-2 flex-1">
+            <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
         </div>
@@ -249,20 +296,22 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">
-            {user.role === "teacher" ? `Rekap Absensi (${attendance.length} data)` : "Riwayat Absensi"}
+            {user.role === "teacher"
+              ? `Records (${attendance.length})`
+              : "Attendance History"}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+                <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
               ))}
             </div>
           ) : attendance.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <UserCheck className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p>Belum ada data absensi</p>
+              <p>No attendance records found</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -272,37 +321,57 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                 return (
                   <div
                     key={record.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                        record.status === "present" ? "bg-green-100 dark:bg-green-900" :
-                        record.status === "absent" ? "bg-red-100 dark:bg-red-900" :
-                        record.status === "late" ? "bg-yellow-100 dark:bg-yellow-900" :
-                        "bg-blue-100 dark:bg-blue-900"
-                      }`}>
-                        <Icon className={`w-4 h-4 ${
-                          record.status === "present" ? "text-green-600 dark:text-green-400" :
-                          record.status === "absent" ? "text-red-600 dark:text-red-400" :
-                          record.status === "late" ? "text-yellow-600 dark:text-yellow-400" :
-                          "text-blue-600 dark:text-blue-400"
-                        }`} />
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${config?.bg}`}>
+                        <Icon className={`w-4 h-4 ${config?.text}`} />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         {user.role === "teacher" && (
-                          <p className="font-medium text-sm text-gray-900 dark:text-white">
-                            {(record.student as any)?.name || "Siswa"}
+                          <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                            {(record.student as any)?.name || "Student"}
                           </p>
                         )}
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {formatDate(record.date)}
-                          {(record.class as any)?.class_name && ` • ${(record.class as any).class_name}`}
+                          {(record.class as any)?.class_name && ` · ${(record.class as any).class_name}`}
                         </p>
                       </div>
                     </div>
-                    <Badge variant={config?.color as any || "secondary"}>
-                      {config?.label || record.status}
-                    </Badge>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Teacher: change status dropdown */}
+                      {user.role === "teacher" ? (
+                        <>
+                          <Select
+                            value={record.status}
+                            onValueChange={(v) => handleChangeStatus(record.id, v as AttendanceStatus)}
+                          >
+                            <SelectTrigger className="h-8 w-28 text-xs rounded-lg">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(statusConfig).map(([s, c]) => (
+                                <SelectItem key={s} value={s} className="text-xs">{c.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleDeleteRecord(record.id, (record.student as any)?.name || "Student")}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge variant={config?.color as any || "secondary"} className="text-xs">
+                          {config?.label || record.status}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 );
               })}

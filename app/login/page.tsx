@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { GraduationCap, Eye, EyeOff, Loader2 } from "lucide-react";
+import { GraduationCap, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -20,32 +19,20 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!email || !password) {
       toast.error("Email and password are required");
       return;
     }
-
     setLoading(true);
     const supabase = createClient();
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          toast.error("Incorrect email or password");
-        } else {
-          toast.error(error.message);
-        }
+        toast.error(error.message.includes("Invalid login credentials") ? "Incorrect email or password" : error.message);
         return;
       }
-
       if (data.user) {
-        toast.success("Login successful! Welcome 👋");
+        toast.success("Welcome back! 👋");
         router.push("/dashboard");
         router.refresh();
       }
@@ -57,46 +44,52 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-950 dark:to-blue-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-3">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <GraduationCap className="w-7 h-7 text-white" />
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-xl text-gray-900 dark:text-white">English LMS</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Mr. Agus · SMK</p>
-            </div>
-          </Link>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 flex flex-col">
+      {/* Back button */}
+      <div className="p-4">
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+        </Link>
+      </div>
 
-        <Card className="shadow-xl border-0">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
-            <CardDescription>
-              Use the email and password provided by your teacher
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+              <GraduationCap className="w-9 h-9 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">English LMS</h1>
+            <p className="text-blue-200 text-sm mt-1">SMK Negeri 1 Buduran</p>
+          </div>
+
+          {/* Card */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Sign In</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              Welcome back! Enter your credentials.
+            </p>
+
             <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="name@school.sch.id"
+                  placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
                   autoComplete="email"
-                  className="h-11"
+                  className="h-12 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -106,47 +99,44 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     autoComplete="current-password"
-                    className="h-11 pr-10"
+                    className="h-12 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
                     tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-semibold"
+                className="w-full h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
                 disabled={loading}
               >
                 {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" />Signing in...</>
+                ) : "Sign In"}
               </Button>
             </form>
 
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
-                Register here
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Don&apos;t have an account?{" "}
+                <Link href="/register" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                  Register here
+                </Link>
+              </p>
+            </div>
+          </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          © 2026 English LMS — Agus Supriyono, S.Pd.,MM
-        </p>
+          <p className="text-center text-xs text-blue-200 mt-6">
+            © 2026 English LMS — Agus Supriyono, S.Pd.,MM
+          </p>
+        </div>
       </div>
     </div>
   );

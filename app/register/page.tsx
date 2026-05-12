@@ -3,11 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { GraduationCap, Eye, EyeOff, Loader2 } from "lucide-react";
+import { GraduationCap, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -20,13 +19,7 @@ interface Class {
 }
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    class_id: "",
-  });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", class_id: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -35,11 +28,7 @@ export default function RegisterPage() {
   useEffect(() => {
     const fetchClasses = async () => {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("classes")
-        .select("*")
-        .order("grade")
-        .order("class_name");
+      const { data } = await supabase.from("classes").select("*").order("grade").order("class_name");
       setClasses(data || []);
     };
     fetchClasses();
@@ -47,17 +36,14 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!form.name || !form.email || !form.password || !form.class_id) {
       toast.error("All fields are required");
       return;
     }
-
     if (form.password !== form.confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
-
     if (form.password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
@@ -65,42 +51,25 @@ export default function RegisterPage() {
 
     setLoading(true);
     const supabase = createClient();
-
     try {
-      // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: {
-          data: {
-            name: form.name,
-            role: "student",
-          },
-        },
+        options: { data: { name: form.name, role: "student" } },
       });
 
       if (authError) {
-        if (authError.message.includes("already registered")) {
-          toast.error("This email is already registered");
-        } else {
-          toast.error(authError.message);
-        }
+        toast.error(authError.message.includes("already registered") ? "This email is already registered" : authError.message);
         return;
       }
 
       if (authData.user) {
-        // 2. Update user profile with name and class
         const { error: profileError } = await supabase
           .from("users")
-          .update({
-            name: form.name,
-            class_id: form.class_id,
-            role: "student",
-          })
+          .update({ name: form.name, class_id: form.class_id, role: "student" })
           .eq("id", authData.user.id);
 
         if (profileError) {
-          // Try insert if update fails (trigger might not have run yet)
           await supabase.from("users").upsert({
             id: authData.user.id,
             name: form.name,
@@ -110,7 +79,7 @@ export default function RegisterPage() {
           });
         }
 
-        toast.success("Account created successfully! Welcome 🎉");
+        toast.success("Account created! Welcome 🎉");
         router.push("/dashboard");
         router.refresh();
       }
@@ -121,97 +90,78 @@ export default function RegisterPage() {
     }
   };
 
-  // Group classes by grade
   const gradeXI = classes.filter((c) => c.grade === "XI");
   const gradeXII = classes.filter((c) => c.grade === "XII");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-950 dark:to-blue-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-3">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <GraduationCap className="w-7 h-7 text-white" />
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-xl text-gray-900 dark:text-white">English LMS</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Mr. Agus · SMK Negeri 1 Buduran</p>
-            </div>
-          </Link>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 flex flex-col">
+      {/* Back button */}
+      <div className="p-4">
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+        </Link>
+      </div>
 
-        <Card className="shadow-xl border-0">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-            <CardDescription>
-              Register to access English learning materials
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      <div className="flex-1 flex items-center justify-center p-4 pb-8">
+        <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+              <GraduationCap className="w-9 h-9 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">Create Account</h1>
+            <p className="text-blue-200 text-sm mt-1">Join English LMS today</p>
+          </div>
+
+          {/* Card */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-6">
             <form onSubmit={handleRegister} className="space-y-4">
-              {/* Full Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Full Name</Label>
                 <Input
-                  id="name"
-                  type="text"
                   placeholder="Enter your full name"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   disabled={loading}
-                  className="h-11"
+                  className="h-12 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
                 />
               </div>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Email</Label>
                 <Input
-                  id="email"
                   type="email"
-                  placeholder="name@school.sch.id"
+                  placeholder="your@email.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   disabled={loading}
-                  autoComplete="email"
-                  className="h-11"
+                  className="h-12 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
                 />
               </div>
 
-              {/* Class */}
-              <div className="space-y-2">
-                <Label>Class</Label>
-                <Select
-                  value={form.class_id}
-                  onValueChange={(v) => setForm({ ...form, class_id: v })}
-                  disabled={loading}
-                >
-                  <SelectTrigger className="h-11">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Class</Label>
+                <Select value={form.class_id} onValueChange={(v) => setForm({ ...form, class_id: v })} disabled={loading}>
+                  <SelectTrigger className="h-12 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                     <SelectValue placeholder="Select your class" />
                   </SelectTrigger>
                   <SelectContent>
                     {gradeXI.length > 0 && (
                       <>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                          Grade XI
-                        </div>
+                        <div className="px-2 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wide">Grade XI</div>
                         {gradeXI.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id}>
-                            {cls.class_name}
-                          </SelectItem>
+                          <SelectItem key={cls.id} value={cls.id}>{cls.class_name}</SelectItem>
                         ))}
                       </>
                     )}
                     {gradeXII.length > 0 && (
                       <>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                          Grade XII
-                        </div>
+                        <div className="px-2 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wide">Grade XII</div>
                         {gradeXII.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id}>
-                            {cls.class_name}
-                          </SelectItem>
+                          <SelectItem key={cls.id} value={cls.id}>{cls.class_name}</SelectItem>
                         ))}
                       </>
                     )}
@@ -219,72 +169,65 @@ export default function RegisterPage() {
                 </Select>
               </div>
 
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Password</Label>
                 <div className="relative">
                   <Input
-                    id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Minimum 6 characters"
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     disabled={loading}
-                    className="h-11 pr-10"
+                    className="h-12 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
                     tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Confirm Password */}
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Confirm Password</Label>
                 <Input
-                  id="confirmPassword"
                   type="password"
                   placeholder="Re-enter your password"
                   value={form.confirmPassword}
                   onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                   disabled={loading}
-                  className="h-11"
+                  className="h-12 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-semibold"
+                className="w-full h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg mt-2"
                 disabled={loading}
               >
                 {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Creating account...
-                  </>
-                ) : (
-                  "Create Account"
-                )}
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" />Creating account...</>
+                ) : "Create Account"}
               </Button>
             </form>
 
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-              Already have an account?{" "}
-              <Link href="/login" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
-                Sign In
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Already have an account?{" "}
+                <Link href="/login" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                  Sign In
+                </Link>
+              </p>
+            </div>
+          </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          © 2026 English LMS — Agus Supriyono, S.Pd.,MM
-        </p>
+          <p className="text-center text-xs text-blue-200 mt-6">
+            © 2026 English LMS — Agus Supriyono, S.Pd.,MM
+          </p>
+        </div>
       </div>
     </div>
   );
