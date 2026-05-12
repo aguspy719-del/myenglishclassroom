@@ -20,7 +20,7 @@ export function formatRelativeTime(date: string | Date): string {
 }
 
 export function isDeadlinePast(deadline: string): boolean {
-  return isPast(new Date(deadline));
+  return isPast(new Date(deadline)) && !isToday(new Date(deadline));
 }
 
 export function isDeadlineToday(deadline: string): boolean {
@@ -28,7 +28,7 @@ export function isDeadlineToday(deadline: string): boolean {
 }
 
 export function getDeadlineStatus(deadline: string): "overdue" | "today" | "upcoming" {
-  if (isDeadlinePast(new Date(deadline))) return "overdue";
+  if (isDeadlinePast(deadline)) return "overdue";
   if (isDeadlineToday(deadline)) return "today";
   return "upcoming";
 }
