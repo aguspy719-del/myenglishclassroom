@@ -77,6 +77,9 @@ export default function LandingPage() {
             <span className="font-bold text-gray-900 dark:text-white">English LMS</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/register">
+              <Button variant="ghost" size="sm">Register</Button>
+            </Link>
             <Link href="/login">
               <Button variant="outline" size="sm">Login</Button>
             </Link>

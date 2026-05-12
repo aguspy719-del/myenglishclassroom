@@ -137,9 +137,9 @@ export default function LoginPage() {
 
             <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
               Don&apos;t have an account?{" "}
-              <span className="text-blue-600 dark:text-blue-400">
-                Contact your teacher to get access
-              </span>
+              <Link href="/register" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                Register here
+              </Link>
             </p>
           </CardContent>
         </Card>
