@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
 import type { User, Submission, Class } from "@/types";
 
