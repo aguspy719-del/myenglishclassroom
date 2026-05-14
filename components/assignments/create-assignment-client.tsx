@@ -3,16 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, Loader2, File, X, Upload } from "lucide-react";
+import { ArrowLeft, ClipboardList, Loader2, File, X, Upload, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatFileSize } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { User, Class } from "@/types";
 
 interface CreateAssignmentClientProps {
@@ -22,15 +22,13 @@ interface CreateAssignmentClientProps {
 export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const defaultClass = searchParams.get("class") || "all";
+  const defaultClass = searchParams.get("class") || "";
 
   const [classes, setClasses] = useState<Class[]>([]);
-  const [form, setForm] = useState({
-    class_id: defaultClass,
-    title: "",
-    description: "",
-    deadline: "",
-  });
+  const [selectedClasses, setSelectedClasses] = useState<string[]>(
+    defaultClass ? [defaultClass] : []
+  );
+  const [form, setForm] = useState({ title: "", description: "", deadline: "" });
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,9 +41,27 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
     fetchClasses();
   }, []);
 
+  const toggleClass = (classId: string) => {
+    setSelectedClasses((prev) =>
+      prev.includes(classId) ? prev.filter((id) => id !== classId) : [...prev, classId]
+    );
+  };
+
+  const toggleAll = () => {
+    if (selectedClasses.length === classes.length) {
+      setSelectedClasses([]);
+    } else {
+      setSelectedClasses(classes.map((c) => c.id));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (selectedClasses.length === 0) {
+      toast.error("Please select at least one class");
+      return;
+    }
     if (!form.title || !form.deadline) {
       toast.error("Title and deadline are required");
       return;
@@ -55,30 +71,19 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
     const supabase = createClient();
 
     try {
-      // Upload file once if provided
       let attachmentUrl = "";
       if (file) {
         const fileExt = file.name.split(".").pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `shared/${fileName}`;
-
         const { error: uploadError } = await supabase.storage
           .from("assignments")
-          .upload(filePath, file);
-
+          .upload(`shared/${fileName}`, file);
         if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage.from("assignments").getPublicUrl(filePath);
+        const { data: urlData } = supabase.storage.from("assignments").getPublicUrl(`shared/${fileName}`);
         attachmentUrl = urlData.publicUrl;
       }
 
-      // Determine which classes to create assignment for
-      const targetClassIds = form.class_id === "all"
-        ? classes.map((c) => c.id)
-        : [form.class_id];
-
-      // Insert assignment for each class
-      const insertData = targetClassIds.map((classId) => ({
+      const insertData = selectedClasses.map((classId) => ({
         class_id: classId,
         title: form.title,
         description: form.description || null,
@@ -90,9 +95,9 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
       if (error) throw error;
 
       toast.success(
-        form.class_id === "all"
-          ? `Assignment created for all ${targetClassIds.length} classes!`
-          : "Assignment created successfully!"
+        selectedClasses.length === 1
+          ? "Assignment created successfully!"
+          : `Assignment created for ${selectedClasses.length} classes!`
       );
       router.push("/assignments");
     } catch (err: any) {
@@ -103,6 +108,12 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
   };
 
   const minDateTime = new Date().toISOString().slice(0, 16);
+  const allSelected = selectedClasses.length === classes.length;
+  const someSelected = selectedClasses.length > 0 && !allSelected;
+
+  // Group by grade
+  const gradeXI = classes.filter((c) => c.grade === "XI");
+  const gradeXII = classes.filter((c) => c.grade === "XII");
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -114,7 +125,7 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create New Assignment</h1>
-          <p className="text-gray-500 dark:text-gray-400">Add assignment for students</p>
+          <p className="text-gray-500 dark:text-gray-400">Add assignment for one or more classes</p>
         </div>
       </div>
 
@@ -122,26 +133,107 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-5">
 
-            {/* Class selector */}
+            {/* Class Multi-Select */}
             <div className="space-y-2">
-              <Label>Class *</Label>
-              <Select value={form.class_id} onValueChange={(v) => setForm({ ...form, class_id: v })}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Select class" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    <span className="font-semibold text-blue-600">📚 All Classes</span>
-                  </SelectItem>
-                  {classes.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id}>{cls.class_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.class_id === "all" && (
-                <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-3 py-2 rounded-lg">
-                  ✓ Assignment will be created for all {classes.length} classes simultaneously
-                </p>
+              <div className="flex items-center justify-between">
+                <Label>Select Classes *</Label>
+                <button
+                  type="button"
+                  onClick={toggleAll}
+                  className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center gap-1"
+                >
+                  {allSelected ? (
+                    <><CheckSquare className="w-3.5 h-3.5" /> Deselect All</>
+                  ) : (
+                    <><Square className="w-3.5 h-3.5" /> Select All</>
+                  )}
+                </button>
+              </div>
+
+              {/* Selected count badge */}
+              {selectedClasses.length > 0 && (
+                <div className="flex items-center gap-2 p-2.5 bg-blue-50 dark:bg-blue-950 rounded-xl">
+                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                    ✓ {selectedClasses.length} class{selectedClasses.length > 1 ? "es" : ""} selected
+                  </span>
+                  <span className="text-xs text-blue-500 dark:text-blue-400">
+                    — assignment will be sent to all selected classes
+                  </span>
+                </div>
+              )}
+
+              {/* Grade XI */}
+              {gradeXI.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Grade XI</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {gradeXI.map((cls) => {
+                      const isSelected = selectedClasses.includes(cls.id);
+                      return (
+                        <button
+                          key={cls.id}
+                          type="button"
+                          onClick={() => toggleClass(cls.id)}
+                          className={cn(
+                            "flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all",
+                            isSelected
+                              ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                              : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                            isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300 dark:border-gray-600"
+                          )}>
+                            {isSelected && (
+                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-sm font-medium truncate">{cls.class_name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Grade XII */}
+              {gradeXII.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2 mt-3">Grade XII</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {gradeXII.map((cls) => {
+                      const isSelected = selectedClasses.includes(cls.id);
+                      return (
+                        <button
+                          key={cls.id}
+                          type="button"
+                          onClick={() => toggleClass(cls.id)}
+                          className={cn(
+                            "flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all",
+                            isSelected
+                              ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                              : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                            isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300 dark:border-gray-600"
+                          )}>
+                            {isSelected && (
+                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-sm font-medium truncate">{cls.class_name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -222,11 +314,17 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
               <Link href="/assignments" className="flex-1">
                 <Button type="button" variant="outline" className="w-full rounded-xl">Cancel</Button>
               </Link>
-              <Button type="submit" className="flex-1 rounded-xl" disabled={submitting}>
+              <Button
+                type="submit"
+                className="flex-1 rounded-xl"
+                disabled={submitting || selectedClasses.length === 0}
+              >
                 {submitting ? (
                   <><Loader2 className="w-4 h-4 animate-spin mr-2" />Creating...</>
                 ) : (
-                  <><ClipboardList className="w-4 h-4 mr-2" />Create Assignment</>
+                  <><ClipboardList className="w-4 h-4 mr-2" />
+                    Create for {selectedClasses.length || 0} Class{selectedClasses.length !== 1 ? "es" : ""}
+                  </>
                 )}
               </Button>
             </div>
