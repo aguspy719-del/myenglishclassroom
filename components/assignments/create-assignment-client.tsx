@@ -28,7 +28,7 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
   const [selectedClasses, setSelectedClasses] = useState<string[]>(
     defaultClass ? [defaultClass] : []
   );
-  const [form, setForm] = useState({ title: "", description: "", deadline: "" });
+  const [form, setForm] = useState({ title: "", description: "", deadline: "", publishAt: "" });
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -89,6 +89,7 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
         description: form.description || null,
         deadline: new Date(form.deadline).toISOString(),
         attachment_url: attachmentUrl || null,
+        published_at: form.publishAt ? new Date(form.publishAt).toISOString() : new Date().toISOString(),
       }));
 
       const { error } = await supabase.from("assignments").insert(insertData);
@@ -270,6 +271,34 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
                 onChange={(e) => setForm({ ...form, deadline: e.target.value })}
                 className="rounded-xl"
               />
+            </div>
+
+            {/* Scheduled Publish */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Publish Schedule (optional)</Label>
+                {form.publishAt && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, publishAt: "" })}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    Clear (publish now)
+                  </button>
+                )}
+              </div>
+              <Input
+                type="datetime-local"
+                min={minDateTime}
+                value={form.publishAt}
+                onChange={(e) => setForm({ ...form, publishAt: e.target.value })}
+                className="rounded-xl"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {form.publishAt
+                  ? `⏰ Assignment will be visible to students on ${new Date(form.publishAt).toLocaleString()}`
+                  : "Leave empty to publish immediately"}
+              </p>
             </div>
 
             {/* File attachment */}

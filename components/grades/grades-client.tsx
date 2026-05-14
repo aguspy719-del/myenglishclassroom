@@ -78,63 +78,97 @@ export function GradesClient({ user }: GradesClientProps) {
   const handleExportExcel = async () => {
     setExporting(true);
     try {
-      // Dynamic import to avoid SSR issues
       const XLSX = await import("xlsx");
-
-      const exportData = filtered.map((g, idx) => ({
-        "No": idx + 1,
-        "Student Name": (g.student as any)?.name || user.name,
-        "Email": (g.student as any)?.email || user.email,
-        "Class": (g.assignment as any)?.class?.class_name || "-",
-        "Assignment": (g.assignment as any)?.title || "-",
-        "Score": g.score || 0,
-        "Grade": getGradeLabel(g.score || 0),
-        "Feedback": g.feedback || "-",
-        "Submitted At": formatDate(g.submitted_at),
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(exportData);
-
-      // Set column widths
-      ws["!cols"] = [
-        { wch: 5 },   // No
-        { wch: 25 },  // Name
-        { wch: 30 },  // Email
-        { wch: 15 },  // Class
-        { wch: 30 },  // Assignment
-        { wch: 8 },   // Score
-        { wch: 8 },   // Grade
-        { wch: 30 },  // Feedback
-        { wch: 15 },  // Date
-      ];
-
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Grades");
 
-      // Add summary sheet
-      const summaryData = [
-        { "Metric": "Total Records", "Value": filtered.length },
-        { "Metric": "Average Score", "Value": avgScore },
-        { "Metric": "Highest Score", "Value": maxScore },
-        { "Metric": "Lowest Score", "Value": minScore },
-        { "Metric": "Grade A (≥90)", "Value": gradeDistribution.A },
-        { "Metric": "Grade B (80-89)", "Value": gradeDistribution.B },
-        { "Metric": "Grade C (70-79)", "Value": gradeDistribution.C },
-        { "Metric": "Grade D (60-69)", "Value": gradeDistribution.D },
-        { "Metric": "Grade E (<60)", "Value": gradeDistribution.E },
-      ];
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      wsSummary["!cols"] = [{ wch: 20 }, { wch: 10 }];
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+      // If specific class selected, export just that class
+      // If "all", export each class as separate sheet
+      const classesToExport = selectedClass !== "all"
+        ? classes.filter((c) => c.id === selectedClass)
+        : classes;
 
-      const className = selectedClass !== "all"
-        ? classes.find((c) => c.id === selectedClass)?.class_name || "All"
-        : "All Classes";
-      const fileName = `Grades_${className}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      // If no classes (student view), export all grades
+      if (classesToExport.length === 0) {
+        const exportData = filtered.map((g, idx) => ({
+          "No": idx + 1,
+          "Assignment": (g.assignment as any)?.title || "-",
+          "Score": g.score || 0,
+          "Grade": getGradeLabel(g.score || 0),
+          "Feedback": g.feedback || "-",
+          "Date": formatDate(g.submitted_at),
+        }));
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        ws["!cols"] = [{ wch: 5 }, { wch: 30 }, { wch: 8 }, { wch: 8 }, { wch: 30 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, ws, "My Grades");
+      } else {
+        // Export per class as separate sheets
+        for (const cls of classesToExport) {
+          const classGrades = grades.filter((g) => {
+            const classId = (g.assignment as any)?.class_id;
+            return classId === cls.id;
+          });
+
+          if (classGrades.length === 0) continue;
+
+          const exportData = classGrades.map((g, idx) => ({
+            "No": idx + 1,
+            "Student Name": (g.student as any)?.name || "-",
+            "Email": (g.student as any)?.email || "-",
+            "Assignment": (g.assignment as any)?.title || "-",
+            "Score": g.score || 0,
+            "Grade": getGradeLabel(g.score || 0),
+            "Feedback": g.feedback || "-",
+            "Date": formatDate(g.submitted_at),
+          }));
+
+          const ws = XLSX.utils.json_to_sheet(exportData);
+          ws["!cols"] = [
+            { wch: 5 }, { wch: 25 }, { wch: 30 },
+            { wch: 30 }, { wch: 8 }, { wch: 8 },
+            { wch: 30 }, { wch: 15 },
+          ];
+
+          // Sheet name max 31 chars
+          const sheetName = cls.class_name.substring(0, 31);
+          XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
+
+        // Add summary sheet
+        const summaryData = classesToExport.map((cls) => {
+          const classGrades = grades.filter((g) => (g.assignment as any)?.class_id === cls.id);
+          const scores = classGrades.map((g) => g.score || 0);
+          const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+          return {
+            "Class": cls.class_name,
+            "Total Records": classGrades.length,
+            "Average Score": avg,
+            "Highest": scores.length > 0 ? Math.max(...scores) : 0,
+            "Lowest": scores.length > 0 ? Math.min(...scores) : 0,
+            "Grade A (≥90)": scores.filter((s) => s >= 90).length,
+            "Grade B (80-89)": scores.filter((s) => s >= 80 && s < 90).length,
+            "Grade C (70-79)": scores.filter((s) => s >= 70 && s < 80).length,
+            "Grade D (60-69)": scores.filter((s) => s >= 60 && s < 70).length,
+            "Grade E (<60)": scores.filter((s) => s < 60).length,
+          };
+        });
+
+        const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+        wsSummary["!cols"] = [
+          { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 },
+          { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+        ];
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+      }
+
+      const fileName = selectedClass !== "all"
+        ? `Grades_${classes.find((c) => c.id === selectedClass)?.class_name}_${new Date().toISOString().split("T")[0]}.xlsx`
+        : `Grades_All_Classes_${new Date().toISOString().split("T")[0]}.xlsx`;
 
       XLSX.writeFile(wb, fileName);
+      toast.success("Excel exported successfully!");
     } catch (err) {
       console.error(err);
+      toast.error("Failed to export");
     } finally {
       setExporting(false);
     }

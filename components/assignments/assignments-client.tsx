@@ -39,7 +39,10 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
       .order("deadline", { ascending: true });
 
     if (user.role === "student" && user.class_id) {
-      query = query.eq("class_id", user.class_id);
+      // Students only see published assignments
+      query = query
+        .eq("class_id", user.class_id)
+        .or(`published_at.is.null,published_at.lte.${new Date().toISOString()}`);
     } else if (selectedClass !== "all") {
       query = query.eq("class_id", selectedClass);
     }
@@ -95,17 +98,20 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
 
   const getStatusBadge = (assignment: Assignment) => {
     const status = getDeadlineStatus(assignment.deadline);
+    // Check if scheduled (not yet published)
+    const isScheduled = (assignment as any).published_at &&
+      new Date((assignment as any).published_at) > new Date();
+
     if (user.role === "student") {
-      if (submissions[assignment.id]) {
-        return <Badge variant="success">Sudah Dikumpulkan</Badge>;
-      }
-      if (status === "overdue") return <Badge variant="destructive">Lewat Deadline</Badge>;
-      if (status === "today") return <Badge variant="warning">Hari Ini</Badge>;
-      return <Badge variant="info">Belum Dikumpulkan</Badge>;
+      if (submissions[assignment.id]) return <Badge variant="success">Submitted</Badge>;
+      if (status === "overdue") return <Badge variant="destructive">Past Deadline</Badge>;
+      if (status === "today") return <Badge variant="warning">Due Today</Badge>;
+      return <Badge variant="info">Not Submitted</Badge>;
     }
-    if (status === "overdue") return <Badge variant="destructive">Selesai</Badge>;
-    if (status === "today") return <Badge variant="warning">Hari Ini</Badge>;
-    return <Badge variant="success">Aktif</Badge>;
+    if (isScheduled) return <Badge variant="warning">⏰ Scheduled</Badge>;
+    if (status === "overdue") return <Badge variant="destructive">Closed</Badge>;
+    if (status === "today") return <Badge variant="warning">Due Today</Badge>;
+    return <Badge variant="success">Active</Badge>;
   };
 
   return (
