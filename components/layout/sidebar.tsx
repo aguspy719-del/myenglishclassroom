@@ -26,7 +26,7 @@ const teacherNavItems = [
   { href: "/assignments", label: "Assignments", icon: ClipboardList },
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
-  { href: "/quiz", label: "Quiz / AKM", icon: FileText },
+  { href: "/quiz", label: "Quiz", icon: FileText },
 ];
 
 const studentNavItems = [

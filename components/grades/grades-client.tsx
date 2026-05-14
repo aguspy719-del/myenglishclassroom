@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, Search, Download, FileSpreadsheet } from "lucide-react";
+import { Star, Search, FileSpreadsheet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -81,92 +81,120 @@ export function GradesClient({ user }: GradesClientProps) {
     try {
       const XLSX = await import("xlsx");
       const wb = XLSX.utils.book_new();
+      const supabase = createClient();
 
-      // If specific class selected, export just that class
-      // If "all", export each class as separate sheet
       const classesToExport = selectedClass !== "all"
         ? classes.filter((c) => c.id === selectedClass)
         : classes;
 
-      // If no classes (student view), export all grades
-      if (classesToExport.length === 0) {
-        const exportData = filtered.map((g, idx) => ({
-          "No": idx + 1,
-          "Assignment": (g.assignment as any)?.title || "-",
-          "Score": g.score || 0,
-          "Grade": getGradeLabel(g.score || 0),
-          "Feedback": g.feedback || "-",
-          "Date": formatDate(g.submitted_at),
-        }));
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        ws["!cols"] = [{ wch: 5 }, { wch: 30 }, { wch: 8 }, { wch: 8 }, { wch: 30 }, { wch: 15 }];
-        XLSX.utils.book_append_sheet(wb, ws, "My Grades");
-      } else {
-        // Export per class as separate sheets
-        for (const cls of classesToExport) {
-          const classGrades = grades.filter((g) => {
-            const classId = (g.assignment as any)?.class_id;
-            return classId === cls.id;
+      for (const cls of classesToExport) {
+        // Get all students in this class
+        const { data: students } = await supabase
+          .from("users")
+          .select("id, name, email")
+          .eq("class_id", cls.id)
+          .eq("role", "student")
+          .order("name");
+
+        if (!students || students.length === 0) continue;
+
+        // Get all assignments for this class
+        const { data: assignments } = await supabase
+          .from("assignments")
+          .select("id, title")
+          .eq("class_id", cls.id)
+          .order("created_at");
+
+        // Get quiz attempts per type for this class
+        const { data: quizAttempts } = await supabase
+          .from("quiz_attempts")
+          .select("student_id, score, quiz:quizzes(title, quiz_type)")
+          .eq("quizzes.class_id", cls.id)
+          .not("score", "is", null);
+
+        // Get submissions for this class
+        const { data: submissions } = await supabase
+          .from("submissions")
+          .select("student_id, score, assignment_id")
+          .not("score", "is", null);
+
+        // Build rapor rows
+        const raporData = students.map((student, idx) => {
+          // Assignment scores
+          const studentSubs = (submissions || []).filter((s) => s.student_id === student.id);
+          const assignmentScores = (assignments || []).map((a) => {
+            const sub = studentSubs.find((s) => s.assignment_id === a.id);
+            return sub?.score ?? "-";
           });
+          const assignmentAvg = assignmentScores.filter((s) => s !== "-").length > 0
+            ? Math.round((assignmentScores.filter((s) => s !== "-") as number[]).reduce((a, b) => a + b, 0) / assignmentScores.filter((s) => s !== "-").length)
+            : "-";
 
-          if (classGrades.length === 0) continue;
+          // Quiz scores by type
+          const studentAttempts = (quizAttempts || []).filter((a) => a.student_id === student.id);
+          const formatifScores = studentAttempts.filter((a) => (a.quiz as any)?.quiz_type === "formatif").map((a) => a.score || 0);
+          const stsScores = studentAttempts.filter((a) => (a.quiz as any)?.quiz_type === "sumatif_tengah").map((a) => a.score || 0);
+          const sasScores = studentAttempts.filter((a) => (a.quiz as any)?.quiz_type === "sumatif_akhir").map((a) => a.score || 0);
 
-          const exportData = classGrades.map((g, idx) => ({
+          const avgFormatif = formatifScores.length > 0 ? Math.round(formatifScores.reduce((a, b) => a + b, 0) / formatifScores.length) : "-";
+          const avgSTS = stsScores.length > 0 ? Math.round(stsScores.reduce((a, b) => a + b, 0) / stsScores.length) : "-";
+          const avgSAS = sasScores.length > 0 ? Math.round(sasScores.reduce((a, b) => a + b, 0) / sasScores.length) : "-";
+
+          // Final grade calculation
+          const validScores = [assignmentAvg, avgFormatif, avgSTS, avgSAS].filter((s) => s !== "-") as number[];
+          const finalGrade = validScores.length > 0
+            ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
+            : "-";
+
+          const row: Record<string, any> = {
             "No": idx + 1,
-            "Student Name": (g.student as any)?.name || "-",
-            "Email": (g.student as any)?.email || "-",
-            "Assignment": (g.assignment as any)?.title || "-",
-            "Score": g.score || 0,
-            "Grade": getGradeLabel(g.score || 0),
-            "Feedback": g.feedback || "-",
-            "Date": formatDate(g.submitted_at),
-          }));
+            "Student Name": student.name,
+            "Email": student.email,
+          };
 
-          const ws = XLSX.utils.json_to_sheet(exportData);
-          ws["!cols"] = [
-            { wch: 5 }, { wch: 25 }, { wch: 30 },
-            { wch: 30 }, { wch: 8 }, { wch: 8 },
-            { wch: 30 }, { wch: 15 },
-          ];
+          // Add assignment columns
+          (assignments || []).forEach((a, i) => {
+            row[`Tugas ${i + 1}: ${a.title.substring(0, 20)}`] = assignmentScores[i];
+          });
+          row["Avg Tugas"] = assignmentAvg;
+          row["Asesmen Formatif"] = avgFormatif;
+          row["Sumatif Tengah Semester"] = avgSTS;
+          row["Sumatif Akhir Semester"] = avgSAS;
+          row["NILAI AKHIR"] = finalGrade;
+          row["PREDIKAT"] = finalGrade !== "-" ? getGradeLabel(finalGrade as number) : "-";
 
-          // Sheet name max 31 chars
-          const sheetName = cls.class_name.substring(0, 31);
-          XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        }
+          return row;
+        });
 
-        // Add summary sheet
+        const ws = XLSX.utils.json_to_sheet(raporData);
+        const sheetName = cls.class_name.substring(0, 31);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      }
+
+      // Summary sheet
+      if (classesToExport.length > 1) {
         const summaryData = classesToExport.map((cls) => {
           const classGrades = grades.filter((g) => (g.assignment as any)?.class_id === cls.id);
           const scores = classGrades.map((g) => g.score || 0);
           const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
           return {
             "Class": cls.class_name,
-            "Total Records": classGrades.length,
+            "Total Submissions": classGrades.length,
             "Average Score": avg,
             "Highest": scores.length > 0 ? Math.max(...scores) : 0,
             "Lowest": scores.length > 0 ? Math.min(...scores) : 0,
-            "Grade A (≥90)": scores.filter((s) => s >= 90).length,
-            "Grade B (80-89)": scores.filter((s) => s >= 80 && s < 90).length,
-            "Grade C (70-79)": scores.filter((s) => s >= 70 && s < 80).length,
-            "Grade D (60-69)": scores.filter((s) => s >= 60 && s < 70).length,
-            "Grade E (<60)": scores.filter((s) => s < 60).length,
           };
         });
-
         const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-        wsSummary["!cols"] = [
-          { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 },
-          { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-        ];
         XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
       }
 
       const fileName = selectedClass !== "all"
-        ? `Grades_${classes.find((c) => c.id === selectedClass)?.class_name}_${new Date().toISOString().split("T")[0]}.xlsx`
-        : `Grades_All_Classes_${new Date().toISOString().split("T")[0]}.xlsx`;
+        ? `Rapor_${classes.find((c) => c.id === selectedClass)?.class_name}_${new Date().toISOString().split("T")[0]}.xlsx`
+        : `Rapor_Semua_Kelas_${new Date().toISOString().split("T")[0]}.xlsx`;
 
       XLSX.writeFile(wb, fileName);
-      toast.success("Excel exported successfully!");
+      toast.success("Rapor Excel exported successfully!");
     } catch (err) {
       console.error(err);
       toast.error("Failed to export");
@@ -192,7 +220,7 @@ export function GradesClient({ user }: GradesClientProps) {
             className="gap-2 bg-green-600 hover:bg-green-700 text-white"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            {exporting ? "Exporting..." : "Export to Excel"}
+            {exporting ? "Exporting..." : "Export Rapor Excel"}
           </Button>
         )}
       </div>
