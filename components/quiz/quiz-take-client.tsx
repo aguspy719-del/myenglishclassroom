@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Clock, CheckCircle, ChevronRight, ChevronLeft,
-  Plus, Trash2, Loader2, Trophy, Users, Star, BarChart2
+  Plus, Trash2, Loader2, Trophy, Users, BarChart2, FileText, PenLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { getGradeColor, getGradeLabel, formatDateTime } from "@/lib/utils";
+import { cn, getGradeColor, getGradeLabel, formatDateTime } from "@/lib/utils";
 import type { User, Quiz, QuizQuestion } from "@/types";
 
 interface QuizTakeClientProps {
@@ -26,30 +26,47 @@ interface QuizTakeClientProps {
   questions: QuizQuestion[];
 }
 
+// Empty question templates
+const emptyMC = () => ({
+  id: crypto.randomUUID(),
+  question_type: "multiple_choice" as const,
+  question: "",
+  option_a: "",
+  option_b: "",
+  option_c: "",
+  option_d: "",
+  correct_answer: "a" as const,
+  max_score: 10,
+});
+
+const emptyEssay = () => ({
+  id: crypto.randomUUID(),
+  question_type: "essay" as const,
+  question: "",
+  option_a: "",
+  option_b: "",
+  option_c: "",
+  option_d: "",
+  correct_answer: "a" as const,
+  max_score: 20,
+});
+
 export function QuizTakeClient({ user, quiz, questions: initialQuestions }: QuizTakeClientProps) {
   const [questions, setQuestions] = useState<QuizQuestion[]>(initialQuestions);
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [essayAnswers, setEssayAnswers] = useState<Record<string, string>>({});
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState((quiz.time_limit || 30) * 60);
-  const [showAddQuestion, setShowAddQuestion] = useState(false);
-  const [newQuestion, setNewQuestion] = useState({
-    question: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_answer: "a" as const
-  });
-  const [addingQ, setAddingQ] = useState(false);
 
   // Timer
   useEffect(() => {
     if (!started || finished) return;
     const timer = setInterval(() => {
       setTimeLeft((t) => {
-        if (t <= 1) {
-          clearInterval(timer);
-          handleFinish();
-          return 0;
-        }
+        if (t <= 1) { clearInterval(timer); handleFinish(); return 0; }
         return t - 1;
       });
     }, 1000);
@@ -58,62 +75,37 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
 
   const handleFinish = useCallback(() => {
     if (finished) return;
+    const mcQuestions = questions.filter((q) => (q as any).question_type !== "essay");
     let correct = 0;
-    questions.forEach((q) => {
-      if (answers[q.id] === q.correct_answer) correct++;
-    });
-    const finalScore = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
-    setScore(finalScore);
+    mcQuestions.forEach((q) => { if (answers[q.id] === q.correct_answer) correct++; });
+    const mcScore = mcQuestions.length > 0 ? Math.round((correct / mcQuestions.length) * 100) : 0;
+    setScore(mcScore);
     setFinished(true);
 
-    // Save attempt
     const supabase = createClient();
+    // Save MC score
     supabase.from("quiz_attempts").insert([{
       quiz_id: quiz.id,
       student_id: user.id,
-      score: finalScore,
+      score: mcScore,
       completed_at: new Date().toISOString(),
       started_at: new Date().toISOString(),
-    }]).then(({ error }) => {
-      if (error) console.error("Failed to save attempt:", error);
+    }]);
+
+    // Save essay answers
+    const essayQs = questions.filter((q) => (q as any).question_type === "essay");
+    essayQs.forEach((q) => {
+      if (essayAnswers[q.id]) {
+        supabase.from("essay_answers").upsert({
+          quiz_id: quiz.id,
+          question_id: q.id,
+          student_id: user.id,
+          answer: essayAnswers[q.id],
+          submitted_at: new Date().toISOString(),
+        });
+      }
     });
-  }, [answers, questions, quiz.id, user.id, finished]);
-
-  const handleAddQuestion = async () => {
-    if (!newQuestion.question || !newQuestion.option_a || !newQuestion.option_b ||
-        !newQuestion.option_c || !newQuestion.option_d) {
-      toast.error("Semua field pertanyaan harus diisi");
-      return;
-    }
-    setAddingQ(true);
-    const supabase = createClient();
-    const { data, error } = await supabase.from("quiz_questions").insert([{
-      quiz_id: quiz.id,
-      ...newQuestion,
-      order_number: questions.length + 1,
-    }]).select().single();
-
-    if (error) {
-      toast.error("Gagal menambah pertanyaan");
-    } else {
-      toast.success("Pertanyaan ditambahkan");
-      setQuestions([...questions, data]);
-      setNewQuestion({ question: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_answer: "a" });
-      setShowAddQuestion(false);
-    }
-    setAddingQ(false);
-  };
-
-  const handleDeleteQuestion = async (id: string) => {
-    if (!confirm("Hapus pertanyaan ini?")) return;
-    const supabase = createClient();
-    const { error } = await supabase.from("quiz_questions").delete().eq("id", id);
-    if (error) toast.error("Gagal menghapus");
-    else {
-      toast.success("Pertanyaan dihapus");
-      setQuestions(questions.filter((q) => q.id !== id));
-    }
-  };
+  }, [answers, essayAnswers, questions, quiz.id, user.id, finished]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -121,52 +113,53 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const optionLabels = { a: "A", b: "B", c: "C", d: "D" };
-
   // Teacher view
   if (user.role === "teacher") {
-    return (
-      <TeacherQuizView
-        quiz={quiz}
-        questions={questions}
-        setQuestions={setQuestions}
-        showAddQuestion={showAddQuestion}
-        setShowAddQuestion={setShowAddQuestion}
-        newQuestion={newQuestion}
-        setNewQuestion={setNewQuestion}
-        addingQ={addingQ}
-        handleAddQuestion={handleAddQuestion}
-        handleDeleteQuestion={handleDeleteQuestion}
-      />
-    );
+    return <TeacherQuizView quiz={quiz} questions={questions} setQuestions={setQuestions} />;
   }
 
   // Student: Finished
   if (finished) {
-    const correct = questions.filter((q) => answers[q.id] === q.correct_answer).length;
+    const mcQuestions = questions.filter((q) => (q as any).question_type !== "essay");
+    const essayQuestions = questions.filter((q) => (q as any).question_type === "essay");
+    const correct = mcQuestions.filter((q) => answers[q.id] === q.correct_answer).length;
     return (
       <div className="max-w-lg mx-auto text-center space-y-6 py-8">
         <div className="w-24 h-24 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto">
           <Trophy className="w-12 h-12 text-yellow-600 dark:text-yellow-400" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Kuis Selesai!</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Quiz Finished!</h2>
           <p className="text-gray-500 dark:text-gray-400 mt-1">{quiz.title}</p>
         </div>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardContent className="pt-6 pb-6">
-            <p className={`text-6xl font-bold ${getGradeColor(score)}`}>{score}</p>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">dari 100</p>
-            <Badge className="mt-3 text-lg px-4 py-1">{getGradeLabel(score)}</Badge>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
-              Benar: {correct} dari {questions.length} soal
-            </p>
+            {mcQuestions.length > 0 && (
+              <>
+                <p className={`text-6xl font-bold ${getGradeColor(score)}`}>{score}</p>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">Multiple Choice Score</p>
+                <Badge className="mt-3 text-lg px-4 py-1">{getGradeLabel(score)}</Badge>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
+                  Correct: {correct} of {mcQuestions.length} questions
+                </p>
+              </>
+            )}
+            {essayQuestions.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-xl">
+                <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                  ✍️ {essayQuestions.length} essay answer{essayQuestions.length > 1 ? "s" : ""} submitted
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  Essay scores will be graded by your teacher
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
         <Link href="/quiz">
-          <Button className="gap-2">
+          <Button className="gap-2 rounded-xl">
             <ArrowLeft className="w-4 h-4" />
-            Kembali ke Daftar Kuis
+            Back to Quiz List
           </Button>
         </Link>
       </div>
@@ -175,44 +168,48 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
 
   // Student: Not started
   if (!started) {
+    const mcCount = questions.filter((q) => (q as any).question_type !== "essay").length;
+    const essayCount = questions.filter((q) => (q as any).question_type === "essay").length;
     return (
       <div className="max-w-lg mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Link href="/quiz">
-            <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
-          </Link>
+          <Link href="/quiz"><Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button></Link>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">{quiz.title}</h1>
         </div>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardContent className="pt-6 pb-6 text-center space-y-4">
             <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">{quiz.title}</h2>
-              {quiz.description && <p className="text-gray-500 dark:text-gray-400 mt-1">{quiz.description}</p>}
+              {quiz.description && <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{quiz.description}</p>}
             </div>
             <div className="flex justify-center gap-6 text-sm text-gray-600 dark:text-gray-400">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{questions.length}</p>
-                <p>Soal</p>
-              </div>
+              {mcCount > 0 && (
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{mcCount}</p>
+                  <p>Multiple Choice</p>
+                </div>
+              )}
+              {essayCount > 0 && (
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{essayCount}</p>
+                  <p>Essay</p>
+                </div>
+              )}
               {quiz.time_limit && (
                 <div className="text-center">
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{quiz.time_limit}</p>
-                  <p>Menit</p>
+                  <p>Minutes</p>
                 </div>
               )}
             </div>
             {questions.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400">Kuis ini belum memiliki soal.</p>
+              <p className="text-gray-500 dark:text-gray-400">No questions yet.</p>
             ) : (
-              <Button
-                size="lg"
-                className="w-full"
-                onClick={() => setStarted(true)}
-              >
-                Mulai Kuis
+              <Button size="lg" className="w-full rounded-xl" onClick={() => setStarted(true)}>
+                Start Quiz
               </Button>
             )}
           </CardContent>
@@ -223,151 +220,241 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
 
   // Student: Taking quiz
   const currentQuestion = questions[currentQ];
+  const isEssay = (currentQuestion as any).question_type === "essay";
   const progress = ((currentQ + 1) / questions.length) * 100;
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      {/* Timer & Progress */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <span>Soal {currentQ + 1} dari {questions.length}</span>
-        </div>
-        <div className={`flex items-center gap-2 font-mono font-bold text-lg ${
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          Question {currentQ + 1} of {questions.length}
+        </span>
+        <div className={cn(
+          "flex items-center gap-2 font-mono font-bold text-lg",
           timeLeft < 60 ? "text-red-600" : "text-gray-900 dark:text-white"
-        }`}>
+        )}>
           <Clock className="w-5 h-5" />
           {formatTime(timeLeft)}
         </div>
       </div>
       <Progress value={progress} className="h-2" />
 
-      {/* Question */}
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardContent className="pt-6 pb-6">
+          <div className="flex items-center gap-2 mb-4">
+            {isEssay ? (
+              <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                <PenLine className="w-3 h-3 mr-1" />Essay
+              </Badge>
+            ) : (
+              <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                <FileText className="w-3 h-3 mr-1" />Multiple Choice
+              </Badge>
+            )}
+          </div>
+
           <p className="text-lg font-medium text-gray-900 dark:text-white mb-6">
-            <span className="text-blue-600 dark:text-blue-400 mr-2">{currentQ + 1}.</span>
+            <span className="text-blue-600 dark:text-blue-400 mr-2 font-bold">{currentQ + 1}.</span>
             {currentQuestion.question}
           </p>
 
-          <div className="space-y-3">
-            {(["a", "b", "c", "d"] as const).map((opt) => {
-              const isSelected = answers[currentQuestion.id] === opt;
-              return (
-                <button
-                  key={opt}
-                  onClick={() => setAnswers({ ...answers, [currentQuestion.id]: opt })}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                    isSelected
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-100"
-                      : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }`}
-                >
-                  <span className={`font-bold mr-3 ${isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-500"}`}>
-                    {opt.toUpperCase()}.
-                  </span>
-                  {currentQuestion[`option_${opt}` as keyof QuizQuestion] as string}
-                </button>
-              );
-            })}
-          </div>
+          {isEssay ? (
+            <Textarea
+              placeholder="Write your answer here..."
+              value={essayAnswers[currentQuestion.id] || ""}
+              onChange={(e) => setEssayAnswers({ ...essayAnswers, [currentQuestion.id]: e.target.value })}
+              rows={6}
+              className="rounded-xl"
+            />
+          ) : (
+            <div className="space-y-3">
+              {(["a", "b", "c", "d"] as const).map((opt) => {
+                const isSelected = answers[currentQuestion.id] === opt;
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => setAnswers({ ...answers, [currentQuestion.id]: opt })}
+                    className={cn(
+                      "w-full text-left p-4 rounded-xl border-2 transition-all",
+                      isSelected
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-100"
+                        : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    )}
+                  >
+                    <span className={cn("font-bold mr-3", isSelected ? "text-blue-600" : "text-gray-500")}>
+                      {opt.toUpperCase()}.
+                    </span>
+                    {currentQuestion[`option_${opt}` as keyof QuizQuestion] as string}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Navigation */}
       <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => setCurrentQ(Math.max(0, currentQ - 1))}
-          disabled={currentQ === 0}
-          className="gap-2"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Sebelumnya
+        <Button variant="outline" onClick={() => setCurrentQ(Math.max(0, currentQ - 1))} disabled={currentQ === 0} className="gap-2 rounded-xl">
+          <ChevronLeft className="w-4 h-4" />Previous
         </Button>
-
         {currentQ === questions.length - 1 ? (
-          <Button onClick={handleFinish} className="gap-2">
-            <CheckCircle className="w-4 h-4" />
-            Selesai
+          <Button onClick={handleFinish} className="gap-2 rounded-xl">
+            <CheckCircle className="w-4 h-4" />Finish
           </Button>
         ) : (
-          <Button
-            onClick={() => setCurrentQ(Math.min(questions.length - 1, currentQ + 1))}
-            className="gap-2"
-          >
-            Selanjutnya
-            <ChevronRight className="w-4 h-4" />
+          <Button onClick={() => setCurrentQ(Math.min(questions.length - 1, currentQ + 1))} className="gap-2 rounded-xl">
+            Next<ChevronRight className="w-4 h-4" />
           </Button>
         )}
       </div>
 
-      {/* Question dots */}
       <div className="flex flex-wrap gap-2 justify-center">
-        {questions.map((q, idx) => (
-          <button
-            key={q.id}
-            onClick={() => setCurrentQ(idx)}
-            className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
-              idx === currentQ
-                ? "bg-blue-600 text-white"
-                : answers[q.id]
-                ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-            }`}
-          >
-            {idx + 1}
-          </button>
-        ))}
+        {questions.map((q, idx) => {
+          const isEssayQ = (q as any).question_type === "essay";
+          const answered = isEssayQ ? !!essayAnswers[q.id] : !!answers[q.id];
+          return (
+            <button
+              key={q.id}
+              onClick={() => setCurrentQ(idx)}
+              className={cn(
+                "w-8 h-8 rounded-full text-xs font-bold transition-colors",
+                idx === currentQ ? "bg-blue-600 text-white" :
+                answered ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" :
+                "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+              )}
+            >
+              {idx + 1}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 // ============================================================
-// Teacher Quiz View with Tabs: Questions + Results
+// Teacher Quiz View — Bulk Add + Essay + Results
 // ============================================================
 interface TeacherQuizViewProps {
   quiz: Quiz;
   questions: QuizQuestion[];
   setQuestions: (q: QuizQuestion[]) => void;
-  showAddQuestion: boolean;
-  setShowAddQuestion: (v: boolean) => void;
-  newQuestion: any;
-  setNewQuestion: (q: any) => void;
-  addingQ: boolean;
-  handleAddQuestion: () => void;
-  handleDeleteQuestion: (id: string) => void;
 }
 
-function TeacherQuizView({
-  quiz, questions, setQuestions,
-  showAddQuestion, setShowAddQuestion,
-  newQuestion, setNewQuestion,
-  addingQ, handleAddQuestion, handleDeleteQuestion,
-}: TeacherQuizViewProps) {
+function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps) {
   const [attempts, setAttempts] = useState<any[]>([]);
+  const [essayAnswers, setEssayAnswers] = useState<any[]>([]);
   const [loadingAttempts, setLoadingAttempts] = useState(true);
+
+  // Bulk question drafts (not yet saved)
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchAttempts = async () => {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("quiz_attempts")
-        .select("*, student:users(name, email)")
-        .eq("quiz_id", quiz.id)
-        .not("score", "is", null)
-        .order("completed_at", { ascending: false });
-      setAttempts(data || []);
+      const [attemptsRes, essayRes] = await Promise.all([
+        supabase
+          .from("quiz_attempts")
+          .select("*, student:users(name, email)")
+          .eq("quiz_id", quiz.id)
+          .not("score", "is", null)
+          .order("completed_at", { ascending: false }),
+        supabase
+          .from("essay_answers")
+          .select("*, student:users(name), question:quiz_questions(question)")
+          .eq("quiz_id", quiz.id)
+          .order("submitted_at", { ascending: false }),
+      ]);
+      setAttempts(attemptsRes.data || []);
+      setEssayAnswers(essayRes.data || []);
       setLoadingAttempts(false);
     };
     fetchAttempts();
   }, [quiz.id]);
 
+  const addDraft = (type: "multiple_choice" | "essay") => {
+    setDrafts((prev) => [...prev, type === "essay" ? emptyEssay() : emptyMC()]);
+  };
+
+  const updateDraft = (id: string, field: string, value: string) => {
+    setDrafts((prev) => prev.map((d) => d.id === id ? { ...d, [field]: value } : d));
+  };
+
+  const removeDraft = (id: string) => {
+    setDrafts((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const saveDrafts = async () => {
+    const valid = drafts.filter((d) => {
+      if (!d.question) return false;
+      if (d.question_type === "multiple_choice") {
+        return d.option_a && d.option_b && d.option_c && d.option_d;
+      }
+      return true;
+    });
+
+    if (valid.length === 0) {
+      toast.error("Fill in all required fields before saving");
+      return;
+    }
+
+    setSaving(true);
+    const supabase = createClient();
+    const insertData = valid.map((d, idx) => ({
+      quiz_id: quiz.id,
+      question: d.question,
+      question_type: d.question_type,
+      option_a: d.option_a || "",
+      option_b: d.option_b || "",
+      option_c: d.option_c || "",
+      option_d: d.option_d || "",
+      correct_answer: d.correct_answer || "a",
+      max_score: d.max_score || 10,
+      order_number: questions.length + idx + 1,
+    }));
+
+    const { data, error } = await supabase.from("quiz_questions").insert(insertData).select();
+    if (error) {
+      toast.error("Failed to save questions");
+    } else {
+      toast.success(`${data.length} question${data.length > 1 ? "s" : ""} saved!`);
+      setQuestions([...questions, ...(data as QuizQuestion[])]);
+      setDrafts([]);
+    }
+    setSaving(false);
+  };
+
+  const deleteQuestion = async (id: string) => {
+    if (!confirm("Delete this question?")) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("quiz_questions").delete().eq("id", id);
+    if (error) toast.error("Failed to delete");
+    else {
+      toast.success("Question deleted");
+      setQuestions(questions.filter((q) => q.id !== id));
+    }
+  };
+
+  const gradeEssay = async (answerId: string, score: number, feedback: string) => {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("essay_answers")
+      .update({ score, feedback })
+      .eq("id", answerId);
+    if (error) toast.error("Failed to save grade");
+    else {
+      toast.success("Essay graded!");
+      setEssayAnswers((prev) => prev.map((a) => a.id === answerId ? { ...a, score, feedback } : a));
+    }
+  };
+
   const avgScore = attempts.length > 0
     ? Math.round(attempts.reduce((a, b) => a + (b.score || 0), 0) / attempts.length)
     : 0;
-  const highest = attempts.length > 0 ? Math.max(...attempts.map((a) => a.score || 0)) : 0;
-  const lowest = attempts.length > 0 ? Math.min(...attempts.map((a) => a.score || 0)) : 0;
+
+  const mcCount = questions.filter((q) => (q as any).question_type !== "essay").length;
+  const essayCount = questions.filter((q) => (q as any).question_type === "essay").length;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -379,156 +466,192 @@ function TeacherQuizView({
         <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">{quiz.title}</h1>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            {(quiz.class as any)?.class_name && (
-              <Badge variant="secondary">{(quiz.class as any).class_name}</Badge>
-            )}
-            {quiz.time_limit && (
-              <Badge variant="info">
-                <Clock className="w-3 h-3 mr-1" />{quiz.time_limit} min
-              </Badge>
-            )}
-            <Badge variant="outline">{questions.length} questions</Badge>
+            {(quiz.class as any)?.class_name && <Badge variant="secondary">{(quiz.class as any).class_name}</Badge>}
+            {quiz.time_limit && <Badge variant="info"><Clock className="w-3 h-3 mr-1" />{quiz.time_limit} min</Badge>}
+            <Badge variant="outline">{mcCount} MC · {essayCount} Essay</Badge>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
       <Tabs defaultValue="questions">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="questions" className="gap-2">
-            <BarChart2 className="w-4 h-4" />
-            Questions ({questions.length})
+            <BarChart2 className="w-4 h-4" />Questions ({questions.length})
           </TabsTrigger>
           <TabsTrigger value="results" className="gap-2">
-            <Users className="w-4 h-4" />
-            Results ({attempts.length})
+            <Users className="w-4 h-4" />Results ({attempts.length})
           </TabsTrigger>
+          {essayCount > 0 && (
+            <TabsTrigger value="essays" className="gap-2">
+              <PenLine className="w-4 h-4" />Essays ({essayAnswers.length})
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        {/* Questions Tab */}
+        {/* ── QUESTIONS TAB ── */}
         <TabsContent value="questions" className="mt-4 space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setShowAddQuestion(!showAddQuestion)} className="gap-2" size="sm">
-              <Plus className="w-4 h-4" />
-              Add Question
+          {/* Add buttons */}
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => addDraft("multiple_choice")} variant="outline" size="sm" className="gap-2 rounded-xl">
+              <Plus className="w-4 h-4" /><FileText className="w-4 h-4" />Add Multiple Choice
             </Button>
+            <Button onClick={() => addDraft("essay")} variant="outline" size="sm" className="gap-2 rounded-xl">
+              <Plus className="w-4 h-4" /><PenLine className="w-4 h-4" />Add Essay
+            </Button>
+            {drafts.length > 0 && (
+              <Button onClick={saveDrafts} disabled={saving} size="sm" className="gap-2 rounded-xl ml-auto">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                Save {drafts.length} Question{drafts.length > 1 ? "s" : ""}
+              </Button>
+            )}
           </div>
 
-          {showAddQuestion && (
-            <Card className="border-blue-200 dark:border-blue-800">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Add New Question</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Question *</Label>
+          {/* Draft questions (unsaved) */}
+          {drafts.map((draft, idx) => (
+            <Card key={draft.id} className="border-2 border-blue-300 dark:border-blue-700 shadow-sm">
+              <CardContent className="pt-4 pb-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Badge className={draft.question_type === "essay"
+                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+                    : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                  }>
+                    {draft.question_type === "essay" ? "✍️ Essay" : "📝 Multiple Choice"} — New #{idx + 1}
+                  </Badge>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeDraft(draft.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Question *</Label>
                   <Textarea
-                    placeholder="Write your question here..."
-                    value={newQuestion.question}
-                    onChange={(e) => setNewQuestion({ ...newQuestion, question: e.target.value })}
-                    rows={3}
-                    className="rounded-xl"
+                    placeholder="Write your question..."
+                    value={draft.question}
+                    onChange={(e) => updateDraft(draft.id, "question", e.target.value)}
+                    rows={2}
+                    className="rounded-xl text-sm"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {(["a", "b", "c", "d"] as const).map((opt) => (
-                    <div key={opt} className="space-y-1">
-                      <Label>Option {opt.toUpperCase()} *</Label>
-                      <Input
-                        placeholder={`Option ${opt.toUpperCase()}`}
-                        value={newQuestion[`option_${opt}`]}
-                        onChange={(e) => setNewQuestion({ ...newQuestion, [`option_${opt}`]: e.target.value })}
-                        className="rounded-xl"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <Label>Correct Answer *</Label>
-                  <Select
-                    value={newQuestion.correct_answer}
-                    onValueChange={(v) => setNewQuestion({ ...newQuestion, correct_answer: v })}
-                  >
-                    <SelectTrigger className="w-40 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
+
+                {draft.question_type === "multiple_choice" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
                       {(["a", "b", "c", "d"] as const).map((opt) => (
-                        <SelectItem key={opt} value={opt}>Option {opt.toUpperCase()}</SelectItem>
+                        <div key={opt} className="space-y-1">
+                          <Label className="text-xs">Option {opt.toUpperCase()} *</Label>
+                          <Input
+                            placeholder={`Option ${opt.toUpperCase()}`}
+                            value={draft[`option_${opt}`]}
+                            onChange={(e) => updateDraft(draft.id, `option_${opt}`, e.target.value)}
+                            className="rounded-xl text-sm h-9"
+                          />
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-3">
-                  <Button onClick={handleAddQuestion} disabled={addingQ} className="gap-2 rounded-xl">
-                    {addingQ ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    Add
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowAddQuestion(false)} className="rounded-xl">Cancel</Button>
-                </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Label className="text-xs whitespace-nowrap">Correct Answer:</Label>
+                      <Select value={draft.correct_answer} onValueChange={(v) => updateDraft(draft.id, "correct_answer", v)}>
+                        <SelectTrigger className="w-32 h-8 rounded-xl text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(["a", "b", "c", "d"] as const).map((opt) => (
+                            <SelectItem key={opt} value={opt}>Option {opt.toUpperCase()}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
+                {draft.question_type === "essay" && (
+                  <div className="flex items-center gap-3">
+                    <Label className="text-xs whitespace-nowrap">Max Score:</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={draft.max_score}
+                      onChange={(e) => updateDraft(draft.id, "max_score", e.target.value)}
+                      className="w-24 h-8 rounded-xl text-sm"
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
+          ))}
 
-          {questions.length === 0 ? (
+          {/* Saved questions */}
+          {questions.length === 0 && drafts.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <BarChart2 className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p>No questions yet. Add questions for this quiz.</p>
+              <p>No questions yet. Add questions above.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {questions.map((q, idx) => (
-                <Card key={q.id} className="border-0 shadow-sm">
-                  <CardContent className="pt-4 pb-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white mb-3">
-                          <span className="text-blue-600 dark:text-blue-400 mr-2 font-bold">{idx + 1}.</span>
-                          {q.question}
-                        </p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {(["a", "b", "c", "d"] as const).map((opt) => (
-                            <div
-                              key={opt}
-                              className={`p-2.5 rounded-xl text-sm ${
-                                q.correct_answer === opt
-                                  ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-semibold"
-                                  : "bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                              }`}
-                            >
-                              <span className="font-bold mr-1">{opt.toUpperCase()}.</span>
-                              {q[`option_${opt}` as keyof QuizQuestion] as string}
-                              {q.correct_answer === opt && " ✓"}
+              {questions.map((q, idx) => {
+                const isEssayQ = (q as any).question_type === "essay";
+                return (
+                  <Card key={q.id} className="border-0 shadow-sm">
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">{idx + 1}.</span>
+                            <Badge className={isEssayQ
+                              ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 text-xs"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs"
+                            }>
+                              {isEssayQ ? "Essay" : "MC"}
+                            </Badge>
+                            {isEssayQ && (q as any).max_score && (
+                              <span className="text-xs text-gray-500">Max: {(q as any).max_score} pts</span>
+                            )}
+                          </div>
+                          <p className="font-medium text-gray-900 dark:text-white text-sm mb-3">{q.question}</p>
+                          {!isEssayQ && (
+                            <div className="grid grid-cols-2 gap-2">
+                              {(["a", "b", "c", "d"] as const).map((opt) => (
+                                <div key={opt} className={cn(
+                                  "p-2 rounded-xl text-xs",
+                                  q.correct_answer === opt
+                                    ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-semibold"
+                                    : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                )}>
+                                  <span className="font-bold mr-1">{opt.toUpperCase()}.</span>
+                                  {q[`option_${opt}` as keyof QuizQuestion] as string}
+                                  {q.correct_answer === opt && " ✓"}
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
+                          {isEssayQ && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                              Students will write their answer in a text box
+                            </p>
+                          )}
                         </div>
+                        <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-50 flex-shrink-0 h-8 w-8" onClick={() => deleteQuestion(q.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-500 hover:bg-red-50 flex-shrink-0"
-                        onClick={() => handleDeleteQuestion(q.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
 
-        {/* Results Tab */}
+        {/* ── RESULTS TAB ── */}
         <TabsContent value="results" className="mt-4 space-y-4">
-          {/* Stats */}
           {attempts.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: "Submissions", value: attempts.length, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
                 { label: "Average", value: avgScore, color: getGradeColor(avgScore), bg: "bg-gray-50 dark:bg-gray-800" },
-                { label: "Highest", value: highest, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950" },
-                { label: "Lowest", value: lowest, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950" },
+                { label: "Highest", value: Math.max(...attempts.map((a) => a.score || 0)), color: "text-green-600", bg: "bg-green-50 dark:bg-green-950" },
+                { label: "Lowest", value: Math.min(...attempts.map((a) => a.score || 0)), color: "text-red-600", bg: "bg-red-50 dark:bg-red-950" },
               ].map((stat) => (
                 <Card key={stat.label} className="border-0 shadow-sm">
                   <CardContent className={`pt-4 pb-4 text-center rounded-xl ${stat.bg}`}>
@@ -541,11 +664,7 @@ function TeacherQuizView({
           )}
 
           {loadingAttempts ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
-              ))}
-            </div>
+            <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}</div>
           ) : attempts.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -554,37 +673,103 @@ function TeacherQuizView({
           ) : (
             <div className="space-y-2">
               {attempts.map((attempt, idx) => (
-                <div
-                  key={attempt.id}
-                  className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm"
-                >
+                <div key={attempt.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400">
                       {idx + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-sm text-gray-900 dark:text-white">
-                        {attempt.student?.name || "Student"}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {attempt.completed_at ? formatDateTime(attempt.completed_at) : "-"}
-                      </p>
+                      <p className="font-medium text-sm text-gray-900 dark:text-white">{attempt.student?.name || "Student"}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{attempt.completed_at ? formatDateTime(attempt.completed_at) : "-"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-xl font-bold ${getGradeColor(attempt.score || 0)}`}>
-                      {attempt.score}
-                    </span>
-                    <Badge variant="outline" className="text-xs">
-                      {getGradeLabel(attempt.score || 0)}
-                    </Badge>
+                    <span className={`text-xl font-bold ${getGradeColor(attempt.score || 0)}`}>{attempt.score}</span>
+                    <Badge variant="outline" className="text-xs">{getGradeLabel(attempt.score || 0)}</Badge>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </TabsContent>
+
+        {/* ── ESSAYS TAB ── */}
+        {essayCount > 0 && (
+          <TabsContent value="essays" className="mt-4 space-y-4">
+            {essayAnswers.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                <PenLine className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p>No essay answers submitted yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {essayAnswers.map((ea) => (
+                  <EssayGradeCard key={ea.id} essayAnswer={ea} onGrade={gradeEssay} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
+  );
+}
+
+// Essay grading card
+function EssayGradeCard({ essayAnswer, onGrade }: { essayAnswer: any; onGrade: (id: string, score: number, feedback: string) => void }) {
+  const [score, setScore] = useState(essayAnswer.score?.toString() || "");
+  const [feedback, setFeedback] = useState(essayAnswer.feedback || "");
+  const [editing, setEditing] = useState(!essayAnswer.score);
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardContent className="pt-4 pb-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-sm text-gray-900 dark:text-white">{essayAnswer.student?.name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{essayAnswer.question?.question}</p>
+          </div>
+          {essayAnswer.score !== null && essayAnswer.score !== undefined && (
+            <div className="flex items-center gap-2">
+              <span className={`text-xl font-bold ${getGradeColor(essayAnswer.score)}`}>{essayAnswer.score}</span>
+              <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-xs">Edit</Button>
+            </div>
+          )}
+        </div>
+
+        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Student Answer:</p>
+          <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{essayAnswer.answer || "(no answer)"}</p>
+        </div>
+
+        {editing && (
+          <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <div className="flex gap-3">
+              <div className="space-y-1 flex-1">
+                <Label className="text-xs">Score (0-100)</Label>
+                <Input type="number" min="0" max="100" placeholder="85" value={score} onChange={(e) => setScore(e.target.value)} className="rounded-xl h-9" />
+              </div>
+              <div className="space-y-1 flex-1">
+                <Label className="text-xs">Feedback</Label>
+                <Input placeholder="Good answer!" value={feedback} onChange={(e) => setFeedback(e.target.value)} className="rounded-xl h-9" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" className="gap-1 rounded-xl" onClick={() => {
+                const s = parseInt(score);
+                if (isNaN(s) || s < 0 || s > 100) { toast.error("Score must be 0-100"); return; }
+                onGrade(essayAnswer.id, s, feedback);
+                setEditing(false);
+              }}>
+                <CheckCircle className="w-3 h-3" />Save Grade
+              </Button>
+              {essayAnswer.score !== null && (
+                <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditing(false)}>Cancel</Button>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
