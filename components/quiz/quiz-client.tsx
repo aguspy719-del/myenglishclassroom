@@ -29,7 +29,7 @@ export function QuizClient({ user }: QuizClientProps) {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ class_id: "", title: "", description: "", time_limit: "" });
+  const [form, setForm] = useState({ class_id: "all", title: "", description: "", time_limit: "" });
 
   const fetchData = async () => {
     const supabase = createClient();
@@ -58,26 +58,39 @@ export function QuizClient({ user }: QuizClientProps) {
   }, []);
 
   const handleCreate = async () => {
-    if (!form.class_id || !form.title) {
-      toast.error("Kelas dan judul harus diisi");
+    if (!form.title) {
+      toast.error("Quiz title is required");
       return;
     }
     setCreating(true);
     const supabase = createClient();
-    const { error } = await supabase.from("quizzes").insert([{
-      class_id: form.class_id,
-      title: form.title,
-      description: form.description || null,
-      time_limit: form.time_limit ? parseInt(form.time_limit) : null,
-    }]);
 
-    if (error) {
-      toast.error("Gagal membuat kuis");
-    } else {
-      toast.success("Kuis berhasil dibuat");
+    // If "all classes" selected, create a quiz for each class
+    const classIds = form.class_id === "all"
+      ? classes.map((c) => c.id)
+      : [form.class_id];
+
+    let successCount = 0;
+    for (const classId of classIds) {
+      const { error } = await supabase.from("quizzes").insert([{
+        class_id: classId,
+        title: form.title,
+        description: form.description || null,
+        time_limit: form.time_limit ? parseInt(form.time_limit) : null,
+      }]);
+      if (!error) successCount++;
+    }
+
+    if (successCount > 0) {
+      toast.success(form.class_id === "all"
+        ? `Quiz created for all ${successCount} classes`
+        : "Quiz created successfully"
+      );
       setShowCreate(false);
-      setForm({ class_id: "", title: "", description: "", time_limit: "" });
+      setForm({ class_id: "all", title: "", description: "", time_limit: "" });
       fetchData();
+    } else {
+      toast.error("Failed to create quiz");
     }
     setCreating(false);
   };
@@ -190,17 +203,25 @@ export function QuizClient({ user }: QuizClientProps) {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Kelas *</Label>
+              <Label>Class *</Label>
               <Select value={form.class_id} onValueChange={(v) => setForm({ ...form, class_id: v })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih kelas" />
+                  <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">
+                    <span className="font-semibold text-blue-600">📚 All Classes</span>
+                  </SelectItem>
                   {classes.map((cls) => (
                     <SelectItem key={cls.id} value={cls.id}>{cls.class_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {form.class_id === "all" && (
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  ✓ Quiz will be created for all {classes.length} classes
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Judul Kuis *</Label>

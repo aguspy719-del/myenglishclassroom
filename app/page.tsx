@@ -1,21 +1,22 @@
 import Link from "next/link";
 import {
   BookOpen, GraduationCap, Users, ClipboardList,
-  Star, Bell, ArrowRight, Calendar, Award, CheckCircle,
+  Star, Bell, ArrowRight, Calendar, Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { createClient } from "@/lib/supabase/server";
 
-const classes = [
-  { name: "XI Butik 1", students: 32, major: "Fashion Design", color: "from-blue-500 to-blue-600" },
-  { name: "XI Butik 2", students: 30, major: "Fashion Design", color: "from-indigo-500 to-indigo-600" },
-  { name: "XI Garmen", students: 28, major: "Garment", color: "from-violet-500 to-violet-600" },
-  { name: "XI Desain", students: 27, major: "Fashion Design", color: "from-purple-500 to-purple-600" },
-  { name: "XII Butik 1", students: 31, major: "Fashion Design", color: "from-cyan-500 to-cyan-600" },
-  { name: "XII Butik 2", students: 29, major: "Fashion Design", color: "from-teal-500 to-teal-600" },
-  { name: "XII Garmen", students: 26, major: "Garment", color: "from-emerald-500 to-emerald-600" },
-  { name: "XII Desain", students: 25, major: "Fashion Design", color: "from-green-500 to-green-600" },
+const classColors = [
+  "from-blue-500 to-blue-600",
+  "from-indigo-500 to-indigo-600",
+  "from-violet-500 to-violet-600",
+  "from-purple-500 to-purple-600",
+  "from-cyan-500 to-cyan-600",
+  "from-teal-500 to-teal-600",
+  "from-emerald-500 to-emerald-600",
+  "from-green-500 to-green-600",
 ];
 
 const schedule = [
@@ -57,7 +58,17 @@ const features = [
   { icon: Users, title: "Digital Attendance", desc: "Modern attendance tracking system", color: "bg-green-500", light: "bg-green-50 dark:bg-green-950" },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Fetch classes from database
+  const supabase = createClient();
+  const { data: classes } = await supabase
+    .from("classes")
+    .select("*")
+    .order("grade")
+    .order("class_name");
+
+  const totalStudents = (classes?.length || 0) * 28; // estimate
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Navbar */}
@@ -87,13 +98,10 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 py-20 px-4">
-        {/* Background decorations */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
         </div>
-
         <div className="relative max-w-6xl mx-auto text-center text-white">
           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6 text-sm font-medium">
             <span className="w-2 h-2 bg-green-400 rounded-full pulse-soft" />
@@ -116,17 +124,15 @@ export default function LandingPage() {
               </Button>
             </Link>
             <Link href="/login">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-white text-white hover:bg-white hover:text-blue-600 text-base px-8 h-12 font-semibold">
+              <Button size="lg" className="w-full sm:w-auto bg-white/20 backdrop-blur-sm border-2 border-white text-white hover:bg-white hover:text-blue-600 font-semibold text-base px-8 h-12">
                 Sign In
               </Button>
             </Link>
           </div>
-
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto mt-12">
             {[
-              { value: "8", label: "Classes" },
-              { value: "228", label: "Students" },
+              { value: String(classes?.length || 8), label: "Classes" },
+              { value: String(classes?.length ? classes.length * 28 : 228), label: "Students" },
               { value: "100%", label: "Digital" },
             ].map((stat) => (
               <div key={stat.label} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
@@ -143,12 +149,8 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
             <Badge variant="info" className="mb-3">Features</Badge>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
-              Everything You Need
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-              All tools for learning English in one platform
-            </p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Everything You Need</h2>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">All tools for learning English in one platform</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {features.map((feature) => {
@@ -192,11 +194,11 @@ export default function LandingPage() {
               </div>
               <div className="grid grid-cols-2 gap-3 flex-shrink-0">
                 <div className="bg-white/15 rounded-2xl p-4 text-center">
-                  <p className="text-3xl font-bold">8</p>
+                  <p className="text-3xl font-bold">{classes?.length || 8}</p>
                   <p className="text-xs text-blue-200">Classes</p>
                 </div>
                 <div className="bg-white/15 rounded-2xl p-4 text-center">
-                  <p className="text-3xl font-bold">228</p>
+                  <p className="text-3xl font-bold">{classes?.length ? classes.length * 28 : 228}</p>
                   <p className="text-xs text-blue-200">Students</p>
                 </div>
               </div>
@@ -205,7 +207,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Classes */}
+      {/* Classes - Dynamic from DB */}
       <section className="py-16 px-4 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
@@ -214,16 +216,16 @@ export default function LandingPage() {
             <p className="text-gray-500 dark:text-gray-400">Academic year 2025/2026</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {classes.map((cls) => (
+            {(classes || []).map((cls, idx) => (
               <div
-                key={cls.name}
-                className={`bg-gradient-to-br ${cls.color} rounded-2xl p-4 text-white shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-200`}
+                key={cls.id}
+                className={`bg-gradient-to-br ${classColors[idx % classColors.length]} rounded-2xl p-4 text-white shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-200`}
               >
-                <p className="font-bold text-lg leading-tight">{cls.name}</p>
+                <p className="font-bold text-lg leading-tight">{cls.class_name}</p>
                 <p className="text-white/80 text-xs mt-1">{cls.major}</p>
                 <div className="flex items-center gap-1 mt-3">
                   <Users className="w-3 h-3 text-white/70" />
-                  <span className="text-xs text-white/80">{cls.students} students</span>
+                  <span className="text-xs text-white/80">Grade {cls.grade}</span>
                 </div>
               </div>
             ))}
@@ -236,9 +238,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
             <Badge variant="info" className="mb-3">Schedule</Badge>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
-              Teaching Schedule
-            </h2>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Teaching Schedule</h2>
           </div>
           <div className="max-w-2xl mx-auto space-y-2">
             {schedule.map((item, idx) => (
@@ -267,31 +267,25 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
             <Badge variant="info" className="mb-3">Announcements</Badge>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
-              Latest Updates
-            </h2>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Latest Updates</h2>
           </div>
           <div className="max-w-3xl mx-auto space-y-3">
             {announcements.map((ann) => (
-              <div
-                key={ann.title}
-                className="flex gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-              >
+              <div key={ann.title} className="flex gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   ann.type === "deadline" ? "bg-red-100 dark:bg-red-900" :
                   ann.type === "material" ? "bg-green-100 dark:bg-green-900" :
                   "bg-blue-100 dark:bg-blue-900"
                 }`}>
-                  {ann.type === "deadline" ? <Bell className="w-5 h-5 text-red-600 dark:text-red-400" /> :
-                   ann.type === "material" ? <BookOpen className="w-5 h-5 text-green-600 dark:text-green-400" /> :
-                   <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
+                  <Bell className={`w-5 h-5 ${
+                    ann.type === "deadline" ? "text-red-600 dark:text-red-400" :
+                    ann.type === "material" ? "text-green-600 dark:text-green-400" :
+                    "text-blue-600 dark:text-blue-400"
+                  }`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <Badge
-                      variant={ann.type === "deadline" ? "destructive" : ann.type === "material" ? "success" : "info"}
-                      className="text-xs"
-                    >
+                    <Badge variant={ann.type === "deadline" ? "destructive" : ann.type === "material" ? "success" : "info"} className="text-xs">
                       {ann.type === "deadline" ? "Deadline" : ann.type === "material" ? "Material" : "Info"}
                     </Badge>
                     <span className="text-xs text-gray-400">{ann.date}</span>
@@ -316,9 +310,7 @@ export default function LandingPage() {
             <Award className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to Start Learning?</h2>
-          <p className="text-blue-100 mb-8 text-lg">
-            Join your classmates and access all English learning materials
-          </p>
+          <p className="text-blue-100 mb-8 text-lg">Join your classmates and access all English learning materials</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/register">
               <Button size="lg" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-blue-50 font-bold gap-2 px-8 h-12">
@@ -326,8 +318,8 @@ export default function LandingPage() {
               </Button>
             </Link>
             <Link href="/login">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 h-12 font-semibold">
-                Already have account? Sign In
+              <Button size="lg" className="w-full sm:w-auto bg-white/20 backdrop-blur-sm border-2 border-white text-white hover:bg-white hover:text-blue-600 font-semibold px-8 h-12">
+                Sign In
               </Button>
             </Link>
           </div>

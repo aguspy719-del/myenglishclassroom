@@ -146,7 +146,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Bottom actions */}
-        <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-0.5">
+        <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-0.5 pb-20 lg:pb-3">
           <Link
             href="/"
             onClick={onClose}
