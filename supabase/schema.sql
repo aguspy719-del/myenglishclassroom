@@ -309,3 +309,21 @@ INSERT INTO public.announcements (title, content) VALUES
   ('Selamat Datang di English LMS', 'Selamat datang di platform pembelajaran Bahasa Inggris SMK. Silakan login dan mulai belajar!'),
   ('Jadwal Kuis AKM', 'Kuis AKM akan dilaksanakan minggu depan. Pelajari materi Hope & Plan dengan baik.')
 ON CONFLICT DO NOTHING;
+
+-- Teaching Aids table (for teacher administrative documents)
+CREATE TABLE IF NOT EXISTS public.teaching_aids (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  doc_key TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  file_url TEXT NOT NULL,
+  file_size INTEGER,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.teaching_aids ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Teachers can manage teaching aids" ON public.teaching_aids
+  FOR ALL USING (public.get_user_role() = 'teacher');
+
+CREATE POLICY "Teachers can read teaching aids" ON public.teaching_aids
+  FOR SELECT USING (public.get_user_role() = 'teacher');

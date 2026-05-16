@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen, ClipboardList, GraduationCap, Home,
-  LayoutDashboard, LogOut, Star, Users, UserCheck, FileText, X,
+  LayoutDashboard, LogOut, Star, Users, UserCheck, FileText, X, BookMarked,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,8 @@ const teacherNavItems = [
   { href: "/assignments", label: "Assignments", icon: ClipboardList },
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
-  { href: "/quiz", label: "Quiz", icon: FileText },
+  { href: "/quiz", label: "Assessment", icon: FileText },
+  { href: "/teaching-aids", label: "Teaching Aids", icon: BookMarked },
 ];
 
 const studentNavItems = [
@@ -36,7 +37,7 @@ const studentNavItems = [
   { href: "/assignments", label: "Assignments", icon: ClipboardList },
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "My Grades", icon: Star },
-  { href: "/quiz", label: "Quiz", icon: FileText },
+  { href: "/quiz", label: "Assessment", icon: FileText },
 ];
 
 // Bottom nav items (most used, max 5)
@@ -200,3 +201,4 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
     </>
   );
 }
+

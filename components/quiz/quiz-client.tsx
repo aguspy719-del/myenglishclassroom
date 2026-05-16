@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -81,7 +81,7 @@ export function QuizClient({ user }: QuizClientProps) {
 
   const handleCreate = async () => {
     if (selectedClasses.length === 0) { toast.error("Select at least one class"); return; }
-    if (!form.title) { toast.error("Quiz title is required"); return; }
+    if (!form.title) { toast.error("Assessment title is required"); return; }
 
     setCreating(true);
     const supabase = createClient();
@@ -98,15 +98,15 @@ export function QuizClient({ user }: QuizClientProps) {
     const { error } = await supabase.from("quizzes").insert(insertData);
 
     if (error) {
-      toast.error("Failed to create quiz");
+      toast.error("Failed to Create Assessment");
     } else {
       const scheduled = form.published_at && new Date(form.published_at) > new Date();
       toast.success(
         scheduled
-          ? `Quiz scheduled for ${new Date(form.published_at).toLocaleString()}`
+          ? `Assessment scheduled for ${new Date(form.published_at).toLocaleString()}`
           : selectedClasses.length === 1
-            ? "Quiz created successfully!"
-            : `Quiz created for ${selectedClasses.length} classes!`
+            ? "Assessment created successfully!"
+            : `Assessment created for ${selectedClasses.length} classes!`
       );
       setShowCreate(false);
       setSelectedClasses([]);
@@ -117,11 +117,11 @@ export function QuizClient({ user }: QuizClientProps) {
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete quiz "${title}"?`)) return;
+    if (!confirm(`Delete assessment "${title}"?`)) return;
     const supabase = createClient();
     const { error } = await supabase.from("quizzes").delete().eq("id", id);
     if (error) toast.error("Failed to delete");
-    else { toast.success("Quiz deleted"); fetchData(); }
+    else { toast.success("Assessment deleted"); fetchData(); }
   };
 
   const minDateTime = new Date().toISOString().slice(0, 16);
@@ -143,13 +143,13 @@ export function QuizClient({ user }: QuizClientProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quiz & Assessment</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Assessment</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">{filtered.length} available</p>
         </div>
         {user.role === "teacher" && (
           <Button onClick={() => setShowCreate(true)} className="gap-2">
             <Plus className="w-4 h-4" />
-            Create Quiz
+            Create Assessment
           </Button>
         )}
       </div>
@@ -158,7 +158,7 @@ export function QuizClient({ user }: QuizClientProps) {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <Input
-          placeholder="Search quiz..."
+          placeholder="Search assessment..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9 rounded-xl"
@@ -182,10 +182,10 @@ export function QuizClient({ user }: QuizClientProps) {
           ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-gray-500 dark:text-gray-400">
               <FileText className="w-16 h-16 mx-auto mb-4 opacity-20" />
-              <p className="text-lg font-medium">No quizzes yet</p>
+              <p className="text-lg font-medium">No assessments yet</p>
               {user.role === "teacher" && (
                 <Button onClick={() => setShowCreate(true)} className="mt-4 gap-2">
-                  <Plus className="w-4 h-4" />Create First Quiz
+                  <Plus className="w-4 h-4" />Create First Assessment
                 </Button>
               )}
             </div>
@@ -233,7 +233,7 @@ export function QuizClient({ user }: QuizClientProps) {
                       </div>
                       <Link href={`/quiz/${quiz.id}`}>
                         <Button className="w-full rounded-xl" size="sm" disabled={scheduled && user.role === "student"}>
-                          {user.role === "teacher" ? "Manage" : scheduled ? "Not Available Yet" : "Start Quiz"}
+                          {user.role === "teacher" ? "Manage" : scheduled ? "Not Available Yet" : "Start Assessment"}
                         </Button>
                       </Link>
                     </CardContent>
@@ -255,7 +255,7 @@ export function QuizClient({ user }: QuizClientProps) {
       }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New Quiz</DialogTitle>
+            <DialogTitle>Create New Assessment</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
 
@@ -348,12 +348,12 @@ export function QuizClient({ user }: QuizClientProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Quiz Title *</Label>
+              <Label>Assessment title *</Label>
               <Input placeholder="e.g. Asesmen Formatif - Hope and Plan" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="rounded-xl" />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea placeholder="Quiz description..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="rounded-xl" />
+              <Textarea placeholder="Assessment description..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="rounded-xl" />
             </div>
             <div className="space-y-2">
               <Label>Time Limit (minutes)</Label>
@@ -373,7 +373,7 @@ export function QuizClient({ user }: QuizClientProps) {
               <Input type="datetime-local" min={minDateTime} value={form.published_at} onChange={(e) => setForm({ ...form, published_at: e.target.value })} className="rounded-xl" />
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {form.published_at
-                  ? `⏰ Quiz will be visible to students on ${new Date(form.published_at).toLocaleString()}`
+                  ? `⏰ Assessment will be visible to students on ${new Date(form.published_at).toLocaleString()}`
                   : "Leave empty to publish immediately"}
               </p>
             </div>
@@ -389,3 +389,4 @@ export function QuizClient({ user }: QuizClientProps) {
     </div>
   );
 }
+
