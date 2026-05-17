@@ -22,8 +22,18 @@ const CATEGORIES = [
     color: "bg-blue-500",
     lightColor: "bg-blue-50 dark:bg-blue-950",
     textColor: "text-blue-700 dark:text-blue-300",
-    description: "CP, ATP, TP, and Teaching Module documents",
-    suggestedDocs: ["CP + ATP + TP (Combined)", "Teaching Module"],
+    description: "CP (Learning Outcomes), ATP (Learning Pathway), TP (Learning Objectives)",
+    suggestedDocs: ["CP + ATP + TP (Combined Document)"],
+  },
+  {
+    id: "teaching_module",
+    label: "Teaching Module",
+    icon: FileText,
+    color: "bg-indigo-500",
+    lightColor: "bg-indigo-50 dark:bg-indigo-950",
+    textColor: "text-indigo-700 dark:text-indigo-300",
+    description: "Modul Ajar — detailed lesson plans per topic/meeting",
+    suggestedDocs: ["Module 1 - Hope & Plan", "Module 2 - Daily Activities"],
   },
   {
     id: "calendar",
@@ -42,8 +52,8 @@ const CATEGORIES = [
     color: "bg-purple-500",
     lightColor: "bg-purple-50 dark:bg-purple-950",
     textColor: "text-purple-700 dark:text-purple-300",
-    description: "Prota and Promes documents",
-    suggestedDocs: ["Prota (Annual Program)", "Promes Semester 1", "Promes Semester 2"],
+    description: "Prota (Annual Program) and Promes (Semester Program)",
+    suggestedDocs: ["Prota 2025/2026", "Promes Semester 1", "Promes Semester 2"],
   },
   {
     id: "assessment_criteria",
@@ -52,7 +62,7 @@ const CATEGORIES = [
     color: "bg-orange-500",
     lightColor: "bg-orange-50 dark:bg-orange-950",
     textColor: "text-orange-700 dark:text-orange-300",
-    description: "KKTP and assessment rubric documents",
+    description: "KKTP (Assessment Criteria) and rubric documents",
     suggestedDocs: ["KKTP", "Assessment Rubric"],
   },
 ];
@@ -63,8 +73,52 @@ interface DocFile {
   file_name: string;
   file_url: string;
   file_size?: number;
-  description?: string;
   uploaded_at: string;
+}
+
+function UploadButton({
+  categoryId,
+  color,
+  uploading,
+  onUpload,
+}: {
+  categoryId: string;
+  color: string;
+  uploading: boolean;
+  onUpload: (categoryId: string, files: FileList) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        className="hidden"
+        multiple
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            onUpload(categoryId, e.target.files);
+          }
+          if (inputRef.current) inputRef.current.value = "";
+        }}
+      />
+      <Button
+        size="sm"
+        className={`gap-2 rounded-xl ${color} text-white hover:opacity-90 border-0`}
+        disabled={uploading}
+        onClick={() => inputRef.current?.click()}
+      >
+        {uploading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Plus className="w-4 h-4" />
+        )}
+        Upload Files
+      </Button>
+    </div>
+  );
 }
 
 export function TeachingAidsClient() {
@@ -72,6 +126,7 @@ export function TeachingAidsClient() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentUploadCategory, setCurrentUploadCategory] = useState<string | null>(null);
 
   const fetchFiles = async () => {
     const supabase = createClient();
@@ -86,54 +141,74 @@ export function TeachingAidsClient() {
   useEffect(() => { fetchFiles(); }, []);
 
   const handleUpload = async (category: string, selectedFiles: FileList) => {
-    if (selectedFiles.length === 0) return;
     setUploading(true);
+    setCurrentUploadCategory(category);
     setUploadProgress(0);
     const supabase = createClient();
     let successCount = 0;
 
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
+
       if (file.size > 50 * 1024 * 1024) {
         toast.error(`${file.name} is too large. Max 50MB`);
         continue;
       }
 
       try {
-        setUploadProgress(Math.round(((i + 0.5) / selectedFiles.length) * 100));
+        setUploadProgress(Math.round(((i + 0.3) / selectedFiles.length) * 100));
+
         const fileExt = file.name.split(".").pop();
-        const fileName = `teaching-aids/${category}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const storagePath = `teaching-aids/${category}/${uniqueName}`;
 
-        const { error: uploadError } = await supabase.storage
+        // Upload to storage
+        const { error: storageError } = await supabase.storage
           .from("materials")
-          .upload(fileName, file, { cacheControl: "3600", upsert: false });
+          .upload(storagePath, file, { cacheControl: "3600" });
 
-        if (uploadError) throw uploadError;
+        if (storageError) {
+          console.error("Storage error:", storageError);
+          toast.error(`Storage error: ${storageError.message}`);
+          continue;
+        }
 
-        const { data: urlData } = supabase.storage.from("materials").getPublicUrl(fileName);
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from("materials")
+          .getPublicUrl(storagePath);
 
-        const { error: dbError } = await supabase.from("teaching_aids").insert([{
+        // Save to database
+        const { error: dbError } = await supabase.from("teaching_aids").insert({
           category,
           file_name: file.name,
           file_url: urlData.publicUrl,
           file_size: file.size,
           uploaded_at: new Date().toISOString(),
-        }]);
+        });
 
-        if (dbError) throw dbError;
+        if (dbError) {
+          console.error("DB error:", dbError);
+          toast.error(`Database error: ${dbError.message}`);
+          continue;
+        }
+
         successCount++;
         setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
       } catch (err: any) {
-        toast.error(`Failed to upload ${file.name}: ${err.message}`);
+        console.error("Upload error:", err);
+        toast.error(`Failed: ${err.message}`);
       }
     }
 
     if (successCount > 0) {
-      toast.success(`${successCount} file${successCount > 1 ? "s" : ""} uploaded successfully!`);
+      toast.success(`${successCount} file${successCount > 1 ? "s" : ""} uploaded!`);
       fetchFiles();
     }
+
     setUploading(false);
     setUploadProgress(0);
+    setCurrentUploadCategory(null);
   };
 
   const handleDelete = async (id: string, fileName: string) => {
@@ -156,9 +231,6 @@ export function TeachingAidsClient() {
     return "📎";
   };
 
-  const totalUploaded = files.length;
-  const totalExpected = CATEGORIES.reduce((sum, cat) => sum + cat.suggestedDocs.length, 0);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -169,25 +241,25 @@ export function TeachingAidsClient() {
         </p>
       </div>
 
-      {/* Summary card */}
+      {/* Summary */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
         <CardContent className="pt-5 pb-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-blue-100 text-sm">Total Documents Uploaded</p>
-              <p className="text-4xl font-bold mt-1">{totalUploaded}</p>
+              <p className="text-blue-100 text-sm">Total Documents</p>
+              <p className="text-4xl font-bold mt-1">{files.length}</p>
             </div>
             <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center">
               <FileText className="w-7 h-7 text-white" />
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-2">
             {CATEGORIES.map((cat) => {
               const count = getFilesForCategory(cat.id).length;
               return (
-                <div key={cat.id} className="bg-white/15 rounded-xl p-2.5 text-center">
-                  <p className="text-xl font-bold">{count}</p>
-                  <p className="text-xs text-blue-200 mt-0.5 truncate">{cat.label}</p>
+                <div key={cat.id} className="bg-white/15 rounded-xl p-2 text-center">
+                  <p className="text-lg font-bold">{count}</p>
+                  <p className="text-xs text-blue-200 truncate">{cat.label.split(" ")[0]}</p>
                 </div>
               );
             })}
@@ -197,11 +269,14 @@ export function TeachingAidsClient() {
 
       {/* Upload progress */}
       {uploading && (
-        <Card className="border-0 shadow-sm">
+        <Card className="border-0 shadow-sm border-l-4 border-l-blue-500">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Uploading...</p>
-              <p className="text-sm text-gray-500">{uploadProgress}%</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                Uploading to {CATEGORIES.find((c) => c.id === currentUploadCategory)?.label}...
+              </p>
+              <p className="text-sm font-bold text-blue-600">{uploadProgress}%</p>
             </div>
             <Progress value={uploadProgress} className="h-2" />
           </CardContent>
@@ -210,15 +285,16 @@ export function TeachingAidsClient() {
 
       {/* Tabs */}
       <Tabs defaultValue="curriculum">
-        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1">
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1 p-1">
           {CATEGORIES.map((cat) => {
             const count = getFilesForCategory(cat.id).length;
             return (
-              <TabsTrigger key={cat.id} value={cat.id} className="gap-1.5 text-xs">
+              <TabsTrigger key={cat.id} value={cat.id} className="gap-1.5 text-xs relative">
                 <cat.icon className="w-3.5 h-3.5" />
-                {cat.label}
+                <span className="hidden sm:inline">{cat.label}</span>
+                <span className="sm:hidden">{cat.label.split(" ")[0]}</span>
                 {count > 0 && (
-                  <span className="ml-1 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  <span className="ml-0.5 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
                     {count}
                   </span>
                 )}
@@ -229,74 +305,61 @@ export function TeachingAidsClient() {
 
         {CATEGORIES.map((cat) => {
           const catFiles = getFilesForCategory(cat.id);
+          const isCurrentlyUploading = uploading && currentUploadCategory === cat.id;
+
           return (
             <TabsContent key={cat.id} value={cat.id} className="mt-4 space-y-4">
-              {/* Category header */}
+              {/* Header card */}
               <div className={`p-4 ${cat.lightColor} rounded-2xl`}>
-                <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 ${cat.color} rounded-xl flex items-center justify-center`}>
+                    <div className={`w-10 h-10 ${cat.color} rounded-xl flex items-center justify-center flex-shrink-0`}>
                       <cat.icon className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <p className={`font-semibold ${cat.textColor}`}>{cat.label}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{cat.description}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{cat.description}</p>
                     </div>
                   </div>
-                  {/* Upload button */}
-                  <label className="cursor-pointer">
-                    <Button
-                      className={`gap-2 rounded-xl pointer-events-none ${cat.color} text-white hover:opacity-90`}
-                      disabled={uploading}
-                      size="sm"
-                    >
-                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                      Upload Files
-                    </Button>
-                    <input
-                      type="file"
-                      className="hidden"
-                      multiple
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                      disabled={uploading}
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files.length > 0) {
-                          handleUpload(cat.id, e.target.files);
-                        }
-                        e.target.value = "";
-                      }}
-                    />
-                  </label>
+                  <UploadButton
+                    categoryId={cat.id}
+                    color={cat.color}
+                    uploading={isCurrentlyUploading}
+                    onUpload={handleUpload}
+                  />
                 </div>
 
-                {/* Suggested docs hint */}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 w-full">Suggested documents:</p>
-                  {cat.suggestedDocs.map((doc) => (
-                    <span key={doc} className="text-xs bg-white/60 dark:bg-gray-800/60 px-2 py-1 rounded-lg text-gray-600 dark:text-gray-400">
-                      {doc}
-                    </span>
-                  ))}
+                {/* Suggested docs */}
+                <div className="mt-3">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Suggested documents:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cat.suggestedDocs.map((doc) => (
+                      <span key={doc} className="text-xs bg-white/70 dark:bg-gray-800/70 px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-400 border border-white/50">
+                        {doc}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Files list */}
+              {/* Files */}
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2].map((i) => <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
                 </div>
               ) : catFiles.length === 0 ? (
-                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                  <Upload className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
+                  <Upload className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p className="font-medium">No files uploaded yet</p>
-                  <p className="text-sm mt-1">Click "Upload Files" to add documents</p>
+                  <p className="text-sm mt-1 text-gray-400">Click "Upload Files" above to add documents</p>
+                  <p className="text-xs mt-1 text-gray-400">Supports PDF, DOCX, XLSX, PPT</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {catFiles.map((file) => (
                     <div
                       key={file.id}
-                      className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm group hover:shadow-md transition-shadow"
+                      className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm group hover:shadow-md transition-all"
                     >
                       <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0 text-xl">
                         {getFileIcon(file.file_name)}
@@ -306,14 +369,16 @@ export function TeachingAidsClient() {
                           {file.file_name}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {file.file_size ? formatFileSize(file.file_size) : ""} · {formatDate(file.uploaded_at)}
+                          {file.file_size ? formatFileSize(file.file_size) : ""}
+                          {file.file_size ? " · " : ""}
+                          {formatDate(file.uploaded_at)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <a href={file.file_url} target="_blank" rel="noopener noreferrer">
                           <Button variant="outline" size="sm" className="gap-1.5 rounded-xl h-8 text-xs">
                             <Download className="w-3.5 h-3.5" />
-                            Download
+                            <span className="hidden sm:inline">Download</span>
                           </Button>
                         </a>
                         <Button
