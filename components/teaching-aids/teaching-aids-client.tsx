@@ -144,7 +144,6 @@ export function TeachingAidsClient() {
     setUploading(true);
     setCurrentUploadCategory(category);
     setUploadProgress(0);
-    const supabase = createClient();
     let successCount = 0;
 
     for (let i = 0; i < selectedFiles.length; i++) {
@@ -158,46 +157,26 @@ export function TeachingAidsClient() {
       try {
         setUploadProgress(Math.round(((i + 0.3) / selectedFiles.length) * 100));
 
-        const fileExt = file.name.split(".").pop();
-        const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const storagePath = `teaching-aids/${category}/${uniqueName}`;
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("category", category);
 
-        // Upload to storage
-        const { error: storageError } = await supabase.storage
-          .from("materials")
-          .upload(storagePath, file, { cacheControl: "3600" });
-
-        if (storageError) {
-          console.error("Storage error:", storageError);
-          toast.error(`Storage error: ${storageError.message}`);
-          continue;
-        }
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from("materials")
-          .getPublicUrl(storagePath);
-
-        // Save to database
-        const { error: dbError } = await supabase.from("teaching_aids").insert({
-          category,
-          file_name: file.name,
-          file_url: urlData.publicUrl,
-          file_size: file.size,
-          uploaded_at: new Date().toISOString(),
+        const response = await fetch("/api/teaching-aids/upload", {
+          method: "POST",
+          body: formData,
         });
 
-        if (dbError) {
-          console.error("DB error:", dbError);
-          toast.error(`Database error: ${dbError.message}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          toast.error(`Failed to upload ${file.name}: ${result.error}`);
           continue;
         }
 
         successCount++;
         setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
       } catch (err: any) {
-        console.error("Upload error:", err);
-        toast.error(`Failed: ${err.message}`);
+        toast.error(`Error: ${err.message}`);
       }
     }
 

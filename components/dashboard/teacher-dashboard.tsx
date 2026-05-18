@@ -230,10 +230,10 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { href: "/classes", label: "Manage Classes", icon: Users, color: "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400" },
-              { href: "/materials/upload", label: "Upload Material", icon: BookOpen, color: "bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400" },
+              { href: "/classes", label: "My Classes", icon: Users, color: "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400" },
               { href: "/assignments/create", label: "New Assignment", icon: ClipboardList, color: "bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400" },
-              { href: "/attendance", label: "View Attendance", icon: CheckCircle, color: "bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-400" },
+              { href: "/attendance", label: "Attendance", icon: CheckCircle, color: "bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-400" },
+              { href: "/teaching-aids", label: "Teaching Aids", icon: BookOpen, color: "bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400" },
             ].map((action) => {
               const Icon = action.icon;
               return (

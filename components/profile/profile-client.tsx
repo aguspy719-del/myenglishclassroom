@@ -1,190 +1,237 @@
 "use client";
 
-import { useState } from "react";
-import { User as UserIcon, Mail, Shield, Loader2, Save } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User as UserIcon, Mail, Shield, Loader2, Save, Star, Trophy, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { getInitials, formatDate } from "@/lib/utils";
+import { BADGES, POINTS_PER_LEVEL } from "@/lib/gamification";
 import type { User } from "@/types";
 
 interface ProfileClientProps {
   user: User;
 }
 
-export function ProfileClient({ user }: ProfileClientProps) {
-  const [name, setName] = useState(user.name);
+export function ProfileClient({ user: initialUser }: ProfileClientProps) {
+  const [user, setUser] = useState(initialUser);
+  const [name, setName] = useState(initialUser.name);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
+  const [passwords, setPasswords] = useState({ new: "", confirm: "" });
+
+  const points = (user as any).points || 0;
+  const level = (user as any).level || 1;
+  const badges: string[] = (user as any).badges || [];
+  const pointsInCurrentLevel = points % POINTS_PER_LEVEL;
+  const progressPercent = Math.round((pointsInCurrentLevel / POINTS_PER_LEVEL) * 100);
+  const pointsToNextLevel = POINTS_PER_LEVEL - pointsInCurrentLevel;
 
   const handleSaveName = async () => {
-    if (!name.trim()) {
-      toast.error("Nama tidak boleh kosong");
-      return;
-    }
+    if (!name.trim()) { toast.error("Name cannot be empty"); return; }
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.from("users").update({ name }).eq("id", user.id);
-    if (error) {
-      toast.error("Gagal menyimpan nama");
-    } else {
-      toast.success("Nama berhasil diperbarui");
-    }
+    if (error) toast.error("Failed to save name");
+    else { toast.success("Name updated!"); setUser({ ...user, name }); }
     setSaving(false);
   };
 
   const handleChangePassword = async () => {
-    if (!passwords.new || !passwords.confirm) {
-      toast.error("Password baru harus diisi");
-      return;
-    }
-    if (passwords.new !== passwords.confirm) {
-      toast.error("Konfirmasi password tidak cocok");
-      return;
-    }
-    if (passwords.new.length < 6) {
-      toast.error("Password minimal 6 karakter");
-      return;
-    }
-
+    if (!passwords.new || !passwords.confirm) { toast.error("Fill in all password fields"); return; }
+    if (passwords.new !== passwords.confirm) { toast.error("Passwords do not match"); return; }
+    if (passwords.new.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setChangingPassword(true);
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password: passwords.new });
-
-    if (error) {
-      toast.error("Gagal mengubah password: " + error.message);
-    } else {
-      toast.success("Password berhasil diubah");
-      setPasswords({ current: "", new: "", confirm: "" });
-    }
+    if (error) toast.error("Failed: " + error.message);
+    else { toast.success("Password changed!"); setPasswords({ new: "", confirm: "" }); }
     setChangingPassword(false);
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profil Saya</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">Kelola informasi akun kamu</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your account and view achievements</p>
       </div>
 
-      {/* Profile Card */}
-      <Card>
-        <CardContent className="pt-6 pb-6">
-          <div className="flex items-center gap-4 mb-6">
-            <Avatar className="w-20 h-20">
-              <AvatarImage src={user.avatar_url} />
-              <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-2xl font-bold">
+      {/* Profile Hero Card */}
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+        <CardContent className="pt-0 pb-6">
+          <div className="flex items-end gap-4 -mt-10 mb-4">
+            <Avatar className="w-20 h-20 border-4 border-white dark:border-gray-900 shadow-lg">
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-2xl font-bold">
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="pb-2">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
-              <p className="text-gray-500 dark:text-gray-400">{user.email}</p>
-              <Badge
-                variant={user.role === "teacher" ? "info" : "success"}
-                className="mt-1"
-              >
-                {user.role === "teacher" ? "👨‍🏫 Guru" : "👨‍🎓 Siswa"}
+              <p className="text-gray-500 dark:text-gray-400 text-sm">{user.email}</p>
+              <Badge className={user.role === "teacher" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 mt-1" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 mt-1"}>
+                {user.role === "teacher" ? "👨‍🏫 Teacher" : "👨‍🎓 Student"}
               </Badge>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Bergabung</p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{formatDate(user.created_at)}</p>
+          {/* Gamification stats — students only */}
+          {user.role === "student" && (
+            <div className="space-y-4">
+              {/* Level & XP */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                      <span className="text-white font-bold text-sm">{level}</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white">Level {level}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{points} XP total</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{pointsToNextLevel} XP</p>
+                    <p className="text-xs text-gray-500">to Level {level + 1}</p>
+                  </div>
+                </div>
+                <Progress value={progressPercent} className="h-3 rounded-full" />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 text-center">
+                  {pointsInCurrentLevel} / {POINTS_PER_LEVEL} XP
+                </p>
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Level", value: level, icon: "⚡", color: "bg-yellow-50 dark:bg-yellow-950" },
+                  { label: "Total XP", value: points, icon: "🎯", color: "bg-blue-50 dark:bg-blue-950" },
+                  { label: "Badges", value: badges.length, icon: "🏅", color: "bg-purple-50 dark:bg-purple-950" },
+                ].map((stat) => (
+                  <div key={stat.label} className={`${stat.color} rounded-2xl p-3 text-center`}>
+                    <p className="text-xl">{stat.icon}</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Role</p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white capitalize">{user.role}</p>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Badges — students only */}
+      {user.role === "student" && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              Badges & Achievements
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {BADGES.map((badge) => {
+                const earned = badges.includes(badge.id);
+                return (
+                  <div
+                    key={badge.id}
+                    className={`relative p-3 rounded-2xl text-center transition-all ${
+                      earned
+                        ? `bg-gradient-to-br ${badge.color} shadow-md`
+                        : "bg-gray-100 dark:bg-gray-800 opacity-40 grayscale"
+                    }`}
+                  >
+                    <p className="text-3xl mb-1">{badge.icon}</p>
+                    <p className={`text-xs font-bold ${earned ? "text-white" : "text-gray-500"}`}>
+                      {badge.name}
+                    </p>
+                    <p className={`text-xs mt-0.5 ${earned ? "text-white/80" : "text-gray-400"} line-clamp-2`}>
+                      {badge.description}
+                    </p>
+                    {earned && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Edit Name */}
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <UserIcon className="w-4 h-4" />
-            Ubah Nama
+            Edit Name
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nama lengkap"
-              className="flex-1"
-            />
-            <Button onClick={handleSaveName} disabled={saving || name === user.name} className="gap-2">
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="flex-1 rounded-xl" />
+            <Button onClick={handleSaveName} disabled={saving || name === user.name} className="gap-2 rounded-xl">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Simpan
+              Save
             </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Account Info */}
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Mail className="w-4 h-4" />
-            Informasi Akun
+            Account Info
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <CardContent>
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+              <p className="text-xs text-gray-500">Email</p>
               <p className="text-sm font-medium text-gray-900 dark:text-white">{user.email}</p>
             </div>
-            <Badge variant="success" className="text-xs">Terverifikasi</Badge>
+            <Badge variant="success" className="text-xs">Verified</Badge>
+          </div>
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl mt-2">
+            <div>
+              <p className="text-xs text-gray-500">Member since</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{formatDate(user.created_at)}</p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Change Password */}
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Shield className="w-4 h-4" />
-            Ubah Password
+            Change Password
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Password Baru</Label>
-            <Input
-              type="password"
-              placeholder="Minimal 6 karakter"
-              value={passwords.new}
-              onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-            />
+            <Label>New Password</Label>
+            <Input type="password" placeholder="Minimum 6 characters" value={passwords.new} onChange={(e) => setPasswords({ ...passwords, new: e.target.value })} className="rounded-xl" />
           </div>
           <div className="space-y-2">
-            <Label>Konfirmasi Password Baru</Label>
-            <Input
-              type="password"
-              placeholder="Ulangi password baru"
-              value={passwords.confirm}
-              onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-            />
+            <Label>Confirm New Password</Label>
+            <Input type="password" placeholder="Re-enter new password" value={passwords.confirm} onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })} className="rounded-xl" />
           </div>
-          <Button
-            onClick={handleChangePassword}
-            disabled={changingPassword || !passwords.new || !passwords.confirm}
-            className="w-full gap-2"
-          >
+          <Button onClick={handleChangePassword} disabled={changingPassword || !passwords.new || !passwords.confirm} className="w-full gap-2 rounded-xl">
             {changingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-            Ubah Password
+            Change Password
           </Button>
         </CardContent>
       </Card>

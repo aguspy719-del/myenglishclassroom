@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BookOpen, ClipboardList, GraduationCap, Home,
+  GraduationCap, Home, Mic,
   LayoutDashboard, LogOut, Star, Users, UserCheck, FileText, X, BookMarked,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,39 +22,37 @@ interface SidebarProps {
 const teacherNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/classes", label: "Classes", icon: Users },
-  { href: "/materials", label: "Materials", icon: BookOpen },
-  { href: "/assignments", label: "Assignments", icon: ClipboardList },
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
   { href: "/quiz", label: "Assessment", icon: FileText },
+  { href: "/speaking", label: "Speaking", icon: Mic },
   { href: "/teaching-aids", label: "Teaching Aids", icon: BookMarked },
 ];
 
 const studentNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/classes", label: "My Classes", icon: GraduationCap },
-  { href: "/materials", label: "Materials", icon: BookOpen },
-  { href: "/assignments", label: "Assignments", icon: ClipboardList },
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "My Grades", icon: Star },
   { href: "/quiz", label: "Assessment", icon: FileText },
+  { href: "/speaking", label: "Speaking", icon: Mic },
 ];
 
 // Bottom nav items (most used, max 5)
 const teacherBottomNav = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/classes", label: "Classes", icon: Users },
-  { href: "/assignments", label: "Tasks", icon: ClipboardList },
+  { href: "/attendance", label: "Attend", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
-  { href: "/materials", label: "Materials", icon: BookOpen },
+  { href: "/quiz", label: "Assessment", icon: FileText },
 ];
 
 const studentBottomNav = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/assignments", label: "Tasks", icon: ClipboardList },
-  { href: "/materials", label: "Materials", icon: BookOpen },
-  { href: "/grades", label: "Grades", icon: Star },
+  { href: "/classes", label: "Classes", icon: GraduationCap },
   { href: "/attendance", label: "Attend", icon: UserCheck },
+  { href: "/grades", label: "Grades", icon: Star },
+  { href: "/quiz", label: "Assessment", icon: FileText },
 ];
 
 export function Sidebar({ role, isOpen, onClose }: SidebarProps) {

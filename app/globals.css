@@ -125,3 +125,38 @@
   height: 60px;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
 }
+
+/* iOS & Mobile fixes */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+  button, a, [role="button"] {
+    min-height: 44px; /* Apple HIG touch target */
+  }
+}
+
+/* Hide scrollbar but keep scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* iOS safe area */
+.safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+}
+
+/* Prevent tap highlight on iOS */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}

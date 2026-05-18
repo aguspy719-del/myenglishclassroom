@@ -1,15 +1,11 @@
 "use client";
 
-import { Bell, Menu, Moon, Sun } from "lucide-react";
+import { Menu, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "next-themes";
 import { getInitials } from "@/lib/utils";
@@ -18,6 +14,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Notifications } from "./notifications";
 
 interface NavbarProps {
   user: User;
@@ -64,9 +61,7 @@ export function Navbar({ user, onMenuClick }: NavbarProps) {
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Notifications">
-          <Bell className="w-4 h-4" />
-        </Button>
+        <Notifications userId={user.id} />
 
         {/* User menu */}
         <DropdownMenu>

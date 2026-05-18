@@ -74,6 +74,17 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
       quiz_id: quiz.id, student_id: user.id, score: finalScore,
       completed_at: new Date().toISOString(), started_at: new Date().toISOString(),
     }]);
+    // Award XP for completing assessment
+    if (finalScore >= 75) {
+      import("@/lib/gamification").then(({ awardPoints }) => {
+        awardPoints(user.id, 100, `completing ${quiz.title}`);
+      });
+    }
+    if (finalScore === 100) {
+      import("@/lib/gamification").then(({ awardBadge }) => {
+        awardBadge(user.id, "perfect_score");
+      });
+    }
     questions.filter((q) => (q as any).question_type === "essay").forEach((q) => {
       if (essayAnswers[q.id]) {
         supabase.from("essay_answers").upsert({
