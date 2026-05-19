@@ -348,7 +348,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                             value={record.status}
                             onValueChange={(v) => handleChangeStatus(record.id, v as AttendanceStatus)}
                           >
-                            <SelectTrigger className="h-8 w-28 text-xs rounded-lg">
+                            <SelectTrigger className="h-8 w-24 sm:w-28 text-xs rounded-lg">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>

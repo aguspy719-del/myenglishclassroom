@@ -180,7 +180,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             </Button>
           </Link>
 
-          <div className="flex items-end justify-between">
+          <div className="flex items-end justify-between flex-wrap gap-3">
             <div>
               <Badge className="bg-white/20 text-white border-white/30 mb-2">Grade {classData.grade}</Badge>
               <h1 className="text-3xl font-bold text-white">{classData.class_name}</h1>
@@ -189,28 +189,26 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                 {students.length} students · {materials.length} materials · {activeAssignments} active tasks
               </p>
             </div>
-            <div className="hidden sm:flex items-center gap-2">
-              {user.role === "teacher" && (
-                <>
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl px-3 py-2 text-center">
-                    <p className="text-white/70 text-xs">Class Code</p>
-                    <p className="text-white font-bold text-lg tracking-widest">{(classData as any).join_code || "------"}</p>
-                  </div>
-                  <Link href={`/assignments/create?class=${classData.id}`}>
-                    <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30 gap-2 rounded-xl backdrop-blur-sm">
-                      <Plus className="w-4 h-4" />
-                      Assignment
-                    </Button>
-                  </Link>
-                  <Link href={`/materials/upload?class=${classData.id}`}>
-                    <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30 gap-2 rounded-xl backdrop-blur-sm">
-                      <Plus className="w-4 h-4" />
-                      Material
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
+            {user.role === "teacher" && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="bg-white/20 backdrop-blur-sm rounded-xl px-3 py-2 text-center">
+                  <p className="text-white/70 text-xs">Class Code</p>
+                  <p className="text-white font-bold text-lg tracking-widest">{(classData as any).join_code || "------"}</p>
+                </div>
+                <Link href={`/assignments/create?class=${classData.id}`}>
+                  <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30 gap-2 rounded-xl backdrop-blur-sm">
+                    <Plus className="w-4 h-4" />
+                    Assignment
+                  </Button>
+                </Link>
+                <Link href={`/materials/upload?class=${classData.id}`}>
+                  <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30 gap-2 rounded-xl backdrop-blur-sm">
+                    <Plus className="w-4 h-4" />
+                    Material
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -241,7 +239,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
         {/* ── STREAM TAB ── */}
         <TabsContent value="stream" className="mt-0">
-          <div className="max-w-3xl mx-auto space-y-4">
+          <div className="max-w-3xl mx-auto space-y-4 pb-4">
             {/* Post box — teacher only */}
             {user.role === "teacher" && (
               <Card className="border-0 shadow-sm rounded-2xl">

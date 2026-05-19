@@ -232,7 +232,7 @@ export function TeachingAidsClient() {
               <FileText className="w-7 h-7 text-white" />
             </div>
           </div>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             {CATEGORIES.map((cat) => {
               const count = getFilesForCategory(cat.id).length;
               return (
@@ -264,11 +264,11 @@ export function TeachingAidsClient() {
 
       {/* Tabs */}
       <Tabs defaultValue="curriculum">
-        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1 p-1">
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1 p-1 overflow-x-auto scrollbar-hide">
           {CATEGORIES.map((cat) => {
             const count = getFilesForCategory(cat.id).length;
             return (
-              <TabsTrigger key={cat.id} value={cat.id} className="gap-1.5 text-xs relative">
+              <TabsTrigger key={cat.id} value={cat.id} className="gap-1.5 text-xs flex-shrink-0">
                 <cat.icon className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{cat.label}</span>
                 <span className="sm:hidden">{cat.label.split(" ")[0]}</span>

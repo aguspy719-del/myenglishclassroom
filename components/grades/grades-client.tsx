@@ -206,7 +206,7 @@ export function GradesClient({ user }: GradesClientProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {user.role === "teacher" ? "Grade Records" : "My Grades"}
@@ -217,7 +217,7 @@ export function GradesClient({ user }: GradesClientProps) {
           <Button
             onClick={handleExportExcel}
             disabled={exporting}
-            className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+            className="gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
           >
             <FileSpreadsheet className="w-4 h-4" />
             {exporting ? "Exporting..." : "Export Rapor Excel"}
