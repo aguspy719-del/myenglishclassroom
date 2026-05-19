@@ -11,7 +11,15 @@ export function PWARegister() {
   useEffect(() => {
     // Register service worker
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        // Listen for sync messages from SW
+        navigator.serviceWorker.addEventListener("message", (event) => {
+          if (event.data?.type === "SYNC_DATA") {
+            // Trigger page refresh when back online
+            window.location.reload();
+          }
+        });
+      }).catch(() => {});
     }
 
     // Don't show if already installed as PWA

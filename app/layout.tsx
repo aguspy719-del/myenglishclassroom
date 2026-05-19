@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { PWARegister } from "@/components/providers/pwa-register";
+import { OfflineIndicator } from "@/components/providers/offline-indicator";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -44,6 +45,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <PWARegister />
+          <OfflineIndicator />
           {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>

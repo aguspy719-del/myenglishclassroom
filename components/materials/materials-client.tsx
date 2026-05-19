@@ -20,8 +20,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
+import { fetchWithCache } from "@/lib/offline-cache";
 import { toast } from "sonner";
 import { formatDate, getFileIcon } from "@/lib/utils";
+import { fetchWithCache, isOnline } from "@/lib/offline-cache";
 import type { User, Material, Class } from "@/types";
 
 interface MaterialsClientProps {
@@ -42,25 +44,43 @@ export function MaterialsClient({ user }: MaterialsClientProps) {
   const fetchData = async () => {
     const supabase = createClient();
 
-    let query = supabase
-      .from("materials")
-      .select("*, class:classes(class_name, major)")
-      .order("created_at", { ascending: false });
+    // Use cache for student materials (most important for offline)
+    const cacheKey = user.role === "student" ? "materials" : `materials_${selectedClass}`;
 
-    if (user.role === "student" && user.class_id) {
-      query = query.eq("class_id", user.class_id);
-    } else if (selectedClass !== "all") {
-      query = query.eq("class_id", selectedClass);
-    }
+    const { data: matsData, fromCache } = await fetchWithCache<Material>(
+      "materials",
+      async () => {
+        let query = supabase
+          .from("materials")
+          .select("*, class:classes(class_name, major)")
+          .order("created_at", { ascending: false });
 
-    const [matsRes, classesRes] = await Promise.all([
-      query,
-      supabase.from("classes").select("*").order("class_name"),
-    ]);
+        if (user.role === "student" && user.class_id) {
+          query = query.eq("class_id", user.class_id);
+        } else if (selectedClass !== "all") {
+          query = query.eq("class_id", selectedClass);
+        }
 
-    setMaterials(matsRes.data || []);
-    setClasses(classesRes.data || []);
+        const { data } = await query;
+        return data || [];
+      }
+    );
+
+    const { data: classesData } = await fetchWithCache<Class>(
+      "classes",
+      async () => {
+        const { data } = await supabase.from("classes").select("*").order("class_name");
+        return data || [];
+      }
+    );
+
+    setMaterials(matsData);
+    setClasses(classesData);
     setLoading(false);
+
+    if (fromCache) {
+      toast.info("Showing cached data (offline mode)", { duration: 2000 });
+    }
   };
 
   useEffect(() => {

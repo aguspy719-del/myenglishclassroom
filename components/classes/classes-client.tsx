@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
+import { fetchWithCache } from "@/lib/offline-cache";
 import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
 import type { User, Class } from "@/types";
@@ -59,35 +60,41 @@ export function ClassesClient({ user }: ClassesClientProps) {
   const [newClass, setNewClass] = useState({ class_name: "", major: "", grade: "" });
 
   const fetchClasses = async () => {
-    const supabase = createClient();
-    let query = supabase.from("classes").select("*").order("grade").order("class_name");
+    const { data, fromCache } = await fetchWithCache<ClassWithStats>(
+      "classes",
+      async () => {
+        const supabase = createClient();
+        let query = supabase.from("classes").select("*").order("grade").order("class_name");
+        if (user.role === "student" && user.class_id) {
+          query = supabase.from("classes").select("*").eq("id", user.class_id);
+        }
+        const { data: classData, error } = await query;
+        if (error || !classData) return [];
 
-    if (user.role === "student" && user.class_id) {
-      query = supabase.from("classes").select("*").eq("id", user.class_id);
-    }
-
-    const { data, error } = await query;
-    if (error || !data) { setLoading(false); return; }
-
-    // Fetch stats for each class
-    const classesWithStats = await Promise.all(
-      data.map(async (cls) => {
-        const [studentsRes, materialsRes, assignmentsRes] = await Promise.all([
-          supabase.from("users").select("id", { count: "exact" }).eq("class_id", cls.id).eq("role", "student"),
-          supabase.from("materials").select("id", { count: "exact" }).eq("class_id", cls.id),
-          supabase.from("assignments").select("id", { count: "exact" }).eq("class_id", cls.id),
-        ]);
-        return {
-          ...cls,
-          student_count: studentsRes.count || 0,
-          material_count: materialsRes.count || 0,
-          assignment_count: assignmentsRes.count || 0,
-        };
-      })
+        // Fetch stats (only when online)
+        const classesWithStats = await Promise.all(
+          classData.map(async (cls) => {
+            const supabase2 = createClient();
+            const [studentsRes, materialsRes, assignmentsRes] = await Promise.all([
+              supabase2.from("users").select("id", { count: "exact" }).eq("class_id", cls.id).eq("role", "student"),
+              supabase2.from("materials").select("id", { count: "exact" }).eq("class_id", cls.id),
+              supabase2.from("assignments").select("id", { count: "exact" }).eq("class_id", cls.id),
+            ]);
+            return {
+              ...cls,
+              student_count: studentsRes.count || 0,
+              material_count: materialsRes.count || 0,
+              assignment_count: assignmentsRes.count || 0,
+            };
+          })
+        );
+        return classesWithStats;
+      }
     );
 
-    setClasses(classesWithStats);
+    setClasses(data);
     setLoading(false);
+    if (fromCache) toast.info("Showing cached data (offline)", { duration: 2000 });
   };
 
   useEffect(() => { fetchClasses(); }, []);
