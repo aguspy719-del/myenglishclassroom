@@ -23,7 +23,6 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchWithCache } from "@/lib/offline-cache";
 import { toast } from "sonner";
 import { formatDate, getFileIcon } from "@/lib/utils";
-import { fetchWithCache, isOnline } from "@/lib/offline-cache";
 import type { User, Material, Class } from "@/types";
 
 interface MaterialsClientProps {
