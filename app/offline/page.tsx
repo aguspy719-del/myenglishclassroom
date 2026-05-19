@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 export default function OfflinePage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -9,12 +11,12 @@ export default function OfflinePage() {
         <p className="text-gray-500 mb-6">
           No internet connection. Pages you have visited before are still available.
         </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+        <a
+          href="/"
+          className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
         >
           Try Again
-        </button>
+        </a>
       </div>
     </div>
   );

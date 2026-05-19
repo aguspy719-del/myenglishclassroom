@@ -123,7 +123,6 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Assignments */}
         <Card className="border-0 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base font-semibold">Upcoming Assignments</CardTitle>
@@ -139,16 +138,16 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
               </div>
             ) : (
               <div className="space-y-3">
-                {upcomingAssignments.map((assignment) => {
-                  const daysLeft = Math.ceil((new Date(assignment.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                {upcomingAssignments.map((a) => {
+                  const daysLeft = Math.ceil((new Date(a.deadline).getTime() - Date.now()) / 86400000);
                   const isUrgent = daysLeft <= 2;
                   return (
-                    <div key={assignment.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <div key={a.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                       <div className="flex items-start gap-3 flex-1 min-w-0">
                         {isUrgent ? <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" /> : <Clock className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />}
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{assignment.title}</p>
-                          <p className="text-xs text-gray-500">Due: {formatDate(assignment.deadline)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{a.title}</p>
+                          <p className="text-xs text-gray-500">Due: {formatDate(a.deadline)}</p>
                         </div>
                       </div>
                       <Badge variant={isUrgent ? "destructive" : "info"} className="text-xs ml-2 whitespace-nowrap">
@@ -162,7 +161,6 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
           </CardContent>
         </Card>
 
-        {/* Recent Grades */}
         <Card className="border-0 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base font-semibold">Recent Grades</CardTitle>
@@ -178,15 +176,15 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
               </div>
             ) : (
               <div className="space-y-3">
-                {recentGrades.map((submission) => (
-                  <div key={submission.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                {recentGrades.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{(submission.assignment as any)?.title || "Assignment"}</p>
-                      {submission.feedback && <p className="text-xs text-gray-500 truncate">{submission.feedback}</p>}
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{(s.assignment as any)?.title || "Assignment"}</p>
+                      {s.feedback && <p className="text-xs text-gray-500 truncate">{s.feedback}</p>}
                     </div>
                     <div className="flex items-center gap-2 ml-2">
-                      <span className={`text-lg font-bold ${getGradeColor(submission.score || 0)}`}>{submission.score}</span>
-                      <Badge variant="outline" className="text-xs">{getGradeLabel(submission.score || 0)}</Badge>
+                      <span className={`text-lg font-bold ${getGradeColor(s.score || 0)}`}>{s.score}</span>
+                      <Badge variant="outline" className="text-xs">{getGradeLabel(s.score || 0)}</Badge>
                     </div>
                   </div>
                 ))}
@@ -196,12 +194,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         </Card>
       </div>
 
-      {/* Announcements */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Bell className="w-4 h-4" />Announcements
-          </CardTitle>
+          <CardTitle className="text-base font-semibold flex items-center gap-2"><Bell className="w-4 h-4" />Announcements</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
