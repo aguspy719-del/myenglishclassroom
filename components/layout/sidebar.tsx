@@ -25,7 +25,6 @@ const teacherNavItems = [
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
   { href: "/quiz", label: "Assessment", icon: FileText },
-  { href: "/speaking", label: "Speaking", icon: Mic },
   { href: "/teaching-aids", label: "Teaching Aids", icon: BookMarked },
 ];
 
@@ -50,7 +49,7 @@ const teacherBottomNav = [
 const studentBottomNav = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/classes", label: "Classes", icon: GraduationCap },
-  { href: "/attendance", label: "Attend", icon: UserCheck },
+  { href: "/speaking", label: "Speaking", icon: Mic },
   { href: "/grades", label: "Grades", icon: Star },
   { href: "/quiz", label: "Assessment", icon: FileText },
 ];
