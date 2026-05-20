@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  GraduationCap, Home, Mic,
+  GraduationCap, Home, Mic, FileSpreadsheet,
   LayoutDashboard, LogOut, Star, Users, UserCheck, FileText, X, BookMarked,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ const teacherNavItems = [
   { href: "/classes", label: "Classes", icon: Users },
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
+  { href: "/rapor", label: "Rapor Export", icon: FileSpreadsheet },
   { href: "/quiz", label: "Assessment", icon: FileText },
   { href: "/teaching-aids", label: "Teaching Aids", icon: BookMarked },
 ];

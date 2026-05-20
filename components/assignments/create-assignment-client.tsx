@@ -100,7 +100,13 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
           ? "Assignment created successfully!"
           : `Assignment created for ${selectedClasses.length} classes!`
       );
-      router.push("/assignments");
+      // Redirect back to the class if came from one, otherwise to classes
+      const classId = searchParams.get("class");
+      if (classId) {
+        router.push(`/classes/${classId}`);
+      } else {
+        router.push("/classes");
+      }
     } catch (err: any) {
       toast.error("Failed: " + (err.message || "Something went wrong"));
     } finally {
@@ -116,10 +122,13 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
   const gradeXI = classes.filter((c) => c.grade === "XI");
   const gradeXII = classes.filter((c) => c.grade === "XII");
 
+  const classId = searchParams.get("class");
+  const backUrl = classId ? `/classes/${classId}` : "/classes";
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/assignments">
+        <Link href={backUrl}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -340,7 +349,7 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
 
             {/* Buttons */}
             <div className="flex gap-3 pt-2">
-              <Link href="/assignments" className="flex-1">
+              <Link href={backUrl} className="flex-1">
                 <Button type="button" variant="outline" className="w-full rounded-xl">Cancel</Button>
               </Link>
               <Button

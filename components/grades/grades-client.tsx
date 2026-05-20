@@ -214,7 +214,7 @@ export function GradesClient({ user }: GradesClientProps) {
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">{filtered.length} records</p>
         </div>
-        {user.role === "teacher" && filtered.length > 0 && (
+        {user.role === "teacher" && (
           <Button
             onClick={handleExportExcel}
             disabled={exporting}

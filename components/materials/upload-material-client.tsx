@@ -105,8 +105,14 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
       if (error) throw error;
 
       setUploadProgress(100);
-      toast.success("Materi berhasil diupload");
-      router.push("/materials");
+      toast.success("Material uploaded successfully!");
+      // Go back to class if came from one
+      const classId = searchParams.get("class") || form.class_id;
+      if (classId) {
+        router.push(`/classes/${classId}`);
+      } else {
+        router.push("/classes");
+      }
     } catch (err: any) {
       toast.error("Gagal upload: " + (err.message || "Terjadi kesalahan"));
     } finally {
@@ -115,18 +121,21 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
     }
   };
 
+  const classId = searchParams.get("class") || form.class_id;
+  const backUrl = classId ? `/classes/${classId}` : "/classes";
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/materials">
+        <Link href={backUrl}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Upload Materi</h1>
-          <p className="text-gray-500 dark:text-gray-400">Tambah materi pelajaran baru</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Upload Material</h1>
+          <p className="text-gray-500 dark:text-gray-400">Add new learning material</p>
         </div>
       </div>
 
@@ -249,16 +258,16 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
 
             {/* Submit */}
             <div className="flex gap-3 pt-2">
-              <Link href="/materials" className="flex-1">
-                <Button type="button" variant="outline" className="w-full">
-                  Batal
+              <Link href={backUrl} className="flex-1">
+                <Button type="button" variant="outline" className="w-full rounded-xl">
+                  Cancel
                 </Button>
               </Link>
-              <Button type="submit" className="flex-1" disabled={uploading}>
+              <Button type="submit" className="flex-1 rounded-xl" disabled={uploading}>
                 {uploading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Mengupload...
+                    Uploading...
                   </>
                 ) : (
                   <>
