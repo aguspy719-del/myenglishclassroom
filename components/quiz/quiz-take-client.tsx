@@ -45,11 +45,31 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
   const [questions, setQuestions] = useState<QuizQuestion[]>(initialQuestions);
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [alreadyAttempted, setAlreadyAttempted] = useState(false);
+  const [existingScore, setExistingScore] = useState<number | null>(null);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [essayAnswers, setEssayAnswers] = useState<Record<string, string>>({});
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState((quiz.time_limit || 30) * 60);
+
+  // Check if already attempted on mount (client-side guard)
+  useEffect(() => {
+    if (user.role !== "student") return;
+    const supabase = createClient();
+    supabase.from("quiz_attempts")
+      .select("id, score, completed_at")
+      .eq("quiz_id", quiz.id)
+      .eq("student_id", user.id)
+      .not("completed_at", "is", null)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setAlreadyAttempted(true);
+          setExistingScore(data.score ?? null);
+        }
+      });
+  }, [quiz.id, user.id, user.role]);
 
   useEffect(() => {
     if (!started || finished) return;
@@ -100,6 +120,41 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
 
   if (user.role === "teacher") {
     return <TeacherQuizView quiz={quiz} questions={questions} setQuestions={setQuestions} />;
+  }
+
+  // Client-side guard: already attempted
+  if (alreadyAttempted) {
+    return (
+      <QuizAntiCheat isActive={false} onForceSubmit={() => {}}>
+        <div className="max-w-lg mx-auto text-center space-y-6 py-8">
+          <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle className="w-12 h-12 text-gray-400" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Already Submitted</h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">{quiz.title}</p>
+          </div>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="pt-6 pb-6 space-y-3">
+              {existingScore !== null && (
+                <>
+                  <p className={`text-6xl font-bold ${getGradeColor(existingScore)}`}>{existingScore}</p>
+                  <Badge className="text-lg px-4 py-1">{getGradeLabel(existingScore)}</Badge>
+                </>
+              )}
+              <div className="p-3 bg-red-50 dark:bg-red-950 rounded-xl">
+                <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+                  🔒 This assessment can only be taken once.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Link href="/quiz">
+            <Button className="gap-2 rounded-xl"><ArrowLeft className="w-4 h-4" />Back to Assessment List</Button>
+          </Link>
+        </div>
+      </QuizAntiCheat>
+    );
   }
 
   const quizType = (quiz as any).quiz_type || "formatif";
@@ -212,7 +267,7 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
                 : <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"><FileText className="w-3 h-3 mr-1" />Multiple Choice</Badge>
               }
             </div>
-            <p className="text-lg font-medium text-gray-900 dark:text-white mb-6">
+            <p className="text-lg font-medium text-gray-900 dark:text-white mb-6 whitespace-pre-wrap leading-relaxed">
               <span className="text-blue-600 dark:text-blue-400 mr-2 font-bold">{currentQ + 1}.</span>
               {currentQuestion.question}
             </p>
@@ -231,8 +286,8 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
                     <button key={opt} onClick={() => setAnswers({ ...answers, [currentQuestion.id]: opt })}
                       className={cn("w-full text-left p-4 rounded-xl border-2 transition-all",
                         isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200 dark:border-gray-700 hover:border-blue-300")}>
-                      <span className={cn("font-bold mr-3", isSelected ? "text-blue-600" : "text-gray-500")}>{opt.toUpperCase()}.</span>
-                      {currentQuestion[`option_${opt}` as keyof QuizQuestion] as string}
+                      <span className={cn("font-bold mr-3 flex-shrink-0", isSelected ? "text-blue-600" : "text-gray-500")}>{opt.toUpperCase()}.</span>
+                      <span className="whitespace-pre-wrap">{currentQuestion[`option_${opt}` as keyof QuizQuestion] as string}</span>
                     </button>
                   );
                 })}

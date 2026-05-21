@@ -246,6 +246,10 @@ export function QuizAntiCheat({
 
   return (
     <div className="select-none" style={{ userSelect: "none", WebkitUserSelect: "none" }}>
+      {/* Hide bottom nav during active quiz */}
+      {isActive && (
+        <style>{`.bottom-nav { display: none !important; }`}</style>
+      )}
       {/* Status indicators */}
       {isActive && (
         <>
