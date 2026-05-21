@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Clock, CheckCircle, ChevronRight, ChevronLeft,
@@ -71,30 +71,45 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
       });
   }, [quiz.id, user.id, user.role]);
 
+  const handleFinishRef = useRef(handleFinish);
+  useEffect(() => { handleFinishRef.current = handleFinish; }, [handleFinish]);
+
   useEffect(() => {
     if (!started || finished) return;
     const timer = setInterval(() => {
       setTimeLeft((t) => {
-        if (t <= 1) { clearInterval(timer); handleFinish(); return 0; }
+        if (t <= 1) { clearInterval(timer); handleFinishRef.current(); return 0; }
         return t - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
   }, [started, finished]);
 
-  const handleFinish = useCallback(() => {
+  const handleFinish = useCallback(async () => {
     if (finished) return;
     const mcQs = questions.filter((q) => (q as any).question_type !== "essay");
     const correct = mcQs.filter((q) => answers[q.id] === q.correct_answer).length;
     const finalScore = mcQs.length > 0 ? Math.round((correct / mcQs.length) * 100) : 0;
     setScore(finalScore);
     setFinished(true);
+
     const supabase = createClient();
-    supabase.from("quiz_attempts").insert([{
-      quiz_id: quiz.id, student_id: user.id, score: finalScore,
-      completed_at: new Date().toISOString(), started_at: new Date().toISOString(),
+
+    // Save attempt — critical, must succeed
+    const { error: attemptError } = await supabase.from("quiz_attempts").insert([{
+      quiz_id: quiz.id,
+      student_id: user.id,
+      score: finalScore,
+      completed_at: new Date().toISOString(),
+      started_at: new Date().toISOString(),
     }]);
-    // Award XP for completing assessment
+
+    if (attemptError) {
+      console.error("[Quiz] Failed to save attempt:", attemptError);
+      toast.error("Failed to save your attempt. Please contact your teacher.");
+    }
+
+    // Award XP
     if (finalScore >= 75) {
       import("@/lib/gamification").then(({ awardPoints }) => {
         awardPoints(user.id, 100, `completing ${quiz.title}`);
@@ -105,15 +120,21 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
         awardBadge(user.id, "perfect_score");
       });
     }
-    questions.filter((q) => (q as any).question_type === "essay").forEach((q) => {
+
+    // Save essay answers
+    const essayQs = questions.filter((q) => (q as any).question_type === "essay");
+    for (const q of essayQs) {
       if (essayAnswers[q.id]) {
-        supabase.from("essay_answers").upsert({
-          quiz_id: quiz.id, question_id: q.id, student_id: user.id,
-          answer: essayAnswers[q.id], submitted_at: new Date().toISOString(),
+        await supabase.from("essay_answers").upsert({
+          quiz_id: quiz.id,
+          question_id: q.id,
+          student_id: user.id,
+          answer: essayAnswers[q.id],
+          submitted_at: new Date().toISOString(),
         });
       }
-    });
-  }, [answers, essayAnswers, questions, quiz.id, user.id, finished]);
+    }
+  }, [answers, essayAnswers, questions, quiz.id, quiz.title, user.id, finished]);
 
   const formatTime = (s: number) =>
     `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
