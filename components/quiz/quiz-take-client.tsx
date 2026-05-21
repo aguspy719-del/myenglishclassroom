@@ -71,20 +71,6 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
       });
   }, [quiz.id, user.id, user.role]);
 
-  const handleFinishRef = useRef(handleFinish);
-  useEffect(() => { handleFinishRef.current = handleFinish; }, [handleFinish]);
-
-  useEffect(() => {
-    if (!started || finished) return;
-    const timer = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) { clearInterval(timer); handleFinishRef.current(); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [started, finished]);
-
   const handleFinish = useCallback(async () => {
     if (finished) return;
     const mcQs = questions.filter((q) => (q as any).question_type !== "essay");
@@ -135,6 +121,20 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
       }
     }
   }, [answers, essayAnswers, questions, quiz.id, quiz.title, user.id, finished]);
+
+  const handleFinishRef = useRef(handleFinish);
+  useEffect(() => { handleFinishRef.current = handleFinish; }, [handleFinish]);
+
+  useEffect(() => {
+    if (!started || finished) return;
+    const timer = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) { clearInterval(timer); handleFinishRef.current(); return 0; }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [started, finished]);
 
   const formatTime = (s: number) =>
     `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
