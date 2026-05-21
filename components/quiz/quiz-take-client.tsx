@@ -568,13 +568,13 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                             </Badge>
                             {isEssayQ && (q as any).max_score && <span className="text-xs text-gray-500">Max: {(q as any).max_score} pts</span>}
                           </div>
-                          <p className="font-medium text-gray-900 dark:text-white text-sm mb-3">{q.question}</p>
+                          <p className="font-medium text-gray-900 dark:text-white text-sm mb-3 whitespace-pre-wrap leading-relaxed">{q.question}</p>
                           {!isEssayQ && (
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {(["a", "b", "c", "d"] as const).map((opt) => (
                                 <div key={opt} className={cn("p-2 rounded-xl text-xs", q.correct_answer === opt ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-semibold" : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400")}>
                                   <span className="font-bold mr-1">{opt.toUpperCase()}.</span>
-                                  {q[`option_${opt}` as keyof QuizQuestion] as string}
+                                  <span className="whitespace-pre-wrap">{q[`option_${opt}` as keyof QuizQuestion] as string}</span>
                                   {q.correct_answer === opt && " ✓"}
                                 </div>
                               ))}

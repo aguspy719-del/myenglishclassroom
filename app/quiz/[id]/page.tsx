@@ -5,6 +5,10 @@ import { QuizTakeClient } from "@/components/quiz/quiz-take-client";
 import { AlreadyAttempted } from "@/components/quiz/already-attempted";
 import type { User } from "@/types";
 
+// Never cache this page — always check fresh attempt status
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function QuizTakePage({
   params,
 }: {
@@ -36,7 +40,7 @@ export default async function QuizTakePage({
       .eq("quiz_id", id)
       .eq("student_id", user.id)
       .not("completed_at", "is", null)
-      .single();
+      .maybeSingle();
 
     if (existingAttempt) {
       return (
