@@ -100,6 +100,32 @@ export function QuizClient({ user }: QuizClientProps) {
     if (error) {
       toast.error("Failed to Create Assessment");
     } else {
+      // Push notification to students (only if publishing now, not scheduled)
+      const isPublishingNow = !form.published_at || new Date(form.published_at) <= new Date();
+      if (isPublishingNow) {
+        try {
+          const { data: students } = await supabase
+            .from("users")
+            .select("id")
+            .in("class_id", selectedClasses)
+            .eq("role", "student");
+          if (students && students.length > 0) {
+            await fetch("/api/push/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userIds: students.map((s) => s.id),
+                payload: {
+                  title: "📝 New Assessment",
+                  body: form.title,
+                  url: "/quiz",
+                },
+              }),
+            });
+          }
+        } catch { /* push failure should not block */ }
+      }
+
       const scheduled = form.published_at && new Date(form.published_at) > new Date();
       toast.success(
         scheduled

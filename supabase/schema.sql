@@ -311,9 +311,10 @@ INSERT INTO public.announcements (title, content) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Teaching Aids table (for teacher administrative documents)
+-- NOTE: uses 'category' column (not 'doc_key') to match application code
 CREATE TABLE IF NOT EXISTS public.teaching_aids (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  doc_key TEXT NOT NULL,
+  category TEXT NOT NULL,
   file_name TEXT NOT NULL,
   file_url TEXT NOT NULL,
   file_size INTEGER,
@@ -327,3 +328,60 @@ CREATE POLICY "Teachers can manage teaching aids" ON public.teaching_aids
 
 CREATE POLICY "Teachers can read teaching aids" ON public.teaching_aids
   FOR SELECT USING (public.get_user_role() = 'teacher');
+
+-- ============================================================
+-- MIGRATIONS: Additional columns required by the application
+-- Run these if you already have the base schema applied
+-- ============================================================
+
+-- Gamification columns on users table
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS badges TEXT[] DEFAULT '{}';
+
+-- Quiz type and scheduled publish support
+ALTER TABLE public.quizzes
+  ADD COLUMN IF NOT EXISTS quiz_type TEXT DEFAULT 'formatif'
+    CHECK (quiz_type IN ('formatif', 'sumatif_tengah', 'sumatif_akhir')),
+  ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+
+-- Text-based assignment submissions
+ALTER TABLE public.submissions
+  ADD COLUMN IF NOT EXISTS submission_type TEXT DEFAULT 'file'
+    CHECK (submission_type IN ('file', 'text')),
+  ADD COLUMN IF NOT EXISTS text_answer TEXT;
+
+-- Essay question support in quizzes
+ALTER TABLE public.quiz_questions
+  ADD COLUMN IF NOT EXISTS question_type TEXT DEFAULT 'multiple_choice'
+    CHECK (question_type IN ('multiple_choice', 'essay')),
+  ADD COLUMN IF NOT EXISTS max_score INTEGER DEFAULT 10;
+
+-- Notifications table (used by gamification system)
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'info'
+    CHECK (type IN ('info', 'points', 'achievement', 'assignment', 'grade')),
+  link TEXT,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own notifications" ON public.notifications
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own notifications" ON public.notifications
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "System can insert notifications" ON public.notifications
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Index for fast notification queries
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);

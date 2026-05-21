@@ -126,6 +126,16 @@
   box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
 }
 
+/* Dark mode: bottom nav shadow */
+.dark .bottom-nav {
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+}
+
+/* Dark mode: card subtle border */
+.dark .card-hover {
+  @apply hover:shadow-none hover:border-gray-700;
+}
+
 /* iOS & Mobile fixes */
 @media (max-width: 768px) {
   input, select, textarea {
@@ -143,6 +153,11 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Prevent text overflow globally on flex children */
+.flex > * {
+  min-width: 0;
 }
 
 /* iOS safe area */

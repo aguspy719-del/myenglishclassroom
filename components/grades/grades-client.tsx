@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, Search, FileSpreadsheet } from "lucide-react";
+import { Star, Search, FileSpreadsheet, UserCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ export function GradesClient({ user }: GradesClientProps) {
   const [search, setSearch] = useState("");
   const [selectedClass, setSelectedClass] = useState("all");
   const [exporting, setExporting] = useState(false);
+  const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,6 +38,18 @@ export function GradesClient({ user }: GradesClientProps) {
           .not("score", "is", null)
           .order("submitted_at", { ascending: false });
         setGrades(data || []);
+
+        // Fetch attendance rate for student
+        const { data: attData } = await supabase
+          .from("attendance")
+          .select("status")
+          .eq("student_id", user.id);
+        if (attData && attData.length > 0) {
+          const presentOrLate = attData.filter((a) => a.status === "present" || a.status === "late").length;
+          setAttendanceRate(Math.round((presentOrLate / attData.length) * 100));
+        } else {
+          setAttendanceRate(null);
+        }
       } else {
         const { data } = await supabase
           .from("submissions")
@@ -256,6 +269,39 @@ export function GradesClient({ user }: GradesClientProps) {
         </div>
       )}
 
+      {/* Student: Attendance Rate summary card */}
+      {user.role === "student" && filtered.length > 0 && attendanceRate !== null && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950 flex items-center justify-center flex-shrink-0">
+                <UserCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Attendance Rate</p>
+                <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full mt-1.5 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      attendanceRate >= 80 ? "bg-green-500" :
+                      attendanceRate >= 60 ? "bg-yellow-500" :
+                      "bg-red-500"
+                    }`}
+                    style={{ width: `${attendanceRate}%` }}
+                  />
+                </div>
+              </div>
+              <p className={`text-xl font-bold flex-shrink-0 ${
+                attendanceRate >= 80 ? "text-green-600 dark:text-green-400" :
+                attendanceRate >= 60 ? "text-yellow-600 dark:text-yellow-400" :
+                "text-red-600 dark:text-red-400"
+              }`}>
+                {attendanceRate}%
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Grade Distribution */}
       {filtered.length > 0 && (
         <Card className="border-0 shadow-sm">
@@ -326,9 +372,9 @@ export function GradesClient({ user }: GradesClientProps) {
           {filtered.map((grade) => (
             <div
               key={grade.id}
-              className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm"
             >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 font-bold text-lg ${
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 font-bold text-base ${
                 (grade.score || 0) >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" :
                 (grade.score || 0) >= 80 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" :
                 (grade.score || 0) >= 70 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" :
@@ -338,32 +384,30 @@ export function GradesClient({ user }: GradesClientProps) {
                 {getGradeLabel(grade.score || 0)}
               </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                    {(grade.assignment as any)?.title || "Assignment"}
-                  </p>
-                  {(grade.assignment as any)?.class?.class_name && (
-                    <Badge variant="secondary" className="text-xs">
-                      {(grade.assignment as any).class.class_name}
-                    </Badge>
-                  )}
-                </div>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                  {(grade.assignment as any)?.title || "Assignment"}
+                </p>
+                {(grade.assignment as any)?.class?.class_name && (
+                  <Badge variant="secondary" className="text-xs mt-0.5">
+                    {(grade.assignment as any).class.class_name}
+                  </Badge>
+                )}
                 {user.role === "teacher" && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                     {(grade.student as any)?.name}
                   </p>
                 )}
                 {grade.feedback && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                     💬 {grade.feedback}
                   </p>
                 )}
                 <p className="text-xs text-gray-400 mt-0.5">{formatDate(grade.submitted_at)}</p>
               </div>
 
-              <div className="text-right flex-shrink-0">
-                <p className={`text-2xl font-bold ${getGradeColor(grade.score || 0)}`}>
+              <div className="text-right flex-shrink-0 ml-1">
+                <p className={`text-xl font-bold ${getGradeColor(grade.score || 0)}`}>
                   {grade.score}
                 </p>
                 <p className="text-xs text-gray-400">/ 100</p>

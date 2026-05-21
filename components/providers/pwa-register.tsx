@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Download, Smartphone } from "lucide-react";
+import { requestNotificationPermission } from "@/lib/push-notifications";
 
 export function PWARegister() {
   const [showBanner, setShowBanner] = useState(false);
@@ -47,6 +48,11 @@ export function PWARegister() {
     const { outcome } = await deferredPrompt.userChoice;
     setDeferredPrompt(null);
     setShowBanner(false);
+
+    // After install, ask for notification permission
+    if (outcome === "accepted") {
+      await requestNotificationPermission();
+    }
   };
 
   const handleMinimize = () => {

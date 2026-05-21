@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
+
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Clock, Download, Upload, File, X, Loader2,
-  CheckCircle, Star, MessageSquare, Users, AlertCircle
+  CheckCircle, Star, Users, AlertCircle, PenLine, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { formatDate, formatDateTime, formatFileSize, getDeadlineStatus, getGradeColor, getGradeLabel } from "@/lib/utils";
+import {
+  formatDateTime, formatFileSize,
+  getDeadlineStatus, getGradeColor, getGradeLabel,
+} from "@/lib/utils";
 import type { User, Assignment, Submission } from "@/types";
 
 interface AssignmentDetailClientProps {
@@ -22,10 +26,119 @@ interface AssignmentDetailClientProps {
   assignment: Assignment;
 }
 
+// ── Submit Form Component ──────────────────────────────────
+function SubmitForm({
+  submitMode, setSubmitMode, file, setFile,
+  textAnswer, setTextAnswer, submitting, onSubmit, isResubmit = false,
+}: {
+  submitMode: "file" | "text";
+  setSubmitMode: (m: "file" | "text") => void;
+  file: File | null;
+  setFile: (f: File | null) => void;
+  textAnswer: string;
+  setTextAnswer: (t: string) => void;
+  submitting: boolean;
+  onSubmit: () => void;
+  isResubmit?: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      {/* Mode toggle */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setSubmitMode("text")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+            submitMode === "text"
+              ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+              : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-blue-300"
+          }`}
+        >
+          <PenLine className="w-4 h-4" />
+          Write Answer
+        </button>
+        <button
+          onClick={() => setSubmitMode("file")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+            submitMode === "file"
+              ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+              : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-blue-300"
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          Upload File
+        </button>
+      </div>
+
+      {/* Text answer */}
+      {submitMode === "text" && (
+        <Textarea
+          placeholder="Write your answer here... You can include your responses, explanations, or any text-based work."
+          value={textAnswer}
+          onChange={(e) => setTextAnswer(e.target.value)}
+          rows={6}
+          className="rounded-xl resize-none"
+        />
+      )}
+
+      {/* File upload */}
+      {submitMode === "file" && (
+        <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-6 text-center hover:border-blue-400 transition-colors">
+          {file ? (
+            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-xl">
+              <div className="flex items-center gap-3">
+                <File className="w-5 h-5 text-blue-600" />
+                <div className="text-left">
+                  <p className="text-sm font-medium">{file.name}</p>
+                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                </div>
+              </div>
+              <Button type="button" variant="ghost" size="icon" onClick={() => setFile(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <label className="cursor-pointer">
+              <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Click to select file</p>
+              <p className="text-xs text-gray-400 mt-1">PDF, DOCX, JPG, PNG, MP4. Max 50MB</p>
+              <input
+                type="file"
+                className="hidden"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp4"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f && f.size <= 50 * 1024 * 1024) setFile(f);
+                  else if (f) toast.error("File too large. Max 50MB");
+                }}
+              />
+            </label>
+          )}
+        </div>
+      )}
+
+      <Button
+        onClick={onSubmit}
+        disabled={submitting || (submitMode === "file" ? !file : !textAnswer.trim())}
+        className="w-full gap-2 rounded-xl h-12"
+        size="lg"
+      >
+        {submitting ? (
+          <><Loader2 className="w-4 h-4 animate-spin" />Submitting...</>
+        ) : (
+          <><Upload className="w-4 h-4" />{isResubmit ? "Update Submission" : "Submit Assignment"}</>
+        )}
+      </Button>
+    </div>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────
 export function AssignmentDetailClient({ user, assignment }: AssignmentDetailClientProps) {
   const [mySubmission, setMySubmission] = useState<Submission | null>(null);
   const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
   const [file, setFile] = useState<File | null>(null);
+  const [textAnswer, setTextAnswer] = useState("");
+  const [submitMode, setSubmitMode] = useState<"file" | "text">("text");
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [gradingId, setGradingId] = useState<string | null>(null);
@@ -37,14 +150,11 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
   useEffect(() => {
     const fetchData = async () => {
       const supabase = createClient();
-
       if (user.role === "student") {
         const { data } = await supabase
-          .from("submissions")
-          .select("*")
+          .from("submissions").select("*")
           .eq("assignment_id", assignment.id)
-          .eq("student_id", user.id)
-          .single();
+          .eq("student_id", user.id).single();
         setMySubmission(data);
       } else {
         const { data } = await supabase
@@ -60,37 +170,32 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
   }, [assignment.id, user.id, user.role]);
 
   const handleSubmit = async () => {
-    if (!file) {
-      toast.error("Pilih file untuk dikumpulkan");
-      return;
-    }
-    if (isPast) {
-      toast.error("Deadline sudah lewat");
-      return;
-    }
+    if (submitMode === "file" && !file) { toast.error("Please select a file"); return; }
+    if (submitMode === "text" && !textAnswer.trim()) { toast.error("Please write your answer"); return; }
+    if (isPast) { toast.error("Deadline has passed"); return; }
 
     setSubmitting(true);
     const supabase = createClient();
-
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${assignment.id}/${fileName}`;
+      let fileUrl = "";
+      if (submitMode === "file" && file) {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("submissions").upload(`${assignment.id}/${fileName}`, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from("submissions").getPublicUrl(`${assignment.id}/${fileName}`);
+        fileUrl = urlData.publicUrl;
+      }
 
-      const { error: uploadError } = await supabase.storage
-        .from("submissions")
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from("submissions").getPublicUrl(filePath);
-
-      const submissionData = {
+      const submissionData: any = {
         assignment_id: assignment.id,
         student_id: user.id,
-        file_url: urlData.publicUrl,
         submitted_at: new Date().toISOString(),
+        submission_type: submitMode,
       };
+      if (fileUrl) submissionData.file_url = fileUrl;
+      if (submitMode === "text") submissionData.text_answer = textAnswer.trim();
 
       let error;
       if (mySubmission) {
@@ -98,22 +203,16 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
       } else {
         ({ error } = await supabase.from("submissions").insert([submissionData]));
       }
-
       if (error) throw error;
 
-      toast.success("Tugas berhasil dikumpulkan!");
+      toast.success("Assignment submitted! 🎉");
       setFile(null);
-
-      // Refresh
-      const { data } = await supabase
-        .from("submissions")
-        .select("*")
-        .eq("assignment_id", assignment.id)
-        .eq("student_id", user.id)
-        .single();
+      setTextAnswer("");
+      const { data } = await supabase.from("submissions").select("*")
+        .eq("assignment_id", assignment.id).eq("student_id", user.id).single();
       setMySubmission(data);
     } catch (err: any) {
-      toast.error("Gagal mengumpulkan: " + (err.message || "Terjadi kesalahan"));
+      toast.error("Failed: " + (err.message || "Something went wrong"));
     } finally {
       setSubmitting(false);
     }
@@ -121,41 +220,50 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
 
   const handleGrade = async (submissionId: string) => {
     const score = parseInt(gradeForm.score);
-    if (isNaN(score) || score < 0 || score > 100) {
-      toast.error("Nilai harus antara 0-100");
-      return;
-    }
-
+    if (isNaN(score) || score < 0 || score > 100) { toast.error("Score must be 0-100"); return; }
     const supabase = createClient();
-    const { error } = await supabase
-      .from("submissions")
-      .update({ score, feedback: gradeForm.feedback || null })
-      .eq("id", submissionId);
+    const { error } = await supabase.from("submissions")
+      .update({ score, feedback: gradeForm.feedback || null }).eq("id", submissionId);
+    if (error) { toast.error("Failed to save grade"); return; }
+    toast.success("Grade saved!");
 
-    if (error) {
-      toast.error("Gagal menyimpan nilai");
-    } else {
-      toast.success("Nilai berhasil disimpan");
-      setGradingId(null);
-      setGradeForm({ score: "", feedback: "" });
-
-      const { data } = await supabase
-        .from("submissions")
-        .select("*, student:users(name, email)")
-        .eq("assignment_id", assignment.id)
-        .order("submitted_at", { ascending: false });
-      setAllSubmissions(data || []);
+    // Push notification to student
+    try {
+      const sub = allSubmissions.find((s) => s.id === submissionId);
+      if (sub) {
+        await fetch("/api/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userIds: [sub.student_id],
+            payload: {
+              title: "⭐ Assignment Graded",
+              body: `${assignment.title} — Score: ${score}`,
+              url: `/assignments/${assignment.id}`,
+            },
+          }),
+        });
+      }
+    } catch {
+      // Push failure should not block
     }
+    setGradingId(null);
+    setGradeForm({ score: "", feedback: "" });
+    const { data } = await supabase.from("submissions")
+      .select("*, student:users(name, email)").eq("assignment_id", assignment.id).order("submitted_at", { ascending: false });
+    setAllSubmissions(data || []);
   };
+
+  // Back URL
+  const classId = (assignment.class as any)?.id || (assignment as any).class_id;
+  const backUrl = classId ? `/classes/${classId}` : "/classes";
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/assignments">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+        <Link href={backUrl}>
+          <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
         </Link>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">{assignment.title}</h1>
@@ -163,37 +271,30 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
             {(assignment.class as any)?.class_name && (
               <Badge variant="secondary">{(assignment.class as any).class_name}</Badge>
             )}
-            <Badge variant={
-              deadlineStatus === "overdue" ? "destructive" :
-              deadlineStatus === "today" ? "warning" : "success"
-            }>
-              {deadlineStatus === "overdue" ? "Deadline Lewat" :
-               deadlineStatus === "today" ? "Deadline Hari Ini" : "Aktif"}
+            <Badge variant={deadlineStatus === "overdue" ? "destructive" : deadlineStatus === "today" ? "warning" : "success"}>
+              {deadlineStatus === "overdue" ? "Closed" : deadlineStatus === "today" ? "Due Today" : "Active"}
             </Badge>
           </div>
         </div>
       </div>
 
       {/* Assignment Info */}
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardContent className="pt-5 pb-5">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
             <Clock className="w-4 h-4" />
             <span>Deadline: <strong>{formatDateTime(assignment.deadline)}</strong></span>
           </div>
-
           {assignment.description && (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{assignment.description}</p>
-            </div>
+            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm leading-relaxed">
+              {assignment.description}
+            </p>
           )}
-
           {assignment.attachment_url && (
             <div className="mt-4">
               <a href={assignment.attachment_url} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Download className="w-4 h-4" />
-                  Download Soal
+                <Button variant="outline" size="sm" className="gap-2 rounded-xl">
+                  <Download className="w-4 h-4" />Download Question File
                 </Button>
               </a>
             </div>
@@ -201,151 +302,87 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
         </CardContent>
       </Card>
 
-      {/* Student: Submit Section */}
+      {/* Student: Submit */}
       {user.role === "student" && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              {mySubmission ? "Pengumpulan Saya" : "Kumpulkan Tugas"}
-            </CardTitle>
+            <CardTitle className="text-base">{mySubmission ? "My Submission" : "Submit Assignment"}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+              <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
             ) : mySubmission ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950 rounded-xl border border-green-200 dark:border-green-800">
-                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-green-800 dark:text-green-200">Tugas sudah dikumpulkan</p>
-                    <p className="text-sm text-green-600 dark:text-green-400">
-                      {formatDateTime(mySubmission.submitted_at)}
-                    </p>
+                {/* Submitted */}
+                <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950 rounded-2xl border border-green-200 dark:border-green-800">
+                  <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-green-800 dark:text-green-200">Submitted!</p>
+                    <p className="text-sm text-green-600 dark:text-green-400">{formatDateTime(mySubmission.submitted_at)}</p>
                   </div>
                   {mySubmission.file_url && (
-                    <a href={mySubmission.file_url} target="_blank" rel="noopener noreferrer" className="ml-auto">
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Download className="w-4 h-4" />
-                        Lihat File
+                    <a href={mySubmission.file_url} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm" className="gap-2 rounded-xl">
+                        <Download className="w-3.5 h-3.5" />File
                       </Button>
                     </a>
                   )}
                 </div>
 
+                {/* Text answer preview */}
+                {(mySubmission as any).text_answer && (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                    <p className="text-xs font-semibold text-gray-500 mb-2">YOUR WRITTEN ANSWER:</p>
+                    <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed">
+                      {(mySubmission as any).text_answer}
+                    </p>
+                  </div>
+                )}
+
+                {/* Grade */}
                 {mySubmission.score !== null && mySubmission.score !== undefined ? (
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-xl border border-blue-200 dark:border-blue-800">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-2xl">
                     <div className="flex items-center gap-3">
                       <Star className="w-6 h-6 text-yellow-500" />
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">
-                          Nilai: <span className={`text-2xl font-bold ${getGradeColor(mySubmission.score)}`}>
-                            {mySubmission.score}
-                          </span>
-                          <span className="ml-2 text-lg">({getGradeLabel(mySubmission.score)})</span>
+                          Score: <span className={`text-2xl font-bold ${getGradeColor(mySubmission.score)}`}>{mySubmission.score}</span>
+                          <span className="ml-2">({getGradeLabel(mySubmission.score)})</span>
                         </p>
-                        {mySubmission.feedback && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            💬 {mySubmission.feedback}
-                          </p>
-                        )}
+                        {mySubmission.feedback && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">💬 {mySubmission.feedback}</p>}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
-                    Menunggu penilaian dari guru...
-                  </p>
+                  <p className="text-sm text-gray-500 text-center py-2">⏳ Waiting for teacher to grade...</p>
                 )}
 
-                {/* Allow resubmission if not past deadline */}
+                {/* Resubmit */}
                 {!isPast && (
                   <div className="border-t pt-4">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Ganti file pengumpulan:</p>
-                    <div className="flex gap-3">
-                      <label className="flex-1 cursor-pointer">
-                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-3 text-center hover:border-blue-400 transition-colors">
-                          {file ? (
-                            <p className="text-sm text-gray-700 dark:text-gray-300">{file.name}</p>
-                          ) : (
-                            <p className="text-sm text-gray-500">Pilih file baru</p>
-                          )}
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp4"
-                            onChange={(e) => setFile(e.target.files?.[0] || null)}
-                          />
-                        </div>
-                      </label>
-                      {file && (
-                        <Button onClick={handleSubmit} disabled={submitting} className="gap-2">
-                          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                          Ganti
-                        </Button>
-                      )}
-                    </div>
+                    <p className="text-sm text-gray-500 mb-3 font-medium">Update your submission:</p>
+                    <SubmitForm
+                      submitMode={submitMode} setSubmitMode={setSubmitMode}
+                      file={file} setFile={setFile}
+                      textAnswer={textAnswer} setTextAnswer={setTextAnswer}
+                      submitting={submitting} onSubmit={handleSubmit} isResubmit
+                    />
                   </div>
                 )}
               </div>
             ) : (
               <div className="space-y-4">
-                {isPast && (
-                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950 rounded-lg text-red-700 dark:text-red-300 text-sm">
-                    <AlertCircle className="w-4 h-4" />
-                    Deadline sudah lewat. Kamu tidak bisa mengumpulkan tugas.
+                {isPast ? (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950 rounded-xl text-red-700 dark:text-red-300 text-sm">
+                    <AlertCircle className="w-4 h-4" />Deadline has passed.
                   </div>
-                )}
-
-                {!isPast && (
-                  <>
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
-                      {file ? (
-                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <File className="w-5 h-5 text-blue-600" />
-                            <div className="text-left">
-                              <p className="text-sm font-medium">{file.name}</p>
-                              <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
-                            </div>
-                          </div>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => setFile(null)}>
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <label className="cursor-pointer">
-                          <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Klik untuk pilih file jawaban
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">PDF, DOCX, JPG, PNG, MP4. Maks 50MB</p>
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp4"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f && f.size <= 50 * 1024 * 1024) setFile(f);
-                              else if (f) toast.error("File terlalu besar. Maks 50MB");
-                            }}
-                          />
-                        </label>
-                      )}
-                    </div>
-
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={!file || submitting}
-                      className="w-full gap-2"
-                      size="lg"
-                    >
-                      {submitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" />Mengumpulkan...</>
-                      ) : (
-                        <><Upload className="w-4 h-4" />Kumpulkan Tugas</>
-                      )}
-                    </Button>
-                  </>
+                ) : (
+                  <SubmitForm
+                    submitMode={submitMode} setSubmitMode={setSubmitMode}
+                    file={file} setFile={setFile}
+                    textAnswer={textAnswer} setTextAnswer={setTextAnswer}
+                    submitting={submitting} onSubmit={handleSubmit}
+                  />
                 )}
               </div>
             )}
@@ -353,101 +390,91 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
         </Card>
       )}
 
-      {/* Teacher: Submissions List */}
+      {/* Teacher: Submissions */}
       {user.role === "teacher" && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Pengumpulan Siswa ({allSubmissions.length})
+              <Users className="w-5 h-5" />Student Submissions ({allSubmissions.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />)}
-              </div>
+              <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}</div>
             ) : allSubmissions.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 <Users className="w-10 h-10 mx-auto mb-2 opacity-20" />
-                <p>Belum ada yang mengumpulkan</p>
+                <p>No submissions yet</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {allSubmissions.map((sub) => (
-                  <div key={sub.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <div key={sub.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {(sub.student as any)?.name || "Siswa"}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-gray-900 dark:text-white">
+                          {(sub.student as any)?.name || "Student"}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Dikumpulkan: {formatDateTime(sub.submitted_at)}
-                        </p>
+                        <p className="text-xs text-gray-500">{formatDateTime(sub.submitted_at)}</p>
+                        {/* Text answer preview for teacher */}
+                        {(sub as any).text_answer && (
+                          <div className="mt-2 p-3 bg-white dark:bg-gray-700 rounded-xl">
+                            <p className="text-xs font-semibold text-gray-500 mb-1">WRITTEN ANSWER:</p>
+                            <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap line-clamp-3">
+                              {(sub as any).text_answer}
+                            </p>
+                          </div>
+                        )}
                         {sub.score !== null && sub.score !== undefined && (
                           <div className="flex items-center gap-2 mt-1">
                             <span className={`font-bold ${getGradeColor(sub.score)}`}>{sub.score}</span>
                             <span className="text-xs text-gray-500">({getGradeLabel(sub.score)})</span>
-                            {sub.feedback && <span className="text-xs text-gray-500">• {sub.feedback}</span>}
+                            {sub.feedback && <span className="text-xs text-gray-500">· {sub.feedback}</span>}
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {sub.file_url && (
                           <a href={sub.file_url} target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" size="sm" className="gap-1">
-                              <Download className="w-3 h-3" />
-                              File
+                            <Button variant="outline" size="sm" className="gap-1 rounded-xl text-xs">
+                              <Download className="w-3 h-3" />File
                             </Button>
                           </a>
                         )}
                         <Button
                           size="sm"
                           variant={sub.score !== null ? "secondary" : "default"}
-                          onClick={() => {
-                            setGradingId(sub.id);
-                            setGradeForm({ score: sub.score?.toString() || "", feedback: sub.feedback || "" });
-                          }}
-                          className="gap-1"
+                          onClick={() => { setGradingId(sub.id); setGradeForm({ score: sub.score?.toString() || "", feedback: sub.feedback || "" }); }}
+                          className="gap-1 rounded-xl text-xs"
                         >
                           <Star className="w-3 h-3" />
-                          {sub.score !== null ? "Edit Nilai" : "Beri Nilai"}
+                          {sub.score !== null ? "Edit" : "Grade"}
                         </Button>
                       </div>
                     </div>
 
-                    {/* Grading Form */}
+                    {/* Grading form */}
                     {gradingId === sub.id && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
-                            <Label className="text-xs">Nilai (0-100)</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              max="100"
-                              placeholder="85"
-                              value={gradeForm.score}
-                              onChange={(e) => setGradeForm({ ...gradeForm, score: e.target.value })}
-                            />
+                            <Label className="text-xs">Score (0-100)</Label>
+                            <Input type="number" min="0" max="100" placeholder="85"
+                              value={gradeForm.score} onChange={(e) => setGradeForm({ ...gradeForm, score: e.target.value })}
+                              className="rounded-xl h-9" />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Feedback (opsional)</Label>
-                            <Input
-                              placeholder="Bagus, pertahankan!"
-                              value={gradeForm.feedback}
+                            <Label className="text-xs">Feedback</Label>
+                            <Input placeholder="Great work!" value={gradeForm.feedback}
                               onChange={(e) => setGradeForm({ ...gradeForm, feedback: e.target.value })}
-                            />
+                              className="rounded-xl h-9" />
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleGrade(sub.id)} className="gap-1">
-                            <CheckCircle className="w-3 h-3" />
-                            Simpan Nilai
+                          <Button size="sm" onClick={() => handleGrade(sub.id)} className="gap-1 rounded-xl">
+                            <CheckCircle className="w-3 h-3" />Save Grade
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => setGradingId(null)}>
-                            Batal
-                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setGradingId(null)} className="rounded-xl">Cancel</Button>
                         </div>
                       </div>
                     )}

@@ -4,14 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Users, BookOpen, ClipboardList, FileText,
-  Plus, ArrowRight, TrendingUp, Clock, CheckCircle,
+  Plus, ArrowRight, TrendingUp, Clock, CheckCircle, Megaphone, Trash2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
-import type { User, Assignment, Submission } from "@/types";
+import { toast } from "sonner";
+import type { User, Assignment, Submission, Announcement } from "@/types";
 
 interface TeacherDashboardProps {
   user: User;
@@ -34,6 +37,14 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [upcomingAssignments, setUpcomingAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Announcements state
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,6 +85,55 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
     fetchData();
   }, []);
 
+  const fetchAnnouncements = async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("announcements")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setAnnouncements(data || []);
+    setAnnouncementsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  const handleCreateAnnouncement = async () => {
+    if (!newTitle.trim() || !newContent.trim()) {
+      toast.error("Title and content are required");
+      return;
+    }
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("announcements").insert([{
+      title: newTitle.trim(),
+      content: newContent.trim(),
+    }]);
+    if (error) {
+      toast.error("Failed to create announcement");
+    } else {
+      toast.success("Announcement created");
+      setNewTitle("");
+      setNewContent("");
+      setShowCreateForm(false);
+      fetchAnnouncements();
+    }
+    setSubmitting(false);
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!confirm("Delete this announcement?")) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("announcements").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete announcement");
+    } else {
+      toast.success("Announcement deleted");
+      fetchAnnouncements();
+    }
+  };
+
   const statCards = [
     { title: "Total Students", value: stats.totalStudents, icon: Users, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950", href: "/classes" },
     { title: "Total Classes", value: stats.totalClasses, icon: BookOpen, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950", href: "/classes" },
@@ -110,23 +170,23 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
             <Link key={card.title} href={card.href}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={`w-10 h-10 ${card.bg} rounded-lg flex items-center justify-center`}>
-                      <Icon className={`w-5 h-5 ${card.color}`} />
+              <Card className="hover:shadow-md transition-shadow cursor-pointer border-0 shadow-sm">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`w-9 h-9 ${card.bg} rounded-lg flex items-center justify-center`}>
+                      <Icon className={`w-4 h-4 ${card.color}`} />
                     </div>
-                    <TrendingUp className="w-4 h-4 text-gray-400" />
+                    <TrendingUp className="w-3.5 h-3.5 text-gray-400" />
                   </div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
                     {loading ? "..." : card.value}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{card.title}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight truncate">{card.title}</p>
                 </CardContent>
               </Card>
             </Link>
@@ -161,7 +221,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
               <div className="space-y-3">
                 {recentSubmissions.map((sub) => (
                   <div key={sub.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {(sub.student as any)?.name || "Student"}
                       </p>
@@ -169,7 +229,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                         {(sub.assignment as any)?.title || "Assignment"}
                       </p>
                     </div>
-                    <Badge variant="warning" className="text-xs whitespace-nowrap ml-2">Ungraded</Badge>
+                    <Badge variant="warning" className="text-xs whitespace-nowrap ml-2 flex-shrink-0">Ungraded</Badge>
                   </div>
                 ))}
               </div>
@@ -204,11 +264,11 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                 {upcomingAssignments.map((assignment) => (
                   <Link key={assignment.id} href={`/assignments/${assignment.id}`}>
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {assignment.title}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {(assignment.class as any)?.class_name} · {formatDate(assignment.deadline)}
                         </p>
                       </div>
@@ -246,6 +306,92 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Announcements */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Megaphone className="w-4 h-4 text-blue-600" />
+            Announcements
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-xs"
+            onClick={() => setShowCreateForm((v) => !v)}
+          >
+            {showCreateForm ? (
+              <><ChevronUp className="w-3.5 h-3.5" /> Cancel</>
+            ) : (
+              <><Plus className="w-3.5 h-3.5" /> New</>
+            )}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Inline create form */}
+          {showCreateForm && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-xl space-y-2 border border-blue-100 dark:border-blue-900">
+              <Input
+                placeholder="Title"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className="rounded-lg text-sm"
+              />
+              <Textarea
+                placeholder="Content..."
+                value={newContent}
+                onChange={(e) => setNewContent(e.target.value)}
+                className="rounded-lg text-sm min-h-[80px] resize-none"
+              />
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={handleCreateAnnouncement}
+                disabled={submitting}
+              >
+                {submitting ? "Posting..." : "Post Announcement"}
+              </Button>
+            </div>
+          )}
+
+          {/* List */}
+          {announcementsLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : announcements.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <Megaphone className="w-10 h-10 mx-auto mb-2 opacity-20" />
+              <p className="text-sm">No announcements yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {announcements.map((ann) => (
+                <div
+                  key={ann.id}
+                  className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl group"
+                >
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{ann.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{ann.content}</p>
+                    <p className="text-xs text-gray-400 mt-1">{formatDate(ann.created_at)}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                    onClick={() => handleDeleteAnnouncement(ann.id)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

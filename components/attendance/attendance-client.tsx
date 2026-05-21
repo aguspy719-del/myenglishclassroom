@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   UserCheck, CheckCircle, XCircle, Clock, AlertCircle,
-  Calendar, Trash2, RefreshCw,
+  Calendar, Trash2, RefreshCw, ChevronDown, ChevronUp, BarChart2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,14 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import type { User, Attendance, Class, AttendanceStatus } from "@/types";
+
+interface ClassSummary {
+  classId: string;
+  className: string;
+  presentCount: number;
+  totalStudents: number;
+  rate: number;
+}
 
 interface AttendanceClientProps {
   user: User;
@@ -37,6 +45,8 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
   const [selectedClass, setSelectedClass] = useState(classFilter);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
+  const [classSummaries, setClassSummaries] = useState<ClassSummary[]>([]);
+  const [summaryOpen, setSummaryOpen] = useState(true);
 
   const fetchData = async () => {
     const supabase = createClient();
@@ -65,6 +75,39 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
 
       const { data } = await query;
       setAttendance(data || []);
+
+      // Build per-class summary for the selected date
+      if (classesData && classesData.length > 0) {
+        const classesToSummarise = selectedClass !== "all"
+          ? classesData.filter((c) => c.id === selectedClass)
+          : classesData;
+
+        const summaries: ClassSummary[] = await Promise.all(
+          classesToSummarise.map(async (cls) => {
+            const { count: totalStudents } = await supabase
+              .from("users")
+              .select("id", { count: "exact", head: true })
+              .eq("class_id", cls.id)
+              .eq("role", "student");
+
+            const presentCount = (data || []).filter(
+              (a) => a.class_id === cls.id && (a.status === "present" || a.status === "late")
+            ).length;
+
+            const total = totalStudents || 0;
+            const rate = total > 0 ? Math.round((presentCount / total) * 100) : 0;
+
+            return {
+              classId: cls.id,
+              className: cls.class_name,
+              presentCount,
+              totalStudents: total,
+              rate,
+            };
+          })
+        );
+        setClassSummaries(summaries.filter((s) => s.totalStudents > 0));
+      }
     }
     setLoading(false);
   };
@@ -257,8 +300,8 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
             { label: "Rate", value: `${attendanceRate}%`, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
           ].map((stat) => (
             <Card key={stat.label} className="border-0 shadow-sm">
-              <CardContent className={`pt-4 pb-4 text-center rounded-xl ${stat.bg}`}>
-                <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+              <CardContent className={`p-3 text-center rounded-xl ${stat.bg}`}>
+                <p className={`text-xl sm:text-2xl font-bold ${stat.color}`}>{stat.value}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</p>
               </CardContent>
             </Card>
@@ -292,6 +335,56 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
         </div>
       )}
 
+      {/* Teacher: Per-class Summary */}
+      {user.role === "teacher" && classSummaries.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-blue-600" />
+                Summary — {selectedDate}
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => setSummaryOpen((v) => !v)}
+              >
+                {summaryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </div>
+          </CardHeader>
+          {summaryOpen && (
+            <CardContent className="space-y-3">
+              {classSummaries.map((s) => (
+                <div key={s.classId} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-gray-900 dark:text-white truncate">{s.className}</span>
+                    <span className="text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
+                      {s.presentCount}/{s.totalStudents} · <span className={
+                        s.rate >= 80 ? "text-green-600 dark:text-green-400 font-semibold" :
+                        s.rate >= 60 ? "text-yellow-600 dark:text-yellow-400 font-semibold" :
+                        "text-red-600 dark:text-red-400 font-semibold"
+                      }>{s.rate}%</span>
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        s.rate >= 80 ? "bg-green-500" :
+                        s.rate >= 60 ? "bg-yellow-500" :
+                        "bg-red-500"
+                      }`}
+                      style={{ width: `${s.rate}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       {/* Attendance Records */}
       <Card>
         <CardHeader className="pb-3">
@@ -321,26 +414,26 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                 return (
                   <div
                     key={record.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl group"
+                    className="flex items-center gap-2 sm:gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl group"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${config?.bg}`}>
-                        <Icon className={`w-4 h-4 ${config?.text}`} />
-                      </div>
-                      <div className="min-w-0">
-                        {user.role === "teacher" && (
-                          <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
-                            {(record.student as any)?.name || "Student"}
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatDate(record.date)}
-                          {(record.class as any)?.class_name && ` · ${(record.class as any).class_name}`}
+                    <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${config?.bg}`}>
+                      <Icon className={`w-4 h-4 ${config?.text}`} />
+                    </div>
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      {user.role === "teacher" && (
+                        <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                          {(record.student as any)?.name || "Student"}
                         </p>
-                      </div>
+                      )}
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {formatDate(record.date)}
+                        {(record.class as any)?.class_name && (
+                          <span className="hidden sm:inline"> · {(record.class as any).class_name}</span>
+                        )}
+                      </p>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                       {/* Teacher: change status dropdown */}
                       {user.role === "teacher" ? (
                         <>
@@ -348,7 +441,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                             value={record.status}
                             onValueChange={(v) => handleChangeStatus(record.id, v as AttendanceStatus)}
                           >
-                            <SelectTrigger className="h-8 w-24 sm:w-28 text-xs rounded-lg">
+                            <SelectTrigger className="h-8 w-20 sm:w-28 text-xs rounded-lg">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -367,7 +460,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                           </Button>
                         </>
                       ) : (
-                        <Badge variant={config?.color as any || "secondary"} className="text-xs">
+                        <Badge variant={config?.color as any || "secondary"} className="text-xs whitespace-nowrap">
                           {config?.label || record.status}
                         </Badge>
                       )}

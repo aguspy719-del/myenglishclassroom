@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User as UserIcon, Mail, Shield, Loader2, Save, Star, Trophy, Zap } from "lucide-react";
+import { User as UserIcon, Mail, Shield, Loader2, Save, Star, Trophy, Bell, BellOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { getInitials, formatDate } from "@/lib/utils";
 import { BADGES, POINTS_PER_LEVEL } from "@/lib/gamification";
+import { subscribeToPush, unsubscribeFromPush } from "@/lib/push-notifications";
 import type { User } from "@/types";
 
 interface ProfileClientProps {
@@ -25,6 +26,39 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [subscribing, setSubscribing] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setNotifPermission(Notification.permission);
+    } else {
+      setNotifPermission("unsupported");
+    }
+  }, []);
+
+  const handleToggleNotifications = async () => {
+    setSubscribing(true);
+    try {
+      if (notifPermission === "granted") {
+        await unsubscribeFromPush();
+        setNotifPermission("default");
+        toast.success("Notifications disabled");
+      } else {
+        const ok = await subscribeToPush(user.id);
+        if (ok) {
+          setNotifPermission("granted");
+          toast.success("Notifications enabled! 🔔");
+        } else {
+          toast.error("Could not enable notifications. Please allow in browser settings.");
+        }
+      }
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   const points = (user as any).points || 0;
   const level = (user as any).level || 1;
@@ -67,14 +101,14 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
         <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
         <CardContent className="pt-0 pb-6">
           <div className="flex items-end gap-4 -mt-10 mb-4">
-            <Avatar className="w-20 h-20 border-4 border-white dark:border-gray-900 shadow-lg">
+            <Avatar className="w-20 h-20 border-4 border-white dark:border-gray-900 shadow-lg flex-shrink-0">
               <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-2xl font-bold">
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
-            <div className="pb-2">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">{user.email}</p>
+            <div className="pb-2 min-w-0 flex-1">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">{user.name}</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm truncate">{user.email}</p>
               <Badge className={user.role === "teacher" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 mt-1" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 mt-1"}>
                 {user.role === "teacher" ? "👨‍🏫 Teacher" : "👨‍🎓 Student"}
               </Badge>
@@ -209,6 +243,56 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
               <p className="text-sm font-medium text-gray-900 dark:text-white">{formatDate(user.created_at)}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Notifications */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bell className="w-4 h-4" />
+            Push Notifications
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {notifPermission === "unsupported" ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Push notifications are not supported on this browser.
+            </p>
+          ) : (
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {notifPermission === "granted" ? "Notifications are ON" : "Notifications are OFF"}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {notifPermission === "granted"
+                    ? "You'll receive alerts for new assignments, grades, and assessments."
+                    : "Enable to get alerts for new assignments, grades, and assessments."}
+                </p>
+              </div>
+              <Button
+                variant={notifPermission === "granted" ? "outline" : "default"}
+                size="sm"
+                className="gap-2 rounded-xl flex-shrink-0"
+                onClick={handleToggleNotifications}
+                disabled={subscribing || notifPermission === "denied"}
+              >
+                {subscribing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : notifPermission === "granted" ? (
+                  <><BellOff className="w-4 h-4" />Disable</>
+                ) : (
+                  <><Bell className="w-4 h-4" />Enable</>
+                )}
+              </Button>
+            </div>
+          )}
+          {notifPermission === "denied" && (
+            <p className="text-xs text-red-500 dark:text-red-400 mt-2">
+              Notifications are blocked. Please allow them in your browser settings.
+            </p>
+          )}
         </CardContent>
       </Card>
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   BookOpen, GraduationCap, Users, ClipboardList,
-  Star, Bell, ArrowRight, Calendar, Award,
+  Star, Bell, ArrowRight, Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,8 +66,6 @@ export default async function LandingPage() {
     .select("*")
     .order("grade")
     .order("class_name");
-
-  const totalStudents = (classes?.length || 0) * 28; // estimate
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">

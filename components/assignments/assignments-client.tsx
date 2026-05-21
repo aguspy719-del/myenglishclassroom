@@ -199,7 +199,7 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
             return (
               <div
                 key={assignment.id}
-                className={`flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border transition-shadow hover:shadow-sm group ${
+                className={`flex items-center gap-3 p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-xl border transition-shadow hover:shadow-sm group ${
                   isToday
                     ? "border-orange-300 dark:border-orange-700"
                     : isPast
@@ -207,7 +207,7 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
                     : "border-gray-200 dark:border-gray-700"
                 }`}
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   isPast
                     ? "bg-gray-100 dark:bg-gray-700"
                     : isToday
@@ -215,21 +215,21 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
                     : "bg-blue-100 dark:bg-blue-900"
                 }`}>
                   {isPast ? (
-                    <CheckCircle className="w-6 h-6 text-gray-500" />
+                    <CheckCircle className="w-5 h-5 text-gray-500" />
                   ) : isToday ? (
-                    <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                    <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   ) : (
-                    <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-gray-900 dark:text-white">{assignment.title}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{assignment.title}</p>
                     {getStatusBadge(assignment)}
                   </div>
-                  <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Deadline: {formatDate(assignment.deadline)}
                     </p>
                     {(assignment.class as any)?.class_name && (
@@ -239,15 +239,15 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
                     )}
                   </div>
                   {assignment.description && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                       {assignment.description}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <Link href={`/assignments/${assignment.id}`}>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="text-xs px-2 h-8">
                       {user.role === "teacher" ? "Lihat" : "Kerjakan"}
                     </Button>
                   </Link>
@@ -255,7 +255,7 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleDelete(assignment.id, assignment.title)}
                     >
                       <Trash2 className="w-4 h-4" />

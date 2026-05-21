@@ -8,15 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatRelativeTime } from "@/lib/utils";
 import Link from "next/link";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: string;
-  read: boolean;
-  link?: string;
-  created_at: string;
-}
+import type { Notification } from "@/types";
 
 interface NotificationsProps {
   userId: string;
@@ -95,7 +87,9 @@ export function Notifications({ userId }: NotificationsProps) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-50 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+          <div className="absolute right-0 top-11 z-50 w-[calc(100vw-2rem)] max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+            style={{ right: "max(0px, calc(50vw - 50%))" }}
+          >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
               <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>

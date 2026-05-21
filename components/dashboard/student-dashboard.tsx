@@ -98,7 +98,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "Active Tasks", value: loading ? "..." : upcomingAssignments.length, icon: ClipboardList, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950", href: "/classes" },
           { label: "Latest Grade", value: loading ? "..." : recentGrades.length > 0 ? `${recentGrades[0].score}` : "-", icon: Star, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950", href: "/grades" },
@@ -109,12 +109,12 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
           return (
             <Link key={stat.label} href={stat.href}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer border-0 shadow-sm">
-                <CardContent className="pt-4 pb-4">
-                  <div className={`w-10 h-10 ${stat.bg} rounded-xl flex items-center justify-center mb-3`}>
-                    <Icon className={`w-5 h-5 ${stat.color}`} />
+                <CardContent className="p-3 sm:p-4">
+                  <div className={`w-9 h-9 ${stat.bg} rounded-xl flex items-center justify-center mb-2`}>
+                    <Icon className={`w-4 h-4 ${stat.color}`} />
                   </div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{stat.label}</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white leading-tight truncate">{stat.value}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight truncate">{stat.label}</p>
                 </CardContent>
               </Card>
             </Link>

@@ -95,6 +95,32 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
       const { error } = await supabase.from("assignments").insert(insertData);
       if (error) throw error;
 
+      // Send push notification to students in selected classes
+      try {
+        const { data: students } = await supabase
+          .from("users")
+          .select("id")
+          .in("class_id", selectedClasses)
+          .eq("role", "student");
+
+        if (students && students.length > 0) {
+          await fetch("/api/push/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userIds: students.map((s) => s.id),
+              payload: {
+                title: "📋 New Assignment",
+                body: form.title,
+                url: "/classes",
+              },
+            }),
+          });
+        }
+      } catch {
+        // Push failure should not block the main flow
+      }
+
       toast.success(
         selectedClasses.length === 1
           ? "Assignment created successfully!"
