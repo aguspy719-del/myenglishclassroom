@@ -78,7 +78,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
           supabase.from("submissions").select("*, assignment:assignments(title)")
             .eq("student_id", user.id).not("score", "is", null)
             .order("submitted_at", { ascending: false }).limit(4)
-            .then(({ data }) => { if (data) setRecentGrades(data); });
+            .then(({ data }) => { if (data) setRecentGrades(data as any[]); });
         }
       )
       .subscribe();
