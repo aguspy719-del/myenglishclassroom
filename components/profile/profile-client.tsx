@@ -100,13 +100,13 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
       <Card className="border-0 shadow-sm overflow-hidden">
         <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
         <CardContent className="pt-0 pb-6">
-          <div className="flex items-end gap-4 -mt-10 mb-4">
+          <div className="flex items-center gap-4 -mt-10 mb-4">
             <Avatar className="w-20 h-20 border-4 border-white dark:border-gray-900 shadow-lg flex-shrink-0">
               <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-2xl font-bold">
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
-            <div className="pb-2 min-w-0 flex-1">
+            <div className="min-w-0 flex-1">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">{user.name}</h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm truncate">{user.email}</p>
               <Badge className={user.role === "teacher" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 mt-1" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 mt-1"}>
