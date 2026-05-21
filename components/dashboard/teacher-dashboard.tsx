@@ -153,15 +153,15 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
             {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Link href="/assignments/create">
-            <Button size="sm" className="gap-2">
+            <Button size="sm" className="gap-2 flex-1 sm:flex-none">
               <Plus className="w-4 h-4" />
               New Assignment
             </Button>
           </Link>
           <Link href="/materials/upload">
-            <Button size="sm" variant="outline" className="gap-2">
+            <Button size="sm" variant="outline" className="gap-2 flex-1 sm:flex-none">
               <Plus className="w-4 h-4" />
               Upload Material
             </Button>
@@ -383,7 +383,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                    className="h-7 w-7 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
                     onClick={() => handleDeleteAnnouncement(ann.id)}
                   >
                     <Trash2 className="w-3.5 h-3.5" />

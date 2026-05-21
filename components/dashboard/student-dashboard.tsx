@@ -29,8 +29,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const [userData, setUserData] = useState<any>(user);
 
   useEffect(() => {
+    const supabase = createClient();
+
     const fetchData = async () => {
-      const supabase = createClient();
       const [assignmentsRes, gradesRes, announcementsRes, attendanceRes, userRes] = await Promise.all([
         supabase.from("assignments").select("*, class:classes(class_name)").eq("class_id", user.class_id || "").gte("deadline", new Date().toISOString()).order("deadline", { ascending: true }).limit(4),
         supabase.from("submissions").select("*, assignment:assignments(title)").eq("student_id", user.id).not("score", "is", null).order("submitted_at", { ascending: false }).limit(4),
@@ -49,7 +50,40 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       }
       setLoading(false);
     };
+
     fetchData();
+
+    // Realtime: auto-update when announcements, assignments, or grades change
+    const channel = supabase
+      .channel("student-dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" },
+        () => {
+          supabase.from("announcements").select("*").order("created_at", { ascending: false }).limit(3)
+            .then(({ data }) => { if (data) setAnnouncements(data); });
+        }
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "assignments",
+          filter: `class_id=eq.${user.class_id}` },
+        () => {
+          supabase.from("assignments").select("*, class:classes(class_name)")
+            .eq("class_id", user.class_id || "")
+            .gte("deadline", new Date().toISOString())
+            .order("deadline", { ascending: true }).limit(4)
+            .then(({ data }) => { if (data) setUpcomingAssignments(data); });
+        }
+      )
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "submissions",
+          filter: `student_id=eq.${user.id}` },
+        () => {
+          supabase.from("submissions").select("*, assignment:assignments(title)")
+            .eq("student_id", user.id).not("score", "is", null)
+            .order("submitted_at", { ascending: false }).limit(4)
+            .then(({ data }) => { if (data) setRecentGrades(data); });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user.id, user.class_id]);
 
   const points = userData?.points || 0;
