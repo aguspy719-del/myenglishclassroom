@@ -106,7 +106,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
+            <div className="mt-10 min-w-0 flex-1">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">{user.name}</h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm truncate">{user.email}</p>
               <Badge className={user.role === "teacher" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 mt-1" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 mt-1"}>
