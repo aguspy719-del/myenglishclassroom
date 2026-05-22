@@ -97,21 +97,23 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
 
       {/* Profile Hero Card */}
       <Card className="border-0 shadow-sm overflow-hidden">
-        {/* Banner — nama & email di dalam */}
-        <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 flex flex-col justify-center">
-          <h2 className="text-white text-xl font-bold leading-tight truncate">{user.name}</h2>
-          <p className="text-blue-200 text-sm truncate mt-0.5">{user.email}</p>
+        {/* Banner */}
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative">
+          {/* Nama & email di kanan atas banner */}
+          <div className="px-5 pt-4 pb-10 text-right">
+            <h2 className="text-white text-xl font-bold leading-tight truncate">{user.name}</h2>
+            <p className="text-blue-200 text-sm mt-0.5 truncate">{user.email}</p>
+          </div>
         </div>
-        {/* Putih — avatar setengah keluar dari banner */}
+        {/* Putih — avatar overlap dari banner */}
         <CardContent className="pt-0 pb-6">
-          {/* Avatar + Badge row */}
-          <div className="flex items-center gap-4 px-2 mb-6">
-            <div className="-mt-8 flex-shrink-0">
+          <div className="flex items-center gap-4 -mt-8 mb-4 px-2">
+            <div className="flex-shrink-0">
               <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl">
                 <span className="text-white text-2xl font-bold">{getInitials(user.name)}</span>
               </div>
             </div>
-            <div className="mt-3">
+            <div className="mt-8">
               <Badge className={user.role === "teacher"
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                 : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}>
@@ -122,7 +124,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
 
           {/* Gamification stats — students only */}
           {user.role === "student" && (
-            <div className="space-y-4">
+            <div className="space-y-4 mt-5">
               {/* Level & XP */}
               <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
