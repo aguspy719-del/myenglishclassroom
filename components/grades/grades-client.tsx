@@ -18,7 +18,7 @@ interface GradesClientProps {
 }
 
 export function GradesClient({ user }: GradesClientProps) {
-  const [grades, setGrades] = useState<Submission[]>([]);
+  const [grades, setGrades] = useState<any[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -31,19 +31,56 @@ export function GradesClient({ user }: GradesClientProps) {
       const supabase = createClient();
 
       if (user.role === "student") {
-        const { data } = await supabase
+        // Fetch assignment submissions
+        const { data: submissionsData } = await supabase
           .from("submissions")
           .select("*, assignment:assignments(title, class_id, class:classes(class_name))")
           .eq("student_id", user.id)
           .not("score", "is", null)
           .order("submitted_at", { ascending: false });
-        setGrades(data || []);
 
-        // Fetch attendance rate for student
+        // Fetch quiz attempts
+        const { data: attemptsData } = await supabase
+          .from("quiz_attempts")
+          .select("*, quiz:quizzes(title, class_id, quiz_type, class:classes(class_name))")
+          .eq("student_id", user.id)
+          .not("score", "is", null)
+          .order("completed_at", { ascending: false });
+
+        // Normalize to unified format
+        const submissionItems = (submissionsData || []).map((s) => ({
+          id: s.id,
+          score: s.score,
+          feedback: s.feedback,
+          submitted_at: s.submitted_at,
+          type: "assignment" as const,
+          title: (s.assignment as any)?.title || "Assignment",
+          class_name: (s.assignment as any)?.class?.class_name || "",
+          class_id: (s.assignment as any)?.class_id || "",
+        }));
+
+        const attemptItems = (attemptsData || []).map((a) => ({
+          id: a.id,
+          score: a.score,
+          feedback: null,
+          submitted_at: a.completed_at,
+          type: "assessment" as const,
+          quiz_type: (a.quiz as any)?.quiz_type || "formatif",
+          title: (a.quiz as any)?.title || "Assessment",
+          class_name: (a.quiz as any)?.class?.class_name || "",
+          class_id: (a.quiz as any)?.class_id || "",
+        }));
+
+        // Merge and sort by date
+        const allGrades = [...submissionItems, ...attemptItems].sort(
+          (a, b) => new Date(b.submitted_at || 0).getTime() - new Date(a.submitted_at || 0).getTime()
+        );
+
+        setGrades(allGrades);
+
+        // Fetch attendance rate
         const { data: attData } = await supabase
-          .from("attendance")
-          .select("status")
-          .eq("student_id", user.id);
+          .from("attendance").select("status").eq("student_id", user.id);
         if (attData && attData.length > 0) {
           const presentOrLate = attData.filter((a) => a.status === "present" || a.status === "late").length;
           setAttendanceRate(Math.round((presentOrLate / attData.length) * 100));
@@ -56,7 +93,13 @@ export function GradesClient({ user }: GradesClientProps) {
           .select("*, student:users(name, email), assignment:assignments(title, class_id, class:classes(class_name))")
           .not("score", "is", null)
           .order("submitted_at", { ascending: false });
-        setGrades(data || []);
+        setGrades((data || []).map((s) => ({
+          ...s,
+          type: "assignment",
+          title: (s.assignment as any)?.title || "Assignment",
+          class_name: (s.assignment as any)?.class?.class_name || "",
+          class_id: (s.assignment as any)?.class_id || "",
+        })));
 
         const { data: classData } = await supabase.from("classes").select("*").order("class_name");
         setClasses(classData || []);
@@ -67,13 +110,12 @@ export function GradesClient({ user }: GradesClientProps) {
   }, [user.id, user.role]);
 
   const filtered = grades.filter((g) => {
-    const assignTitle = (g.assignment as any)?.title || "";
+    const title = g.title || "";
     const studentName = (g.student as any)?.name || "";
     const matchSearch =
-      assignTitle.toLowerCase().includes(search.toLowerCase()) ||
+      title.toLowerCase().includes(search.toLowerCase()) ||
       studentName.toLowerCase().includes(search.toLowerCase());
-    const classId = (g.assignment as any)?.class_id;
-    const matchClass = selectedClass === "all" || classId === selectedClass;
+    const matchClass = selectedClass === "all" || g.class_id === selectedClass;
     return matchSearch && matchClass;
   });
 
@@ -369,51 +411,73 @@ export function GradesClient({ user }: GradesClientProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((grade) => (
-            <div
-              key={grade.id}
-              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm"
-            >
-              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 font-bold text-base ${
-                (grade.score || 0) >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" :
-                (grade.score || 0) >= 80 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" :
-                (grade.score || 0) >= 70 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" :
-                (grade.score || 0) >= 60 ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" :
-                "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-              }`}>
-                {getGradeLabel(grade.score || 0)}
-              </div>
+          {filtered.map((grade) => {
+            const quizTypeLabels: Record<string, string> = {
+              formatif: "Formatif",
+              sumatif_tengah: "STS",
+              sumatif_akhir: "SAS",
+            };
+            const quizTypeColors: Record<string, string> = {
+              formatif: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+              sumatif_tengah: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+              sumatif_akhir: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+            };
+            return (
+              <div
+                key={grade.id}
+                className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm"
+              >
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 font-bold text-base ${
+                  (grade.score || 0) >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" :
+                  (grade.score || 0) >= 80 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" :
+                  (grade.score || 0) >= 70 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" :
+                  (grade.score || 0) >= 60 ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" :
+                  "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                }`}>
+                  {getGradeLabel(grade.score || 0)}
+                </div>
 
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">
-                  {(grade.assignment as any)?.title || "Assignment"}
-                </p>
-                {(grade.assignment as any)?.class?.class_name && (
-                  <Badge variant="secondary" className="text-xs mt-0.5">
-                    {(grade.assignment as any).class.class_name}
-                  </Badge>
-                )}
-                {user.role === "teacher" && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                    {(grade.student as any)?.name}
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                    {grade.title}
                   </p>
-                )}
-                {grade.feedback && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                    💬 {grade.feedback}
-                  </p>
-                )}
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(grade.submitted_at)}</p>
-              </div>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    {/* Type badge */}
+                    {grade.type === "assessment" ? (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${quizTypeColors[grade.quiz_type] || quizTypeColors.formatif}`}>
+                        {quizTypeLabels[grade.quiz_type] || "Assessment"}
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                        Tugas
+                      </span>
+                    )}
+                    {grade.class_name && (
+                      <Badge variant="secondary" className="text-xs">{grade.class_name}</Badge>
+                    )}
+                  </div>
+                  {user.role === "teacher" && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                      {(grade.student as any)?.name}
+                    </p>
+                  )}
+                  {grade.feedback && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                      💬 {grade.feedback}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-0.5">{formatDate(grade.submitted_at)}</p>
+                </div>
 
-              <div className="text-right flex-shrink-0 ml-1">
-                <p className={`text-xl font-bold ${getGradeColor(grade.score || 0)}`}>
-                  {grade.score}
-                </p>
-                <p className="text-xs text-gray-400">/ 100</p>
+                <div className="text-right flex-shrink-0 ml-1">
+                  <p className={`text-xl font-bold ${getGradeColor(grade.score || 0)}`}>
+                    {grade.score}
+                  </p>
+                  <p className="text-xs text-gray-400">/ 100</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

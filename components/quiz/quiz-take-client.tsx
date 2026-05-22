@@ -434,10 +434,74 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
     if (error) toast.error("Failed"); else { toast.success("Deleted"); setQuestions(questions.filter((q) => q.id !== id)); }
   };
 
-  const gradeEssay = async (answerId: string, score: number, feedback: string) => {
+  const gradeEssay = async (answerId: string, essayScore: number, feedback: string) => {
     const supabase = createClient();
-    const { error } = await supabase.from("essay_answers").update({ score, feedback }).eq("id", answerId);
-    if (error) toast.error("Failed"); else { toast.success("Graded!"); setEssayAnswers((p) => p.map((a) => a.id === answerId ? { ...a, score, feedback } : a)); }
+    const { error } = await supabase.from("essay_answers").update({ score: essayScore, feedback }).eq("id", answerId);
+    if (error) { toast.error("Failed"); return; }
+
+    toast.success("Graded!");
+    setEssayAnswers((p) => p.map((a) => a.id === answerId ? { ...a, score: essayScore, feedback } : a));
+
+    // Recalculate total score for this student and update quiz_attempts
+    const gradedAnswer = essayAnswers.find((a) => a.id === answerId);
+    if (!gradedAnswer) return;
+
+    const studentId = gradedAnswer.student_id || gradedAnswer.student?.id;
+    if (!studentId) return;
+
+    // Get all essay answers for this student in this quiz
+    const { data: allEssayAnswers } = await supabase
+      .from("essay_answers")
+      .select("score, question:quiz_questions(max_score)")
+      .eq("quiz_id", quiz.id)
+      .eq("student_id", studentId)
+      .not("score", "is", null);
+
+    // Get MC score from existing attempt
+    const { data: attempt } = await supabase
+      .from("quiz_attempts")
+      .select("id, score")
+      .eq("quiz_id", quiz.id)
+      .eq("student_id", studentId)
+      .maybeSingle();
+
+    if (!attempt) return;
+
+    // Calculate essay contribution
+    const mcCount = questions.filter((q) => (q as any).question_type !== "essay").length;
+    const essayCount = questions.filter((q) => (q as any).question_type === "essay").length;
+    const totalQuestions = mcCount + essayCount;
+
+    if (totalQuestions === 0) return;
+
+    // MC score is already stored as percentage of MC questions
+    const mcScore = mcCount > 0 ? (attempt.score || 0) * mcCount / 100 : 0;
+
+    // Essay score: sum of (score/max_score) for each essay
+    const essayTotalScore = (allEssayAnswers || []).reduce((sum, ea) => {
+      const maxScore = (ea.question as any)?.max_score || 10;
+      return sum + ((ea.score || 0) / maxScore) * 100;
+    }, 0);
+    const essayAvg = essayCount > 0 ? essayTotalScore / essayCount : 0;
+
+    // Final score = weighted average
+    const finalScore = Math.round((mcScore + essayAvg * essayCount / totalQuestions * totalQuestions) / totalQuestions);
+    const combinedScore = Math.round(
+      (mcCount * (attempt.score || 0) + essayCount * essayAvg) / totalQuestions
+    );
+
+    await supabase.from("quiz_attempts")
+      .update({ score: combinedScore })
+      .eq("id", attempt.id);
+
+    // Refresh attempts list
+    const { data: updatedAttempts } = await supabase
+      .from("quiz_attempts")
+      .select("*, student:users(name,email)")
+      .eq("quiz_id", quiz.id)
+      .not("score", "is", null)
+      .order("completed_at", { ascending: false });
+    setAttempts(updatedAttempts || []);
   };
 
   const avgScore = attempts.length > 0 ? Math.round(attempts.reduce((a, b) => a + (b.score || 0), 0) / attempts.length) : 0;

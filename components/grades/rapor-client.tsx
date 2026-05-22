@@ -89,19 +89,34 @@ export function RaporClient() {
           .eq("class_id", cls.id)
           .order("created_at");
 
-        const { data: quizAttempts } = await supabase
-          .from("quiz_attempts")
-          .select("student_id, score, quiz:quizzes(title, quiz_type, class_id)")
-          .not("score", "is", null);
+        // Get quiz IDs for this class first, then get attempts
+        const { data: classQuizzes } = await supabase
+          .from("quizzes")
+          .select("id, title, quiz_type")
+          .eq("class_id", cls.id);
+
+        const classQuizIds = (classQuizzes || []).map((q) => q.id);
+
+        const { data: quizAttempts } = classQuizIds.length > 0
+          ? await supabase
+              .from("quiz_attempts")
+              .select("student_id, score, quiz_id")
+              .in("quiz_id", classQuizIds)
+              .not("score", "is", null)
+          : { data: [] };
+
+        // Map quiz_id to quiz info
+        const quizMap = Object.fromEntries((classQuizzes || []).map((q) => [q.id, q]));
+
+        const classAttempts = (quizAttempts || []).map((a) => ({
+          ...a,
+          quiz: quizMap[a.quiz_id],
+        }));
 
         const { data: submissions } = await supabase
           .from("submissions")
           .select("student_id, score, assignment_id")
           .not("score", "is", null);
-
-        const classAttempts = (quizAttempts || []).filter(
-          (a) => (a.quiz as any)?.class_id === cls.id
-        );
 
         const raporData = students.map((student, idx) => {
           const studentSubs = (submissions || []).filter((s) => s.student_id === student.id);
