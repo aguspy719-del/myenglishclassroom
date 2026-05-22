@@ -98,21 +98,20 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
       {/* Profile Hero Card */}
       <Card className="border-0 shadow-sm overflow-hidden">
         {/* Banner — nama & email di dalam */}
-        <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-5 flex flex-col justify-center">
-          <h2 className="text-white text-lg font-bold leading-tight truncate">{user.name}</h2>
+        <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 flex flex-col justify-center">
+          <h2 className="text-white text-xl font-bold leading-tight truncate">{user.name}</h2>
           <p className="text-blue-200 text-sm truncate mt-0.5">{user.email}</p>
         </div>
         {/* Putih — avatar setengah keluar dari banner */}
         <CardContent className="pt-0 pb-6">
-          <div className="flex items-center gap-3 px-1">
-            {/* Avatar overlapping banner */}
-            <div className="-mt-7 flex-shrink-0">
-              <div className="w-14 h-14 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <span className="text-white text-lg font-bold">{getInitials(user.name)}</span>
+          {/* Avatar + Badge row */}
+          <div className="flex items-center gap-4 px-2 mb-6">
+            <div className="-mt-8 flex-shrink-0">
+              <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl">
+                <span className="text-white text-2xl font-bold">{getInitials(user.name)}</span>
               </div>
             </div>
-            {/* Badge */}
-            <div className="mt-2">
+            <div className="mt-3">
               <Badge className={user.role === "teacher"
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                 : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}>
@@ -127,8 +126,8 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
               {/* Level & XP */}
               <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
                       <span className="text-white font-bold text-sm">{level}</span>
                     </div>
                     <div>
@@ -154,10 +153,10 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
                   { label: "Total XP", value: points, icon: "🎯", color: "bg-blue-50 dark:bg-blue-950" },
                   { label: "Badges", value: badges.length, icon: "🏅", color: "bg-purple-50 dark:bg-purple-950" },
                 ].map((stat) => (
-                  <div key={stat.label} className={`${stat.color} rounded-2xl p-3 text-center`}>
-                    <p className="text-xl">{stat.icon}</p>
+                  <div key={stat.label} className={`${stat.color} rounded-2xl p-4 text-center`}>
+                    <p className="text-2xl">{stat.icon}</p>
                     <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{stat.label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</p>
                   </div>
                 ))}
               </div>
