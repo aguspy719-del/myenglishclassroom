@@ -98,17 +98,21 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
       {/* Profile Hero Card */}
       <Card className="border-0 shadow-sm overflow-hidden">
         {/* Banner — nama & email di dalam */}
-        <div className="h-28 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-5 pt-4">
+        <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-5 flex flex-col justify-center">
           <h2 className="text-white text-lg font-bold leading-tight truncate">{user.name}</h2>
           <p className="text-blue-200 text-sm truncate mt-0.5">{user.email}</p>
         </div>
         {/* Putih — avatar setengah keluar dari banner */}
         <CardContent className="pt-0 pb-6">
-          <div className="flex items-end gap-3 -mt-7 mb-4">
-            <div className="w-14 h-14 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-              <span className="text-white text-lg font-bold">{getInitials(user.name)}</span>
+          <div className="flex items-center gap-3 px-1">
+            {/* Avatar overlapping banner */}
+            <div className="-mt-7 flex-shrink-0">
+              <div className="w-14 h-14 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <span className="text-white text-lg font-bold">{getInitials(user.name)}</span>
+              </div>
             </div>
-            <div className="pb-1">
+            {/* Badge */}
+            <div className="mt-2">
               <Badge className={user.role === "teacher"
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                 : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}>
