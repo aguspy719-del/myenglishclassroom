@@ -97,29 +97,27 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
 
       {/* Profile Hero Card */}
       <Card className="border-0 shadow-sm overflow-hidden">
-        {/* Banner */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative">
-          {/* Nama & email di kanan atas banner */}
-          <div className="px-5 pt-4 pb-10 text-right">
+        {/* Banner dengan nama & email di kiri bawah, avatar di kanan bawah overlap */}
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-5 pt-5 pb-8 flex items-end justify-between">
+          <div className="min-w-0 flex-1 pr-4">
             <h2 className="text-white text-xl font-bold leading-tight truncate">{user.name}</h2>
             <p className="text-blue-200 text-sm mt-0.5 truncate">{user.email}</p>
           </div>
+          {/* Avatar di kanan, setengah keluar ke bawah */}
+          <div className="flex-shrink-0 translate-y-1/2">
+            <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-xl">
+              <span className="text-white text-2xl font-bold">{getInitials(user.name)}</span>
+            </div>
+          </div>
         </div>
-        {/* Putih — avatar overlap dari banner */}
-        <CardContent className="pt-0 pb-6">
-          <div className="flex items-center gap-4 -mt-8 mb-4 px-2">
-            <div className="flex-shrink-0">
-              <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl">
-                <span className="text-white text-2xl font-bold">{getInitials(user.name)}</span>
-              </div>
-            </div>
-            <div className="mt-8">
-              <Badge className={user.role === "teacher"
-                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}>
-                {user.role === "teacher" ? "👨‍🏫 Teacher" : "👨‍🎓 Student"}
-              </Badge>
-            </div>
+        {/* Putih — badge di bawah */}
+        <CardContent className="pt-3 pb-6">
+          <div className="flex justify-end pr-2 mb-4" style={{ marginTop: "2.5rem" }}>
+            <Badge className={user.role === "teacher"
+              ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+              : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}>
+              {user.role === "teacher" ? "👨‍🏫 Teacher" : "👨‍🎓 Student"}
+            </Badge>
           </div>
 
           {/* Gamification stats — students only */}
