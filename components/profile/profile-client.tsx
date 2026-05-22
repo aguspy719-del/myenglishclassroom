@@ -97,32 +97,28 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
 
       {/* Profile Hero Card */}
       <Card className="border-0 shadow-sm overflow-hidden">
-        {/* Banner dengan nama & email di kiri bawah, avatar di kanan bawah overlap */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-5 pt-5 pb-8 flex items-end justify-between">
-          <div className="min-w-0 flex-1 pr-4">
-            <h2 className="text-white text-xl font-bold leading-tight truncate">{user.name}</h2>
-            <p className="text-blue-200 text-sm mt-0.5 truncate">{user.email}</p>
-          </div>
-          {/* Avatar di kanan, setengah keluar ke bawah */}
-          <div className="flex-shrink-0 translate-y-1/2">
-            <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-xl">
+        {/* Banner polos */}
+        <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+        {/* Content */}
+        <CardContent className="pt-0 pb-5 px-5">
+          {/* Avatar overlap banner */}
+          <div className="-mt-10 mb-3">
+            <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl">
               <span className="text-white text-2xl font-bold">{getInitials(user.name)}</span>
             </div>
           </div>
-        </div>
-        {/* Putih — badge di bawah */}
-        <CardContent className="pt-3 pb-6">
-          <div className="flex justify-end pr-2 mb-4" style={{ marginTop: "2.5rem" }}>
-            <Badge className={user.role === "teacher"
-              ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-              : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}>
-              {user.role === "teacher" ? "👨‍🏫 Teacher" : "👨‍🎓 Student"}
-            </Badge>
-          </div>
+          {/* Nama, email, badge */}
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{user.email}</p>
+          <Badge className={`mt-2 ${user.role === "teacher"
+            ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+            : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}`}>
+            {user.role === "teacher" ? "👨‍🏫 Teacher" : "👨‍🎓 Student"}
+          </Badge>
 
           {/* Gamification stats — students only */}
           {user.role === "student" && (
-            <div className="space-y-4 mt-5">
+            <div className="space-y-4 mt-4">
               {/* Level & XP */}
               <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
