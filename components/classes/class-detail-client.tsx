@@ -117,12 +117,19 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
   // Delete student account entirely
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
-    if (!confirm(`Permanently delete account "${studentName}"? This cannot be undone.`)) return;
-    const supabase = createClient();
-    // Delete from auth via admin — we can only delete from users table (auth deletion needs service key)
-    const { error } = await supabase.from("users").delete().eq("id", studentId);
-    if (error) toast.error("Failed to delete student");
-    else { toast.success(`${studentName} deleted`); fetchData(); }
+    if (!confirm(`Permanently delete account "${studentName}"? This cannot be undone and will remove all their data.`)) return;
+    const res = await fetch("/api/admin/delete-student", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || "Failed to delete student");
+    } else {
+      toast.success(`${studentName} deleted`);
+      fetchData();
+    }
   };
 
   // Load students not in any class or in other classes
