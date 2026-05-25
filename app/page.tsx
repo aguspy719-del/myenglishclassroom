@@ -59,14 +59,13 @@ const features = [
 ];
 
 export default async function LandingPage() {
-  // Fetch classes and real student count from database
   const supabase = createClient();
-  const [{ data: classes }, { count: studentCount }] = await Promise.all([
+  const [{ data: classes }, { data: countData }] = await Promise.all([
     supabase.from("classes").select("*").order("grade").order("class_name"),
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "student"),
+    supabase.rpc("get_student_count"),
   ]);
 
-  const totalStudents = studentCount || 0;
+  const totalStudents = (countData as number) || 0;
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
