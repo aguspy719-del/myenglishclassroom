@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, Users, BookOpen, ClipboardList, FileText,
   Plus, Download, Trash2, Clock, Search, GraduationCap,
-  MoreVertical, Mail, FileQuestion, UserMinus, UserPlus,
+  MoreVertical, Mail, FileQuestion, UserMinus, UserPlus, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatDate, formatDateTime, getDeadlineStatus, getInitials } from "@/lib/utils";
@@ -44,8 +45,11 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
   const [activeTab, setActiveTab] = useState("overview");
   // Student management
   const [showAddStudent, setShowAddStudent] = useState(false);
+  const [showCreateStudent, setShowCreateStudent] = useState(false);
   const [availableStudents, setAvailableStudents] = useState<User[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
+  const [newStudentForm, setNewStudentForm] = useState({ name: "", email: "", password: "" });
+  const [creatingStudent, setCreatingStudent] = useState(false);
 
   const fetchData = async () => {
     const supabase = createClient();
@@ -144,6 +148,40 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
       toast.success(`${studentName} added to class`);
       setAvailableStudents((p) => p.filter((s) => s.id !== studentId));
       fetchData();
+    }
+  };
+
+  // Create new student account
+  const handleCreateStudent = async () => {
+    if (!newStudentForm.name || !newStudentForm.email || !newStudentForm.password) {
+      toast.error("All fields are required");
+      return;
+    }
+    setCreatingStudent(true);
+    try {
+      const res = await fetch("/api/admin/create-student", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newStudentForm.name,
+          email: newStudentForm.email,
+          password: newStudentForm.password,
+          class_id: classData.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to create account");
+      } else {
+        toast.success(`Account created for ${newStudentForm.name}! 🎉`);
+        setNewStudentForm({ name: "", email: "", password: "" });
+        setShowCreateStudent(false);
+        fetchData();
+      }
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setCreatingStudent(false);
     }
   };
 
@@ -688,13 +726,25 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
               />
             </div>
             {user.role === "teacher" && (
-              <Button
-                size="sm"
-                className="gap-2 rounded-xl flex-shrink-0"
-                onClick={() => { setShowAddStudent(true); loadAvailableStudents(); }}
-              >
-                <UserPlus className="w-4 h-4" />Add
-              </Button>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 rounded-xl"
+                  onClick={() => { setShowAddStudent(true); loadAvailableStudents(); }}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Add</span>
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-2 rounded-xl"
+                  onClick={() => setShowCreateStudent(true)}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Create</span>
+                </Button>
+              </div>
             )}
           </div>
 
@@ -823,6 +873,57 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddStudent(false)} className="rounded-xl">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Create Student Account Dialog */}
+      <Dialog open={showCreateStudent} onOpenChange={setShowCreateStudent}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Student Account</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-xl text-xs text-blue-700 dark:text-blue-300">
+              📌 Account will be created for <strong>{classData.class_name}</strong>. Share the email & password with the student.
+            </div>
+            <div className="space-y-2">
+              <Label>Full Name *</Label>
+              <Input
+                placeholder="e.g. Budi Santoso"
+                value={newStudentForm.name}
+                onChange={(e) => setNewStudentForm({ ...newStudentForm, name: e.target.value })}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input
+                type="email"
+                placeholder="student@email.com"
+                value={newStudentForm.email}
+                onChange={(e) => setNewStudentForm({ ...newStudentForm, email: e.target.value })}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Password *</Label>
+              <Input
+                type="text"
+                placeholder="Minimum 6 characters"
+                value={newStudentForm.password}
+                onChange={(e) => setNewStudentForm({ ...newStudentForm, password: e.target.value })}
+                className="rounded-xl font-mono"
+              />
+              <p className="text-xs text-gray-500">Share this password with the student. They can change it later in Profile.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowCreateStudent(false); setNewStudentForm({ name: "", email: "", password: "" }); }} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button onClick={handleCreateStudent} disabled={creatingStudent} className="rounded-xl">
+              {creatingStudent ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Creating...</> : "Create Account"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

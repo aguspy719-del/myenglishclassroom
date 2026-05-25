@@ -40,7 +40,7 @@ function JoinClassCard({ userId, onJoined }: { userId: string; onJoined: () => v
       .from("classes")
       .select("id, class_name")
       .eq("class_code", code.trim().toUpperCase())
-      .eq("is_archived", false)
+      .neq("is_archived", true)
       .maybeSingle();
 
     if (error || !cls) {
