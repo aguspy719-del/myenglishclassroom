@@ -59,13 +59,14 @@ const features = [
 ];
 
 export default async function LandingPage() {
-  // Fetch classes from database
+  // Fetch classes and real student count from database
   const supabase = createClient();
-  const { data: classes } = await supabase
-    .from("classes")
-    .select("*")
-    .order("grade")
-    .order("class_name");
+  const [{ data: classes }, { count: studentCount }] = await Promise.all([
+    supabase.from("classes").select("*").order("grade").order("class_name"),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "student"),
+  ]);
+
+  const totalStudents = studentCount || 0;
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -130,7 +131,7 @@ export default async function LandingPage() {
           <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto mt-12">
             {[
               { value: String(classes?.length || 8), label: "Classes" },
-              { value: String(classes?.length ? classes.length * 28 : 228), label: "Students" },
+              { value: String(totalStudents), label: "Students" },
               { value: "100%", label: "Digital" },
             ].map((stat) => (
               <div key={stat.label} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
@@ -196,7 +197,7 @@ export default async function LandingPage() {
                   <p className="text-xs text-blue-200">Classes</p>
                 </div>
                 <div className="bg-white/15 rounded-2xl p-4 text-center">
-                  <p className="text-3xl font-bold">{classes?.length ? classes.length * 28 : 228}</p>
+                  <p className="text-3xl font-bold">{totalStudents}</p>
                   <p className="text-xs text-blue-200">Students</p>
                 </div>
               </div>
