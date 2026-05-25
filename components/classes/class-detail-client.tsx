@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, Users, BookOpen, ClipboardList, FileText,
   Plus, Download, Trash2, Clock, Search, GraduationCap,
-  MoreVertical, Mail, FileQuestion,
+  MoreVertical, Mail, FileQuestion, UserMinus, UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatDate, formatDateTime, getDeadlineStatus, getInitials } from "@/lib/utils";
@@ -38,6 +42,10 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  // Student management
+  const [showAddStudent, setShowAddStudent] = useState(false);
+  const [availableStudents, setAvailableStudents] = useState<User[]>([]);
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
 
   const fetchData = async () => {
     const supabase = createClient();
@@ -92,6 +100,51 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     const { error } = await supabase.from("assignments").delete().eq("id", id);
     if (error) toast.error("Failed to delete assignment");
     else { toast.success("Assignment deleted"); fetchData(); }
+  };
+
+  // Remove student from class (set class_id to null)
+  const handleRemoveStudent = async (studentId: string, studentName: string) => {
+    if (!confirm(`Remove "${studentName}" from this class? Their account will not be deleted.`)) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("users").update({ class_id: null }).eq("id", studentId);
+    if (error) toast.error("Failed to remove student");
+    else { toast.success(`${studentName} removed from class`); fetchData(); }
+  };
+
+  // Delete student account entirely
+  const handleDeleteStudent = async (studentId: string, studentName: string) => {
+    if (!confirm(`Permanently delete account "${studentName}"? This cannot be undone.`)) return;
+    const supabase = createClient();
+    // Delete from auth via admin — we can only delete from users table (auth deletion needs service key)
+    const { error } = await supabase.from("users").delete().eq("id", studentId);
+    if (error) toast.error("Failed to delete student");
+    else { toast.success(`${studentName} deleted`); fetchData(); }
+  };
+
+  // Load students not in any class or in other classes
+  const loadAvailableStudents = async () => {
+    setLoadingAvailable(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("role", "student")
+      .neq("class_id", classData.id)
+      .order("name");
+    setAvailableStudents(data || []);
+    setLoadingAvailable(false);
+  };
+
+  // Add student to this class
+  const handleAddStudent = async (studentId: string, studentName: string) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("users").update({ class_id: classData.id }).eq("id", studentId);
+    if (error) toast.error("Failed to add student");
+    else {
+      toast.success(`${studentName} added to class`);
+      setAvailableStudents((p) => p.filter((s) => s.id !== studentId));
+      fetchData();
+    }
   };
 
   const filteredStudents = students.filter((s) =>
@@ -155,20 +208,26 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
           </Badge>
           <h2 className="text-2xl font-bold">{classData.class_name}</h2>
           <p className="text-white/80 mt-1">{classData.major}</p>
-          <div className="flex items-center gap-4 mt-4 flex-wrap">
-            <div className="flex items-center gap-2">
+          {(classData as any).class_code && (
+            <div className="mt-2 inline-flex items-center gap-2 bg-white/20 rounded-xl px-3 py-1.5">
+              <span className="text-white/70 text-xs">Class Code:</span>
+              <span className="text-white font-bold font-mono text-sm tracking-widest">{(classData as any).class_code}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-3 mt-4 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <Users className="w-4 h-4 text-white/70" />
               <span className="text-sm font-semibold">{students.length} Students</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <BookOpen className="w-4 h-4 text-white/70" />
               <span className="text-sm font-semibold">{materials.length} Materials</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <ClipboardList className="w-4 h-4 text-white/70" />
               <span className="text-sm font-semibold">{assignments.length} Assignments</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <FileQuestion className="w-4 h-4 text-white/70" />
               <span className="text-sm font-semibold">{quizzes.length} Assessments</span>
             </div>
@@ -618,14 +677,25 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
         {/* ── Students Tab ── */}
         <TabsContent value="students" className="mt-4 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search students..."
-              className="pl-9 rounded-xl"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search students..."
+                className="pl-9 rounded-xl"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            {user.role === "teacher" && (
+              <Button
+                size="sm"
+                className="gap-2 rounded-xl flex-shrink-0"
+                onClick={() => { setShowAddStudent(true); loadAvailableStudents(); }}
+              >
+                <UserPlus className="w-4 h-4" />Add
+              </Button>
+            )}
           </div>
 
           {loading ? (
@@ -645,7 +715,6 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                   key={student.id}
                   className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
                 >
-                  {/* Avatar */}
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
                     {student.avatar_url ? (
                       <img src={student.avatar_url} alt={student.name} className="w-10 h-10 rounded-full object-cover" />
@@ -669,15 +738,26 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                         <DropdownMenuContent align="end" className="rounded-xl">
                           <DropdownMenuItem asChild>
                             <a href={`mailto:${student.email}`} className="gap-2">
-                              <Mail className="w-4 h-4" />
-                              Send Email
+                              <Mail className="w-4 h-4" />Send Email
                             </a>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/grades?student=${student.id}`} className="gap-2">
-                              <GraduationCap className="w-4 h-4" />
-                              View Grades
+                              <GraduationCap className="w-4 h-4" />View Grades
                             </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="gap-2 text-yellow-600 dark:text-yellow-400"
+                            onClick={() => handleRemoveStudent(student.id, student.name)}
+                          >
+                            <UserMinus className="w-4 h-4" />Remove from Class
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="gap-2 text-red-600 dark:text-red-400"
+                            onClick={() => handleDeleteStudent(student.id, student.name)}
+                          >
+                            <Trash2 className="w-4 h-4" />Delete Account
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -701,6 +781,51 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Add Student Dialog */}
+      <Dialog open={showAddStudent} onOpenChange={setShowAddStudent}>
+        <DialogContent className="rounded-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Student to {classData.class_name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {loadingAvailable ? (
+              <div className="space-y-2">
+                {[1,2,3].map((i) => <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
+              </div>
+            ) : availableStudents.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <GraduationCap className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                <p className="text-sm">No available students</p>
+                <p className="text-xs mt-1">All registered students are already in a class</p>
+              </div>
+            ) : (
+              availableStudents.map((s) => (
+                <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs font-bold">{getInitials(s.name)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{s.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{s.email}</p>
+                    {s.class_id && <p className="text-xs text-orange-500">Currently in another class</p>}
+                  </div>
+                  <Button
+                    size="sm"
+                    className="gap-1 rounded-xl flex-shrink-0"
+                    onClick={() => handleAddStudent(s.id, s.name)}
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />Add
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddStudent(false)} className="rounded-xl">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

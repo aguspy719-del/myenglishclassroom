@@ -44,16 +44,33 @@ export function AlreadyAttempted({ quiz, attempt }: AlreadyAttemptedProps) {
           </div>
 
           <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Your Score</p>
-            <p className={`text-5xl font-bold ${getGradeColor(attempt.score || 0)}`}>
-              {attempt.score}
-            </p>
-            <Badge className="mt-2 text-base px-3 py-1">
-              {getGradeLabel(attempt.score || 0)}
-            </Badge>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-              Submitted: {formatDateTime(attempt.completed_at)}
-            </p>
+            {attempt.score !== null && attempt.score !== undefined ? (
+              <>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Your Score</p>
+                <p className={`text-5xl font-bold ${getGradeColor(attempt.score || 0)}`}>
+                  {attempt.score}
+                </p>
+                <Badge className="mt-2 text-base px-3 py-1">
+                  {getGradeLabel(attempt.score || 0)}
+                </Badge>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                  Submitted: {formatDateTime(attempt.completed_at)}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Status</p>
+                <div className="flex items-center gap-2 justify-center">
+                  <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
+                  <p className="text-base font-semibold text-yellow-600 dark:text-yellow-400">
+                    Waiting for teacher to grade
+                  </p>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                  Submitted: {formatDateTime(attempt.completed_at)}
+                </p>
+              </>
+            )}
           </div>
 
           <div className="p-3 bg-red-50 dark:bg-red-950 rounded-xl">

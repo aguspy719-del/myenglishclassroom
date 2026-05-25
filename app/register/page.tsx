@@ -52,39 +52,61 @@ export default function RegisterPage() {
     setLoading(true);
     const supabase = createClient();
     try {
+      // Pass class_id in metadata so trigger can use it
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: { data: { name: form.name, role: "student" } },
+        options: {
+          data: { name: form.name, role: "student", class_id: form.class_id },
+        },
       });
 
       if (authError) {
-        toast.error(authError.message.includes("already registered") ? "This email is already registered" : authError.message);
+        toast.error(
+          authError.message.includes("already registered")
+            ? "This email is already registered. Please sign in instead."
+            : authError.message
+        );
         return;
       }
 
       if (authData.user) {
-        const { error: profileError } = await supabase
+        // Wait a moment for the trigger to create the profile
+        await new Promise((r) => setTimeout(r, 800));
+
+        // Update profile with class_id (trigger may not have class_id)
+        const { error: updateError } = await supabase
           .from("users")
           .update({ name: form.name, class_id: form.class_id, role: "student" })
           .eq("id", authData.user.id);
 
-        if (profileError) {
-          await supabase.from("users").upsert({
+        if (updateError) {
+          // Trigger hasn't run yet or failed — upsert manually
+          const { error: upsertError } = await supabase.from("users").upsert({
             id: authData.user.id,
             name: form.name,
             email: form.email,
             class_id: form.class_id,
             role: "student",
-          });
+          }, { onConflict: "id" });
+
+          if (upsertError) {
+            console.error("Profile upsert error:", upsertError);
+            // Still proceed — profile will be created on next login
+          }
         }
 
         toast.success("Account created! Welcome 🎉");
         router.push("/dashboard");
         router.refresh();
+      } else {
+        // Email confirmation required
+        toast.success("Account created! Please check your email to confirm, then sign in.");
+        router.push("/login");
       }
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err: any) {
+      console.error("Register error:", err);
+      toast.error("Something went wrong: " + (err.message || "Please try again."));
     } finally {
       setLoading(false);
     }

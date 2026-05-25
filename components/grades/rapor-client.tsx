@@ -260,18 +260,18 @@ export function RaporClient() {
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0">
                       <span className="text-white font-bold text-sm">{cls.grade}</span>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-gray-900 dark:text-white">{cls.class_name}</p>
-                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-gray-900 dark:text-white truncate">{cls.class_name}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Users className="w-3 h-3" />{cls.studentCount} students
+                          <Users className="w-3 h-3 flex-shrink-0" />{cls.studentCount} siswa
                         </span>
                         <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <BookOpen className="w-3 h-3" />{cls.submissionCount} submissions
+                          <BookOpen className="w-3 h-3 flex-shrink-0" />{cls.submissionCount} submit
                         </span>
                         {cls.avgScore > 0 && (
                           <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <Star className="w-3 h-3" />Avg: {cls.avgScore} ({getGradeLabel(cls.avgScore)})
+                            <Star className="w-3 h-3 flex-shrink-0" />Avg: {cls.avgScore}
                           </span>
                         )}
                       </div>

@@ -104,3 +104,14 @@ CREATE POLICY "Users can manage own push subscriptions" ON public.push_subscript
   FOR ALL USING (auth.uid() = user_id);
 
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON public.push_subscriptions(user_id);
+
+-- ============================================================
+-- Class Code for student join via code
+-- ============================================================
+ALTER TABLE public.classes
+  ADD COLUMN IF NOT EXISTS class_code TEXT UNIQUE;
+
+-- Generate codes for existing classes (run once)
+UPDATE public.classes
+SET class_code = UPPER(SUBSTRING(MD5(id::text), 1, 6))
+WHERE class_code IS NULL;

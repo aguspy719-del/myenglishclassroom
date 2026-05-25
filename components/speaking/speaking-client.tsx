@@ -100,6 +100,9 @@ export function SpeakingClient({ user }: SpeakingClientProps) {
   const recognitionRef = useRef<any>(null);
   const restartTimerRef = useRef<any>(null);
   const isIOSDevice = useRef(false);
+  // Use ref to avoid stale closure in recognition callbacks
+  const isRecordingRef = useRef(false);
+  const transcriptRef = useRef("");
 
   const scenario = SCENARIOS[currentIdx];
   const categories = ["All", ...Array.from(new Set(SCENARIOS.map((s) => s.category)))];
@@ -129,43 +132,59 @@ export function SpeakingClient({ user }: SpeakingClientProps) {
     return recognition;
   }, []);
 
-  const startRecognition = useCallback((existingTranscript: string) => {
+  const startRecognition = useCallback(() => {
     const recognition = createRecognition();
     if (!recognition) return;
 
-    recognition.onstart = () => setIsRecording(true);
+    recognition.onstart = () => {
+      setIsRecording(true);
+      isRecordingRef.current = true;
+    };
 
     recognition.onresult = (event: any) => {
       let finalText = "";
-      let interimText = "";
+      let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const text = event.results[i][0].transcript;
-        if (event.results[i].isFinal) finalText += text + " ";
-        else interimText += text;
+        if (event.results[i].isFinal) {
+          finalText += text + " ";
+        } else {
+          interim += text;
+        }
       }
-      if (finalText) setTranscript((prev) => (prev + " " + finalText).trim());
-      setInterimText(interimText);
+      if (finalText) {
+        const newTranscript = (transcriptRef.current + " " + finalText).trim();
+        transcriptRef.current = newTranscript;
+        setTranscript(newTranscript);
+      }
+      setInterimText(interim);
     };
 
     recognition.onerror = (event: any) => {
       if (event.error === "no-speech") {
-        // iOS: restart on no-speech
-        if (isIOSDevice.current && isRecording) {
-          restartTimerRef.current = setTimeout(() => startRecognition(existingTranscript), 300);
+        // iOS: restart only if still recording
+        if (isIOSDevice.current && isRecordingRef.current) {
+          restartTimerRef.current = setTimeout(() => {
+            if (isRecordingRef.current) startRecognition();
+          }, 500);
         }
       } else if (event.error !== "aborted") {
-        toast.error("Microphone error: " + event.error);
+        console.error("Speech error:", event.error);
         setIsRecording(false);
+        isRecordingRef.current = false;
       }
     };
 
     recognition.onend = () => {
       setInterimText("");
-      // iOS: auto-restart to simulate continuous
-      if (isIOSDevice.current && isRecording) {
-        restartTimerRef.current = setTimeout(() => startRecognition(existingTranscript), 200);
-      } else {
+      // iOS: auto-restart ONLY if still recording
+      if (isIOSDevice.current && isRecordingRef.current) {
+        restartTimerRef.current = setTimeout(() => {
+          if (isRecordingRef.current) startRecognition();
+        }, 200);
+      } else if (!isIOSDevice.current) {
         setIsRecording(false);
+        isRecordingRef.current = false;
       }
     };
 
@@ -175,21 +194,26 @@ export function SpeakingClient({ user }: SpeakingClientProps) {
     } catch (e) {
       console.error("Recognition start error:", e);
     }
-  }, [createRecognition, isRecording]);
+  }, [createRecognition]);
 
   const startRecording = useCallback(() => {
     if (browserSupport === "none") {
       toast.error("Speech recognition not supported. Please use Safari on iPhone or Chrome on Android/Desktop.");
       return;
     }
+    // Reset transcript ref
+    transcriptRef.current = "";
     setTranscript("");
     setInterimText("");
     setScore(null);
+    isRecordingRef.current = true;
     setIsRecording(true);
-    startRecognition("");
+    startRecognition();
   }, [browserSupport, startRecognition]);
 
   const stopRecording = useCallback(() => {
+    // Set ref first to prevent iOS restart
+    isRecordingRef.current = false;
     if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
     setIsRecording(false);
     setInterimText("");
@@ -226,6 +250,7 @@ export function SpeakingClient({ user }: SpeakingClientProps) {
 
   const reset = () => {
     stopRecording();
+    transcriptRef.current = "";
     setTranscript("");
     setInterimText("");
     setScore(null);

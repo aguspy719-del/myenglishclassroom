@@ -363,7 +363,7 @@ export function TeachingAidsClient() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                           onClick={() => handleDelete(file.id, file.file_name)}
                         >
                           <Trash2 className="w-4 h-4" />

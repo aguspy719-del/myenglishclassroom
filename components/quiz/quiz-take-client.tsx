@@ -157,11 +157,21 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
           </div>
           <Card className="border-0 shadow-sm">
             <CardContent className="pt-6 pb-6 space-y-3">
-              {existingScore !== null && (
+              {existingScore !== null && existingScore !== undefined ? (
                 <>
                   <p className={`text-6xl font-bold ${getGradeColor(existingScore)}`}>{existingScore}</p>
                   <Badge className="text-lg px-4 py-1">{getGradeLabel(existingScore)}</Badge>
                 </>
+              ) : (
+                <div className="py-4">
+                  <div className="flex items-center gap-2 justify-center mb-2">
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
+                    <p className="text-base font-semibold text-yellow-600 dark:text-yellow-400">
+                      Waiting for teacher to grade
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500 text-center">Your essay answers have been submitted</p>
+                </div>
               )}
               <div className="p-3 bg-red-50 dark:bg-red-950 rounded-xl">
                 <p className="text-sm text-red-700 dark:text-red-300 font-medium">
@@ -706,16 +716,34 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
             <div className="space-y-2">
               {attempts.map((a, idx) => (
                 <div key={a.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">{idx + 1}</div>
-                    <div>
-                      <p className="font-medium text-sm text-gray-900 dark:text-white">{a.student?.name || "Student"}</p>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 flex-shrink-0">{idx + 1}</div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{a.student?.name || "Student"}</p>
                       <p className="text-xs text-gray-500">{a.completed_at ? formatDateTime(a.completed_at) : "-"}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xl font-bold ${getGradeColor(a.score || 0)}`}>{a.score}</span>
-                    <Badge variant="outline" className="text-xs">{getGradeLabel(a.score || 0)}</Badge>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`text-xl font-bold ${getGradeColor(a.score || 0)}`}>{a.score ?? "—"}</span>
+                    {a.score !== null && <Badge variant="outline" className="text-xs">{getGradeLabel(a.score || 0)}</Badge>}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950 gap-1 rounded-xl"
+                      onClick={async () => {
+                        if (!confirm(`Reset attempt for ${a.student?.name}? They will be able to retake the assessment.`)) return;
+                        const supabase = createClient();
+                        const { error } = await supabase.from("quiz_attempts").delete().eq("id", a.id);
+                        if (error) { toast.error("Failed to reset"); return; }
+                        // Also delete essay answers
+                        await supabase.from("essay_answers").delete()
+                          .eq("quiz_id", quiz.id).eq("student_id", a.student_id || a.student?.id);
+                        toast.success(`Attempt reset for ${a.student?.name}`);
+                        setAttempts((p) => p.filter((x) => x.id !== a.id));
+                      }}
+                    >
+                      Reset
+                    </Button>
                   </div>
                 </div>
               ))}

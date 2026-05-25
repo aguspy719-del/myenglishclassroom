@@ -6,8 +6,7 @@ import {
   Plus, Search, Users, BookOpen, ClipboardList,
   Loader2, Trash2, MoreVertical, GraduationCap,
   Settings, Archive, ArchiveRestore,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+} from "lucide-react";import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,6 +25,73 @@ import type { User, Class } from "@/types";
 
 interface ClassesClientProps {
   user: User;
+}
+
+// ── Join Class Card (for students) ────────────────────────
+function JoinClassCard({ userId, onJoined }: { userId: string; onJoined: () => void }) {
+  const [code, setCode] = useState("");
+  const [joining, setJoining] = useState(false);
+
+  const handleJoin = async () => {
+    if (!code.trim()) { toast.error("Enter a class code"); return; }
+    setJoining(true);
+    const supabase = createClient();
+    const { data: cls, error } = await supabase
+      .from("classes")
+      .select("id, class_name")
+      .eq("class_code", code.trim().toUpperCase())
+      .eq("is_archived", false)
+      .maybeSingle();
+
+    if (error || !cls) {
+      toast.error("Class not found. Check the code and try again.");
+      setJoining(false);
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({ class_id: cls.id })
+      .eq("id", userId);
+
+    if (updateError) {
+      toast.error("Failed to join class");
+    } else {
+      toast.success(`Joined ${cls.class_name}! 🎉`);
+      setCode("");
+      onJoined();
+    }
+    setJoining(false);
+  };
+
+  return (
+    <div className="flex gap-2 p-4 bg-blue-50 dark:bg-blue-950 rounded-2xl border border-blue-100 dark:border-blue-900">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">Join a Class</p>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Enter class code (e.g. AB12CD)"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+            className="rounded-xl font-mono uppercase flex-1"
+            maxLength={6}
+          />
+          <Button
+            onClick={handleJoin}
+            disabled={joining || !code.trim()}
+            className="gap-2 rounded-xl flex-shrink-0"
+            size="sm"
+          >
+            {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join"}
+          </Button>
+        </div>
+        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1.5">
+          Ask your teacher for the class code
+        </p>
+      </div>
+    </div>
+  );
 }
 
 const BANNER_COLORS = [
@@ -95,7 +161,9 @@ export function ClassesClient({ user }: ClassesClientProps) {
     }
     setCreating(true);
     const supabase = createClient();
-    const { error } = await supabase.from("classes").insert([{ ...newClass, is_archived: false }]);
+    // Generate unique 6-char code
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const { error } = await supabase.from("classes").insert([{ ...newClass, is_archived: false, class_code: code }]);
     if (error) {
       toast.error("Failed to create class: " + error.message);
     } else {
@@ -152,6 +220,11 @@ export function ClassesClient({ user }: ClassesClientProps) {
             </div>
             <h3 className="text-white font-bold text-lg leading-tight">{cls.class_name}</h3>
             <p className="text-white/80 text-xs mt-0.5">{cls.major}</p>
+            {(cls as any).class_code && (
+              <p className="text-white/60 text-xs mt-1 font-mono">
+                Kode: <span className="font-bold text-white/90">{(cls as any).class_code}</span>
+              </p>
+            )}
           </div>
           <div className="absolute bottom-3 right-3 w-9 h-9 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/40">
             <span className="text-white text-xs font-bold">AS</span>
@@ -161,10 +234,10 @@ export function ClassesClient({ user }: ClassesClientProps) {
 
       {/* Card body */}
       <div className="p-4 flex-1 flex flex-col">
-        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-4">
-          <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{cls.student_count} students</span>
-          <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" />{cls.material_count} materials</span>
-          <span className="flex items-center gap-1"><ClipboardList className="w-3.5 h-3.5" />{cls.assignment_count} tasks</span>
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-4 flex-wrap">
+          <span className="flex items-center gap-1 flex-shrink-0"><Users className="w-3.5 h-3.5" />{cls.student_count} students</span>
+          <span className="flex items-center gap-1 flex-shrink-0"><BookOpen className="w-3.5 h-3.5" />{cls.material_count} materials</span>
+          <span className="flex items-center gap-1 flex-shrink-0"><ClipboardList className="w-3.5 h-3.5" />{cls.assignment_count} tasks</span>
         </div>
 
         <div className="flex gap-2 mt-auto">
@@ -248,18 +321,18 @@ export function ClassesClient({ user }: ClassesClientProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Classes</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
             {user.role === "teacher"
-              ? `${activeClasses.length} active · ${archivedClasses.length} archived · Academic Year 2025/2026`
+              ? `${activeClasses.length} active · ${archivedClasses.length} archived · 2025/2026`
               : "Classes you are enrolled in"}
           </p>
         </div>
         {user.role === "teacher" && (
           <Button
             onClick={() => setShowCreateDialog(true)}
-            className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md rounded-xl"
+            className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md rounded-xl w-full sm:w-auto"
           >
-            <Plus className="w-4 h-4" />Create Class
+            <Plus className="w-4 h-4 flex-shrink-0" />Create Class
           </Button>
         )}
       </div>
@@ -274,6 +347,9 @@ export function ClassesClient({ user }: ClassesClientProps) {
           className="pl-9 rounded-xl"
         />
       </div>
+
+      {/* Student: Join class via code */}
+      {user.role === "student" && <JoinClassCard userId={user.id} onJoined={fetchClasses} />}
 
       {/* Tabs — Active / Archived (teacher only) */}
       {user.role === "teacher" ? (

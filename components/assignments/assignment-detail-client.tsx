@@ -132,6 +132,28 @@ function SubmitForm({
   );
 }
 
+// ── Expandable Answer Component ───────────────────────────
+function ExpandableAnswer({ answer }: { answer: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = answer.length > 200;
+  return (
+    <div className="mt-2 p-3 bg-white dark:bg-gray-700 rounded-xl">
+      <p className="text-xs font-semibold text-gray-500 mb-1">WRITTEN ANSWER:</p>
+      <p className={`text-sm text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed ${!expanded && isLong ? "line-clamp-4" : ""}`}>
+        {answer}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-blue-600 dark:text-blue-400 mt-1.5 hover:underline font-medium"
+        >
+          {expanded ? "Show less ↑" : "Show more ↓"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────
 export function AssignmentDetailClient({ user, assignment }: AssignmentDetailClientProps) {
   const [mySubmission, setMySubmission] = useState<Submission | null>(null);
@@ -418,12 +440,7 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
                         <p className="text-xs text-gray-500">{formatDateTime(sub.submitted_at)}</p>
                         {/* Text answer preview for teacher */}
                         {(sub as any).text_answer && (
-                          <div className="mt-2 p-3 bg-white dark:bg-gray-700 rounded-xl">
-                            <p className="text-xs font-semibold text-gray-500 mb-1">WRITTEN ANSWER:</p>
-                            <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap line-clamp-3">
-                              {(sub as any).text_answer}
-                            </p>
-                          </div>
+                          <ExpandableAnswer answer={(sub as any).text_answer} />
                         )}
                         {sub.score !== null && sub.score !== undefined && (
                           <div className="flex items-center gap-2 mt-1">

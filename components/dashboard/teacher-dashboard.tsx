@@ -153,17 +153,17 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
             {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Link href="/assignments/create">
-            <Button size="sm" className="gap-2 flex-1 sm:flex-none">
-              <Plus className="w-4 h-4" />
-              New Assignment
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Link href="/assignments/create" className="flex-1 sm:flex-none">
+            <Button size="sm" className="gap-2 w-full sm:w-auto">
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">New Assignment</span>
             </Button>
           </Link>
-          <Link href="/materials/upload">
-            <Button size="sm" variant="outline" className="gap-2 flex-1 sm:flex-none">
-              <Plus className="w-4 h-4" />
-              Upload Material
+          <Link href="/materials/upload" className="flex-1 sm:flex-none">
+            <Button size="sm" variant="outline" className="gap-2 w-full sm:w-auto">
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">Upload Material</span>
             </Button>
           </Link>
         </div>
@@ -178,10 +178,10 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
               <Card className="hover:shadow-md transition-shadow cursor-pointer border-0 shadow-sm">
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <div className={`w-9 h-9 ${card.bg} rounded-lg flex items-center justify-center`}>
+                    <div className={`w-9 h-9 ${card.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
                       <Icon className={`w-4 h-4 ${card.color}`} />
                     </div>
-                    <TrendingUp className="w-3.5 h-3.5 text-gray-400" />
+                    <TrendingUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                   </div>
                   <p className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
                     {loading ? "..." : card.value}
@@ -221,7 +221,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
               <div className="space-y-3">
                 {recentSubmissions.map((sub) => (
                   <div key={sub.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="flex-1 min-w-0 overflow-hidden mr-2">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {(sub.student as any)?.name || "Student"}
                       </p>
@@ -229,7 +229,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                         {(sub.assignment as any)?.title || "Assignment"}
                       </p>
                     </div>
-                    <Badge variant="warning" className="text-xs whitespace-nowrap ml-2 flex-shrink-0">Ungraded</Badge>
+                    <Badge variant="warning" className="text-xs whitespace-nowrap flex-shrink-0">Ungraded</Badge>
                   </div>
                 ))}
               </div>
@@ -264,7 +264,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                 {upcomingAssignments.map((assignment) => (
                   <Link key={assignment.id} href={`/assignments/${assignment.id}`}>
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                      <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex-1 min-w-0 overflow-hidden mr-2">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {assignment.title}
                         </p>
@@ -272,7 +272,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                           {(assignment.class as any)?.class_name} · {formatDate(assignment.deadline)}
                         </p>
                       </div>
-                      <Clock className="w-4 h-4 text-orange-500 ml-2 flex-shrink-0" />
+                      <Clock className="w-4 h-4 text-orange-500 flex-shrink-0" />
                     </div>
                   </Link>
                 ))}
@@ -298,9 +298,9 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
               const Icon = action.icon;
               return (
                 <Link key={action.href} href={action.href}>
-                  <div className={`${action.color} rounded-xl p-4 text-center hover:opacity-80 transition-opacity cursor-pointer`}>
-                    <Icon className="w-6 h-6 mx-auto mb-2" />
-                    <p className="text-xs font-medium">{action.label}</p>
+                  <div className={`${action.color} rounded-xl p-3 sm:p-4 text-center hover:opacity-80 transition-opacity cursor-pointer`}>
+                    <Icon className="w-6 h-6 mx-auto mb-2 flex-shrink-0" />
+                    <p className="text-xs font-medium truncate">{action.label}</p>
                   </div>
                 </Link>
               );
@@ -383,7 +383,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
+                    className="h-7 w-7 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1"
                     onClick={() => handleDeleteAnnouncement(ann.id)}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
