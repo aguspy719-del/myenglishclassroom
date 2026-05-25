@@ -444,8 +444,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
     if (error) toast.error("Failed"); else { toast.success("Deleted"); setQuestions(questions.filter((q) => q.id !== id)); }
   };
 
-  const gradeEssay = async (answerId: string, essayScore: number, feedback: string) => {
-    const supabase = createClient();
+  const gradeEssay = async (answerId: string, essayScore: number, feedback: string) => {    const supabase = createClient();
     const { error } = await supabase.from("essay_answers").update({ score: essayScore, feedback }).eq("id", answerId);
     if (error) { toast.error("Failed"); return; }
 
@@ -512,6 +511,15 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
       .not("score", "is", null)
       .order("completed_at", { ascending: false });
     setAttempts(updatedAttempts || []);
+  };
+
+  const deleteEssayAnswer = async (answerId: string, studentName: string) => {
+    if (!confirm(`Delete essay answer from ${studentName}? This cannot be undone.`)) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("essay_answers").delete().eq("id", answerId);
+    if (error) { toast.error("Failed to delete"); return; }
+    toast.success("Answer deleted");
+    setEssayAnswers((p) => p.filter((a) => a.id !== answerId));
   };
 
   const avgScore = attempts.length > 0 ? Math.round(attempts.reduce((a, b) => a + (b.score || 0), 0) / attempts.length) : 0;
@@ -759,7 +767,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                 <PenLine className="w-12 h-12 mx-auto mb-3 opacity-20" /><p>No essay answers yet.</p>
               </div>
             ) : (
-              essayAnswers.map((ea) => <EssayGradeCard key={ea.id} essayAnswer={ea} onGrade={gradeEssay} />)
+              essayAnswers.map((ea) => <EssayGradeCard key={ea.id} essayAnswer={ea} onGrade={gradeEssay} onDelete={deleteEssayAnswer} />)
             )}
           </TabsContent>
         )}
@@ -768,39 +776,77 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
   );
 }
 
-function EssayGradeCard({ essayAnswer, onGrade }: { essayAnswer: any; onGrade: (id: string, score: number, feedback: string) => void }) {
+function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
+  essayAnswer: any;
+  onGrade: (id: string, score: number, feedback: string) => void;
+  onDelete?: (id: string, studentName: string) => void;
+}) {
   const [score, setScore] = useState(essayAnswer.score?.toString() || "");
   const [feedback, setFeedback] = useState(essayAnswer.feedback || "");
   const [editing, setEditing] = useState(!essayAnswer.score);
+  const [showQuestion, setShowQuestion] = useState(false);
+  const questionText = essayAnswer.question?.question || "";
+  const isLongQuestion = questionText.length > 120;
+
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="pt-4 pb-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-semibold text-sm text-gray-900 dark:text-white">{essayAnswer.student?.name}</p>
-            <p className="text-xs text-gray-500">{essayAnswer.question?.question}</p>
-          </div>
-          {essayAnswer.score != null && !editing && (
-            <div className="flex items-center gap-2">
-              <span className={`text-xl font-bold ${getGradeColor(essayAnswer.score)}`}>{essayAnswer.score}</span>
-              <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-xs">Edit</Button>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+              {essayAnswer.student?.name || "Student"}
+            </p>
+            {/* Question — collapsible */}
+            <div className="mt-1">
+              <p className={`text-xs text-gray-500 dark:text-gray-400 ${!showQuestion && isLongQuestion ? "line-clamp-2" : "whitespace-pre-wrap"}`}>
+                {questionText}
+              </p>
+              {isLongQuestion && (
+                <button onClick={() => setShowQuestion(!showQuestion)}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-0.5">
+                  {showQuestion ? "Show less ↑" : "Show full question ↓"}
+                </button>
+              )}
             </div>
-          )}
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {essayAnswer.score != null && !editing && (
+              <>
+                <span className={`text-xl font-bold ${getGradeColor(essayAnswer.score)}`}>{essayAnswer.score}</span>
+                <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-xs rounded-xl">Edit</Button>
+              </>
+            )}
+            {onDelete && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                onClick={() => onDelete(essayAnswer.id, essayAnswer.student?.name || "Student")}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Student Answer */}
         <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <p className="text-xs font-semibold text-gray-500 mb-1">Student Answer:</p>
-          <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{essayAnswer.answer || "(no answer)"}</p>
+          <p className="text-xs font-semibold text-gray-500 mb-1.5">Student Answer:</p>
+          <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed break-words">
+            {essayAnswer.answer || "(no answer)"}
+          </p>
         </div>
+
+        {/* Grading form */}
         {editing && (
           <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-700">
             <div className="flex gap-3">
               <div className="space-y-1 flex-1">
                 <Label className="text-xs">Score (0-100)</Label>
-                <Input type="number" min="0" max="100" placeholder="85" value={score} onChange={(e) => setScore(e.target.value)} className="rounded-xl h-9" />
+                <Input type="number" min="0" max="100" placeholder="85" value={score}
+                  onChange={(e) => setScore(e.target.value)} className="rounded-xl h-9" />
               </div>
               <div className="space-y-1 flex-1">
                 <Label className="text-xs">Feedback</Label>
-                <Input placeholder="Good answer!" value={feedback} onChange={(e) => setFeedback(e.target.value)} className="rounded-xl h-9" />
+                <Input placeholder="Good answer!" value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)} className="rounded-xl h-9" />
               </div>
             </div>
             <div className="flex gap-2">
@@ -810,7 +856,9 @@ function EssayGradeCard({ essayAnswer, onGrade }: { essayAnswer: any; onGrade: (
                 onGrade(essayAnswer.id, s, feedback);
                 setEditing(false);
               }}><CheckCircle className="w-3 h-3" />Save Grade</Button>
-              {essayAnswer.score != null && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditing(false)}>Cancel</Button>}
+              {essayAnswer.score != null && (
+                <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditing(false)}>Cancel</Button>
+              )}
             </div>
           </div>
         )}
