@@ -109,8 +109,7 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
       });
     }
 
-    // Save essay answers
-    const essayQs = questions.filter((q) => (q as any).question_type === "essay");
+    // Save essay answers (essayQs already declared above)
     for (const q of essayQs) {
       if (essayAnswers[q.id]) {
         await supabase.from("essay_answers").upsert({
