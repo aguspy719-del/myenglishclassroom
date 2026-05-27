@@ -74,6 +74,8 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
   const handleFinish = useCallback(async () => {
     if (finished) return;
     const mcQs = questions.filter((q) => (q as any).question_type !== "essay");
+    const essayQs = questions.filter((q) => (q as any).question_type === "essay");
+    const isEssayOnly = mcQs.length === 0 && essayQs.length > 0;
     const correct = mcQs.filter((q) => answers[q.id] === q.correct_answer).length;
     const finalScore = mcQs.length > 0 ? Math.round((correct / mcQs.length) * 100) : 0;
     setScore(finalScore);
@@ -81,16 +83,10 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
 
     const supabase = createClient();
 
-    // Save attempt — critical, must succeed
-    // For essay-only assessments, save score as null until teacher grades
-    const mcQs = questions.filter((q) => (q as any).question_type !== "essay");
-    const essayQs = questions.filter((q) => (q as any).question_type === "essay");
-    const isEssayOnly = mcQs.length === 0 && essayQs.length > 0;
-
+    // Save attempt — essay-only saves null score until teacher grades
     const { error: attemptError } = await supabase.from("quiz_attempts").insert([{
       quiz_id: quiz.id,
       student_id: user.id,
-      // If essay-only, save null score so "waiting for grade" shows correctly
       score: isEssayOnly ? null : finalScore,
       completed_at: new Date().toISOString(),
       started_at: new Date().toISOString(),
