@@ -41,7 +41,6 @@ export default async function QuizTakePage({
       .eq("student_id", user.id)
       .not("completed_at", "is", null)
       .maybeSingle();
-
     if (existingAttempt) {
       return (
         <DashboardLayout user={user}>

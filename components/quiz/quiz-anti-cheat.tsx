@@ -41,6 +41,18 @@ export function QuizAntiCheat({
 
   const addWarning = useCallback((reason: string) => {
     if (!isActiveRef.current) return;
+
+    // Speak warning message
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance("Do you want to exit the exam?");
+      utterance.lang = "en-US";
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+
     warningsRef.current += 1;
     const current = warningsRef.current;
     setWarnings(current);

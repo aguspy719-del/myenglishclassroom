@@ -7,7 +7,7 @@ import { GraduationCap, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -172,20 +172,20 @@ export default function RegisterPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {gradeXI.length > 0 && (
-                      <>
-                        <div className="px-2 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wide">Grade XI</div>
+                      <SelectGroup>
+                        <SelectLabel>Grade XI</SelectLabel>
                         {gradeXI.map((cls) => (
                           <SelectItem key={cls.id} value={cls.id}>{cls.class_name}</SelectItem>
                         ))}
-                      </>
+                      </SelectGroup>
                     )}
                     {gradeXII.length > 0 && (
-                      <>
-                        <div className="px-2 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wide">Grade XII</div>
+                      <SelectGroup>
+                        <SelectLabel>Grade XII</SelectLabel>
                         {gradeXII.map((cls) => (
                           <SelectItem key={cls.id} value={cls.id}>{cls.class_name}</SelectItem>
                         ))}
-                      </>
+                      </SelectGroup>
                     )}
                   </SelectContent>
                 </Select>
