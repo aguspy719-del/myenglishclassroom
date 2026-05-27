@@ -42,16 +42,8 @@ export function QuizAntiCheat({
   const addWarning = useCallback((reason: string) => {
     if (!isActiveRef.current) return;
 
-    // Speak warning message
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance("Do you want to exit the exam?");
-      utterance.lang = "en-US";
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-      window.speechSynthesis.speak(utterance);
-    }
+    // Speak warning — triggered after user interaction (fullscreen click)
+    speakWarning();
 
     warningsRef.current += 1;
     const current = warningsRef.current;
@@ -120,11 +112,31 @@ export function QuizAntiCheat({
     return () => document.removeEventListener("keydown", handler);
   }, [isActive]);
 
+  // Pre-warm speech synthesis on user interaction
+  const speakWarning = useCallback(() => {
+    try {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const msg = new SpeechSynthesisUtterance("Do you want to exit the exam?");
+      msg.lang = "en-US";
+      msg.rate = 0.85;
+      msg.volume = 1;
+      window.speechSynthesis.speak(msg);
+    } catch (e) {}
+  }, []);
+
   // Fullscreen — try native API, fallback gracefully for iOS
   const enterFullscreen = async () => {
+    // Pre-warm speech synthesis on user gesture (required by browser policy)
+    try {
+      if ("speechSynthesis" in window) {
+        const warmup = new SpeechSynthesisUtterance(" ");
+        warmup.volume = 0;
+        window.speechSynthesis.speak(warmup);
+      }
+    } catch (e) {}
+
     if (isIOS()) {
-      // iOS Safari doesn't support fullscreen API
-      // Use a visual "lock" instead — hide browser UI via scroll trick
       window.scrollTo(0, 1);
       setIsFullscreen(true);
       setShowFullscreenPrompt(false);
@@ -136,13 +148,11 @@ export function QuizAntiCheat({
       if (el.requestFullscreen) {
         await el.requestFullscreen();
       } else if ((el as any).webkitRequestFullscreen) {
-        // Android Chrome
         await (el as any).webkitRequestFullscreen();
       }
       setIsFullscreen(true);
       setShowFullscreenPrompt(false);
     } catch {
-      // Fullscreen failed — continue without it
       setIsFullscreen(true);
       setShowFullscreenPrompt(false);
     }
