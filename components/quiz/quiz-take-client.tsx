@@ -379,7 +379,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
     const load = async () => {
       const supabase = createClient();
       const [a, e, s] = await Promise.all([
-        supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("score", "is", null).order("completed_at", { ascending: false }),
+        supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("completed_at", "is", null).order("completed_at", { ascending: false }),
         supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
         supabase.from("quizzes").select("id, title, class:classes(class_name)").eq("quiz_type", (quiz as any).quiz_type || "formatif").neq("id", quiz.id).order("created_at", { ascending: false }),
       ]);
@@ -509,7 +509,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
       .from("quiz_attempts")
       .select("*, student:users(name,email)")
       .eq("quiz_id", quiz.id)
-      .not("score", "is", null)
+      .not("completed_at", "is", null)
       .order("completed_at", { ascending: false });
     setAttempts(updatedAttempts || []);
   };
@@ -708,7 +708,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                 setLoadingAttempts(true);
                 const supabase = createClient();
                 const [a, e] = await Promise.all([
-                  supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("score", "is", null).order("completed_at", { ascending: false }),
+                  supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("completed_at", "is", null).order("completed_at", { ascending: false }),
                   supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
                 ]);
                 setAttempts(a.data || []);
@@ -772,7 +772,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                         toast.success(`Attempt reset for ${a.student?.name}. Refreshing...`);
                         // Refresh all data after reset
                         const [newAttempts, newEssays] = await Promise.all([
-                          supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("score", "is", null).order("completed_at", { ascending: false }),
+                          supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("completed_at", "is", null).order("completed_at", { ascending: false }),
                           supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
                         ]);
                         setAttempts(newAttempts.data || []);
