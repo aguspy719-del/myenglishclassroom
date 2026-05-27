@@ -114,6 +114,14 @@ export function QuizAntiCheat({
 
   // Pre-warm speech synthesis on user interaction
   const speakWarning = useCallback(() => {
+    // Vibrate — works on Android, ignored on iOS/desktop
+    try {
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate([300, 100, 300, 100, 300]); // pattern: buzz-pause-buzz-pause-buzz
+      }
+    } catch (e) {}
+
+    // Speak
     try {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
       window.speechSynthesis.cancel();
