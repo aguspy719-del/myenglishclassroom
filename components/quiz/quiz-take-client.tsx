@@ -698,6 +698,28 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
 
         {/* Results Tab */}
         <TabsContent value="results" className="mt-4 space-y-4">
+          {/* Refresh button */}
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-xl text-xs"
+              onClick={async () => {
+                setLoadingAttempts(true);
+                const supabase = createClient();
+                const [a, e] = await Promise.all([
+                  supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("score", "is", null).order("completed_at", { ascending: false }),
+                  supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
+                ]);
+                setAttempts(a.data || []);
+                setEssayAnswers(e.data || []);
+                setLoadingAttempts(false);
+                toast.success("Refreshed!");
+              }}
+            >
+              🔄 Refresh Results
+            </Button>
+          </div>
           {attempts.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
@@ -747,8 +769,14 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                         // Also delete essay answers
                         await supabase.from("essay_answers").delete()
                           .eq("quiz_id", quiz.id).eq("student_id", a.student_id || a.student?.id);
-                        toast.success(`Attempt reset for ${a.student?.name}`);
-                        setAttempts((p) => p.filter((x) => x.id !== a.id));
+                        toast.success(`Attempt reset for ${a.student?.name}. Refreshing...`);
+                        // Refresh all data after reset
+                        const [newAttempts, newEssays] = await Promise.all([
+                          supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("score", "is", null).order("completed_at", { ascending: false }),
+                          supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
+                        ]);
+                        setAttempts(newAttempts.data || []);
+                        setEssayAnswers(newEssays.data || []);
                       }}
                     >
                       Reset
