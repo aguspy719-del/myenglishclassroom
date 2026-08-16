@@ -411,7 +411,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
-        <TabsList className="w-full grid grid-cols-5 h-auto">
+        <TabsList className={`w-full grid h-auto ${user.role === "teacher" ? "grid-cols-5" : "grid-cols-4"}`}>
           <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
           <TabsTrigger value="materials" className="text-xs">
             Materials
