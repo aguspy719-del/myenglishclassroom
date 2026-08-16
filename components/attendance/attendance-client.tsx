@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   UserCheck, CheckCircle, XCircle, Clock, AlertCircle,
   Calendar, Trash2, RefreshCw, ChevronDown, ChevronUp, BarChart2,
-  FileSpreadsheet, Search, Loader2, TableProperties,
+  FileSpreadsheet, Search, Loader2, TableProperties, MapPin,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,26 @@ const statusConfig: Record<AttendanceStatus, { label: string; color: string; ico
   excused: { label: "Excused", color: "info", icon: AlertCircle, bg: "bg-blue-100 dark:bg-blue-900", text: "text-blue-600 dark:text-blue-400" },
 };
 
+// ── Konfigurasi lokasi sekolah ─────────────────────────────
+// Hanya dipakai untuk menampilkan info di UI siswa
+const SCHOOL_LOCATION_NAME = "SMK Negeri 1 Buduran";
+const MAX_DISTANCE_METERS = 150;
+
+// Minta lokasi GPS dari browser
+function getCurrentPosition(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation tidak didukung browser ini"));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    });
+  });
+}
+
 export function AttendanceClient({ user }: AttendanceClientProps) {
   const searchParams = useSearchParams();
   const classFilter = searchParams.get("class") || "all";
@@ -69,6 +89,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
   const [rekapLoading, setRekapLoading] = useState(false);
   const [rekapSearch, setRekapSearch] = useState("");
   const [exporting, setExporting] = useState(false);
+
+  // Student: geolocation state
+  const [locationStatus, setLocationStatus] = useState<"idle" | "checking" | "ok" | "denied" | "tooFar">("idle");
+  const [studentDistance, setStudentDistance] = useState<number | null>(null);
 
   const fetchData = async () => {
     const supabase = createClient();
@@ -229,26 +253,54 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
   // ── Attendance actions ─────────────────────────────────────
   const handleMarkAttendance = async (status: AttendanceStatus) => {
     if (!user.class_id) { toast.error("You are not registered in any class"); return; }
+
     setMarking(true);
-    const supabase = createClient();
-    const today = new Date().toISOString().split("T")[0];
+    setLocationStatus("checking");
+
+    // 1. Ambil GPS dari browser
+    let position: GeolocationPosition;
     try {
-      if (todayAttendance) {
-        const { error } = await supabase.from("attendance")
-          .update({ status, timestamp: new Date().toISOString() }).eq("id", todayAttendance.id);
-        if (error) throw error;
-        toast.success(`Attendance updated: ${statusConfig[status].label}`);
-      } else {
-        const { error } = await supabase.from("attendance").insert([{
-          student_id: user.id, class_id: user.class_id, date: today,
-          status, timestamp: new Date().toISOString(),
-        }]);
-        if (error) throw error;
-        toast.success(`Attendance marked: ${statusConfig[status].label}`);
+      position = await getCurrentPosition();
+    } catch {
+      setLocationStatus("denied");
+      toast.error("Izin lokasi ditolak. Aktifkan GPS di browser untuk bisa absen.", { duration: 5000 });
+      setMarking(false);
+      return;
+    }
+
+    const { latitude, longitude } = position.coords;
+
+    // 2. Kirim ke API route — validasi jarak di SERVER
+    try {
+      const res = await fetch("/api/attendance/mark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latitude, longitude, status }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.tooFar) {
+          setLocationStatus("tooFar");
+          setStudentDistance(data.distance);
+          toast.error(data.error, { duration: 5000 });
+        } else {
+          setLocationStatus("idle");
+          toast.error(data.error || "Gagal absen");
+        }
+        setMarking(false);
+        return;
       }
+
+      // Sukses
+      setLocationStatus("ok");
+      setStudentDistance(data.distance);
+      toast.success(`Attendance marked: ${statusConfig[status].label} ✅`);
       fetchData();
-    } catch (err: any) {
-      toast.error("Failed: " + err.message);
+    } catch {
+      setLocationStatus("idle");
+      toast.error("Koneksi gagal, coba lagi");
     } finally {
       setMarking(false);
     }
@@ -341,6 +393,31 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 font-medium">
                     Select your attendance status for today:
                   </p>
+
+                  {/* Location status indicator */}
+                  <div className={`flex items-center gap-2 p-3 rounded-xl mb-4 text-sm ${
+                    locationStatus === "ok"
+                      ? "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300"
+                      : locationStatus === "tooFar" || locationStatus === "denied"
+                      ? "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300"
+                      : locationStatus === "checking"
+                      ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                      : "bg-gray-50 dark:bg-gray-800 text-gray-500"
+                  }`}>
+                    {locationStatus === "checking" ? (
+                      <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+                    ) : (
+                      <MapPin className="w-4 h-4 flex-shrink-0" />
+                    )}
+                    <span className="text-xs font-medium">
+                      {locationStatus === "idle" && `Lokasi akan dicek saat kamu absen (maks ${MAX_DISTANCE_METERS}m dari ${SCHOOL_LOCATION_NAME})`}
+                      {locationStatus === "checking" && "Mengecek lokasi GPS..."}
+                      {locationStatus === "ok" && `✅ Kamu berada di area sekolah (${studentDistance}m)`}
+                      {locationStatus === "tooFar" && `❌ Terlalu jauh dari sekolah (${studentDistance}m · maks ${MAX_DISTANCE_METERS}m)`}
+                      {locationStatus === "denied" && "❌ Izin lokasi ditolak — aktifkan GPS di browser"}
+                    </span>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     {(Object.entries(statusConfig) as [AttendanceStatus, typeof statusConfig[AttendanceStatus]][]).map(([status, config]) => {
                       const Icon = config.icon;
