@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Plus, Search, Users, BookOpen, ClipboardList,
   Loader2, Trash2, MoreVertical, GraduationCap,
-  Settings, Archive, ArchiveRestore,
+  Settings, Archive, ArchiveRestore, Pencil,
 } from "lucide-react";import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -123,6 +123,11 @@ export function ClassesClient({ user }: ClassesClientProps) {
   const [creating, setCreating] = useState(false);
   const [newClass, setNewClass] = useState({ class_name: "", major: "", grade: "" });
 
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editingClass, setEditingClass] = useState<ClassWithStats | null>(null);
+  const [editForm, setEditForm] = useState({ class_name: "", major: "", grade: "" });
+
   const fetchClasses = async () => {
     const supabase = createClient();
     let query = supabase.from("classes").select("*").order("grade").order("class_name");
@@ -193,6 +198,39 @@ export function ClassesClient({ user }: ClassesClientProps) {
     const { error } = await supabase.from("classes").delete().eq("id", id);
     if (error) toast.error("Failed to delete class");
     else { toast.success("Class deleted"); fetchClasses(); }
+  };
+
+  const openEditDialog = (cls: ClassWithStats) => {
+    setEditingClass(cls);
+    setEditForm({ class_name: cls.class_name, major: cls.major, grade: cls.grade });
+    setShowEditDialog(true);
+  };
+
+  const handleEditClass = async () => {
+    if (!editingClass) return;
+    if (!editForm.class_name || !editForm.major || !editForm.grade) {
+      toast.error("All fields are required");
+      return;
+    }
+    setEditing(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("classes")
+      .update({
+        class_name: editForm.class_name,
+        major: editForm.major,
+        grade: editForm.grade,
+      })
+      .eq("id", editingClass.id);
+    if (error) {
+      toast.error("Failed to update class: " + error.message);
+    } else {
+      toast.success("Class updated!");
+      setShowEditDialog(false);
+      setEditingClass(null);
+      fetchClasses();
+    }
+    setEditing(false);
   };
 
   const activeClasses = classes.filter(
@@ -273,6 +311,12 @@ export function ClassesClient({ user }: ClassesClientProps) {
                       <Link href={`/classes/${cls.id}`} className="gap-2">
                         <Settings className="w-4 h-4" />Manage Class
                       </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onClick={() => openEditDialog(cls)}
+                    >
+                      <Pencil className="w-4 h-4" />Edit Class
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href={`/assignments/create?class=${cls.id}`} className="gap-2">
@@ -453,6 +497,60 @@ export function ClassesClient({ user }: ClassesClientProps) {
             <Button onClick={handleCreateClass} disabled={creating} className="rounded-xl">
               {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Create Class
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Class Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={(open) => { setShowEditDialog(open); if (!open) setEditingClass(null); }}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-4 h-4" />
+              Edit Class
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Class Name</Label>
+              <Input
+                placeholder="e.g. XI Butik 1"
+                value={editForm.class_name}
+                onChange={(e) => setEditForm({ ...editForm, class_name: e.target.value })}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Major / Department</Label>
+              <Input
+                placeholder="e.g. Fashion Design"
+                value={editForm.major}
+                onChange={(e) => setEditForm({ ...editForm, major: e.target.value })}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Grade Level</Label>
+              <Input
+                placeholder="e.g. XI or XII"
+                value={editForm.grade}
+                onChange={(e) => setEditForm({ ...editForm, grade: e.target.value })}
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setShowEditDialog(false); setEditingClass(null); }}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleEditClass} disabled={editing} className="rounded-xl">
+              {editing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
