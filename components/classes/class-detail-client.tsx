@@ -6,6 +6,7 @@ import {
   ArrowLeft, Users, BookOpen, ClipboardList, FileText,
   Plus, Download, Trash2, Clock, Search, GraduationCap,
   MoreVertical, Mail, FileQuestion, UserMinus, UserPlus, Loader2,
+  Archive, ArchiveRestore,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,14 +36,24 @@ interface StudentWithStats extends User {
   attendance_count?: number;
 }
 
+type MaterialWithArchive = Material & { is_archived?: boolean };
+type AssignmentWithArchive = Assignment & { is_archived?: boolean };
+type QuizWithArchive = Quiz & { is_archived?: boolean };
+
 export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
   const [students, setStudents] = useState<StudentWithStats[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [materials, setMaterials] = useState<MaterialWithArchive[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentWithArchive[]>([]);
+  const [quizzes, setQuizzes] = useState<QuizWithArchive[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Sub-tab states for archive views (teacher only)
+  const [materialView, setMaterialView] = useState<"active" | "archived">("active");
+  const [assignmentView, setAssignmentView] = useState<"active" | "archived">("active");
+  const [quizView, setQuizView] = useState<"active" | "archived">("active");
+
   // Student management
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showCreateStudent, setShowCreateStudent] = useState(false);
@@ -90,8 +101,33 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     fetchData();
   }, [classData.id]);
 
+  // ── Archive helpers ────────────────────────────────────────
+
+  const handleArchiveMaterial = async (id: string, title: string, archive: boolean) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("materials").update({ is_archived: archive }).eq("id", id);
+    if (error) toast.error(`Failed to ${archive ? "archive" : "restore"} material`);
+    else { toast.success(`Material ${archive ? "archived" : "restored"}`); fetchData(); }
+  };
+
+  const handleArchiveAssignment = async (id: string, title: string, archive: boolean) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("assignments").update({ is_archived: archive }).eq("id", id);
+    if (error) toast.error(`Failed to ${archive ? "archive" : "restore"} assignment`);
+    else { toast.success(`Assignment ${archive ? "archived" : "restored"}`); fetchData(); }
+  };
+
+  const handleArchiveQuiz = async (id: string, title: string, archive: boolean) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("quizzes").update({ is_archived: archive }).eq("id", id);
+    if (error) toast.error(`Failed to ${archive ? "archive" : "restore"} assessment`);
+    else { toast.success(`Assessment ${archive ? "archived" : "restored"}`); fetchData(); }
+  };
+
+  // ── Delete helpers ─────────────────────────────────────────
+
   const handleDeleteMaterial = async (id: string, title: string) => {
-    if (!confirm(`Delete material "${title}"?`)) return;
+    if (!confirm(`Permanently delete material "${title}"?`)) return;
     const supabase = createClient();
     const { error } = await supabase.from("materials").delete().eq("id", id);
     if (error) toast.error("Failed to delete material");
@@ -99,14 +135,23 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
   };
 
   const handleDeleteAssignment = async (id: string, title: string) => {
-    if (!confirm(`Delete assignment "${title}"?`)) return;
+    if (!confirm(`Permanently delete assignment "${title}"?`)) return;
     const supabase = createClient();
     const { error } = await supabase.from("assignments").delete().eq("id", id);
     if (error) toast.error("Failed to delete assignment");
     else { toast.success("Assignment deleted"); fetchData(); }
   };
 
-  // Remove student from class (set class_id to null)
+  const handleDeleteQuiz = async (id: string, title: string) => {
+    if (!confirm(`Permanently delete assessment "${title}"?`)) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("quizzes").delete().eq("id", id);
+    if (error) toast.error("Failed to delete assessment");
+    else { toast.success("Assessment deleted"); fetchData(); }
+  };
+
+  // ── Student helpers ────────────────────────────────────────
+
   const handleRemoveStudent = async (studentId: string, studentName: string) => {
     if (!confirm(`Remove "${studentName}" from this class? Their account will not be deleted.`)) return;
     const supabase = createClient();
@@ -115,7 +160,6 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     else { toast.success(`${studentName} removed from class`); fetchData(); }
   };
 
-  // Delete student account entirely
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
     if (!confirm(`Permanently delete account "${studentName}"? This cannot be undone and will remove all their data.`)) return;
     const res = await fetch("/api/admin/delete-student", {
@@ -132,7 +176,6 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     }
   };
 
-  // Load students not in any class or in other classes
   const loadAvailableStudents = async () => {
     setLoadingAvailable(true);
     const supabase = createClient();
@@ -146,7 +189,6 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     setLoadingAvailable(false);
   };
 
-  // Add student to this class
   const handleAddStudent = async (studentId: string, studentName: string) => {
     const supabase = createClient();
     const { error } = await supabase.from("users").update({ class_id: classData.id }).eq("id", studentId);
@@ -158,7 +200,6 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     }
   };
 
-  // Create new student account
   const handleCreateStudent = async () => {
     if (!newStudentForm.name || !newStudentForm.email || !newStudentForm.password) {
       toast.error("All fields are required");
@@ -192,17 +233,32 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     }
   };
 
+  // ── Derived data ───────────────────────────────────────────
+
   const filteredStudents = students.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Active = not archived
+  const activeMaterials = materials.filter((m) => !m.is_archived);
+  const archivedMaterials = materials.filter((m) => m.is_archived);
+
   const activeAssignments = assignments.filter(
-    (a) => getDeadlineStatus(a.deadline) !== "overdue"
+    (a) => !a.is_archived && getDeadlineStatus(a.deadline) !== "overdue"
   );
   const overdueAssignments = assignments.filter(
-    (a) => getDeadlineStatus(a.deadline) === "overdue"
+    (a) => !a.is_archived && getDeadlineStatus(a.deadline) === "overdue"
   );
+  const archivedAssignments = assignments.filter((a) => a.is_archived);
+
+  const activeQuizzes = quizzes.filter((q) => !q.is_archived);
+  const archivedQuizzes = quizzes.filter((q) => q.is_archived);
+
+  // For students: only show non-archived items
+  const studentMaterials = activeMaterials;
+  const studentAssignmentsActive = activeAssignments;
+  const studentQuizzes = activeQuizzes;
 
   const getFileTypeBg = (fileUrl?: string) => {
     if (!fileUrl) return "bg-gray-100 dark:bg-gray-800 text-gray-500";
@@ -213,7 +269,6 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     return "bg-gray-100 dark:bg-gray-800 text-gray-500";
   };
 
-  // Banner color based on class name
   const BANNER_COLORS = [
     "from-blue-500 to-blue-700",
     "from-indigo-500 to-indigo-700",
@@ -223,6 +278,49 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     "from-orange-500 to-orange-700",
   ];
   const bannerColor = BANNER_COLORS[classData.class_name.charCodeAt(0) % BANNER_COLORS.length];
+
+  const typeColors: Record<string, string> = {
+    formatif: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+    sumatif_tengah: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+    sumatif_akhir: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+  };
+  const typeLabels: Record<string, string> = {
+    formatif: "Formatif",
+    sumatif_tengah: "STS",
+    sumatif_akhir: "SAS",
+  };
+
+  // ── Archive toggle button (reusable) ──────────────────────
+  const ArchiveToggleButton = ({
+    isArchived,
+    onArchive,
+    onRestore,
+  }: {
+    isArchived: boolean;
+    onArchive: () => void;
+    onRestore: () => void;
+  }) =>
+    isArchived ? (
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Restore"
+        className="h-8 w-8 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+        onClick={onRestore}
+      >
+        <ArchiveRestore className="w-4 h-4" />
+      </Button>
+    ) : (
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Archive"
+        className="h-8 w-8 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+        onClick={onArchive}
+      >
+        <Archive className="w-4 h-4" />
+      </Button>
+    );
 
   return (
     <div className="space-y-6">
@@ -266,15 +364,15 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <BookOpen className="w-4 h-4 text-white/70" />
-              <span className="text-sm font-semibold">{materials.length} Materials</span>
+              <span className="text-sm font-semibold">{activeMaterials.length} Materials</span>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <ClipboardList className="w-4 h-4 text-white/70" />
-              <span className="text-sm font-semibold">{assignments.length} Assignments</span>
+              <span className="text-sm font-semibold">{activeAssignments.length + overdueAssignments.length} Assignments</span>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <FileQuestion className="w-4 h-4 text-white/70" />
-              <span className="text-sm font-semibold">{quizzes.length} Assessments</span>
+              <span className="text-sm font-semibold">{activeQuizzes.length} Assessments</span>
             </div>
           </div>
         </div>
@@ -311,18 +409,16 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
       )}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
         <TabsList className="w-full grid grid-cols-4 h-auto">
-          <TabsTrigger value="overview" className="text-xs">
-            Overview
-          </TabsTrigger>
+          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
           <TabsTrigger value="materials" className="text-xs">
             Materials
-            {materials.length > 0 && <span className="ml-1 text-[10px] opacity-70">({materials.length})</span>}
+            {activeMaterials.length > 0 && <span className="ml-1 text-[10px] opacity-70">({activeMaterials.length})</span>}
           </TabsTrigger>
           <TabsTrigger value="assessments" className="text-xs">
             Assessment
-            {quizzes.length > 0 && <span className="ml-1 text-[10px] opacity-70">({quizzes.length})</span>}
+            {activeQuizzes.length > 0 && <span className="ml-1 text-[10px] opacity-70">({activeQuizzes.length})</span>}
           </TabsTrigger>
           <TabsTrigger value="students" className="text-xs">
             Students
@@ -413,14 +509,14 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                 <div className="space-y-2">
                   {[1, 2].map((i) => <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
                 </div>
-              ) : materials.length === 0 ? (
+              ) : activeMaterials.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-20" />
                   <p className="text-sm">No materials yet</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {materials.slice(0, 5).map((m) => (
+                  {activeMaterials.slice(0, 5).map((m) => (
                     <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${getFileTypeBg(m.file_url)}`}>
                         <FileText className="w-4 h-4" />
@@ -438,12 +534,12 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                       )}
                     </div>
                   ))}
-                  {materials.length > 5 && (
+                  {activeMaterials.length > 5 && (
                     <button
                       onClick={() => setActiveTab("materials")}
                       className="w-full text-center text-xs text-blue-600 dark:text-blue-400 py-2 hover:underline"
                     >
-                      View all {materials.length} materials →
+                      View all {activeMaterials.length} materials →
                     </button>
                   )}
                 </div>
@@ -457,7 +553,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <FileQuestion className="w-4 h-4 text-purple-600" />
-                  Assessments ({quizzes.length})
+                  Assessments ({activeQuizzes.length})
                 </CardTitle>
                 <button
                   onClick={() => setActiveTab("assessments")}
@@ -472,7 +568,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                 <div className="space-y-2">
                   {[1, 2].map((i) => <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
                 </div>
-              ) : quizzes.length === 0 ? (
+              ) : activeQuizzes.length === 0 ? (
                 <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                   <FileQuestion className="w-8 h-8 mx-auto mb-2 opacity-20" />
                   <p className="text-sm">No assessments yet</p>
@@ -486,17 +582,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {quizzes.slice(0, 3).map((q) => {
-                    const typeLabels: Record<string, string> = {
-                      formatif: "Formatif",
-                      sumatif_tengah: "STS",
-                      sumatif_akhir: "SAS",
-                    };
-                    const typeColors: Record<string, string> = {
-                      formatif: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-                      sumatif_tengah: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-                      sumatif_akhir: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-                    };
+                  {activeQuizzes.slice(0, 3).map((q) => {
                     const quizType = q.quiz_type || "formatif";
                     return (
                       <Link key={q.id} href={`/quiz/${q.id}`}>
@@ -567,43 +653,88 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             )}
           </div>
 
+          {/* Teacher: Active / Archived sub-tabs */}
+          {user.role === "teacher" && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMaterialView("active")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  materialView === "active"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                    : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                Active
+                <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                  {activeMaterials.filter((m) => m.title.toLowerCase().includes(search.toLowerCase())).length}
+                </span>
+              </button>
+              <button
+                onClick={() => setMaterialView("archived")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  materialView === "archived"
+                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                    : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                <Archive className="w-3.5 h-3.5" />
+                Archived
+                <span className="bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                  {archivedMaterials.filter((m) => m.title.toLowerCase().includes(search.toLowerCase())).length}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Materials list */}
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
             </div>
-          ) : materials.filter((m) => m.title.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
-            <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-              <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p className="font-medium">No materials found</p>
-              {user.role === "teacher" && (
-                <Link href={`/materials/upload?class=${classData.id}`}>
-                  <Button className="mt-4 gap-2 rounded-xl" size="sm">
-                    <Plus className="w-4 h-4" />Upload First Material
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {materials
-                .filter((m) => m.title.toLowerCase().includes(search.toLowerCase()))
-                .map((m) => (
+          ) : (() => {
+            const displayList = user.role === "teacher"
+              ? (materialView === "active" ? activeMaterials : archivedMaterials)
+              : studentMaterials;
+            const filtered = displayList.filter((m) => m.title.toLowerCase().includes(search.toLowerCase()));
+
+            if (filtered.length === 0) return (
+              <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+                <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p className="font-medium">
+                  {materialView === "archived" ? "No archived materials" : "No materials found"}
+                </p>
+                {user.role === "teacher" && materialView === "active" && (
+                  <Link href={`/materials/upload?class=${classData.id}`}>
+                    <Button className="mt-4 gap-2 rounded-xl" size="sm">
+                      <Plus className="w-4 h-4" />Upload First Material
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            );
+
+            return (
+              <div className="space-y-2">
+                {filtered.map((m) => (
                   <div
                     key={m.id}
-                    className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm group hover:shadow-md transition-all"
+                    className={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm group hover:shadow-md transition-all ${m.is_archived ? "opacity-70" : ""}`}
                   >
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${getFileTypeBg(m.file_url)}`}>
                       <FileText className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{m.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{m.title}</p>
+                        {m.is_archived && <Badge variant="secondary" className="text-[10px] flex-shrink-0 gap-1"><Archive className="w-2.5 h-2.5" />Archived</Badge>}
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         {m.topic && <Badge variant="outline" className="text-xs">{m.topic}</Badge>}
                         {m.meeting && <Badge variant="secondary" className="text-xs">Meeting {m.meeting}</Badge>}
                         <span className="text-xs text-gray-400">{formatDate(m.created_at)}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       {m.file_url && (
                         <a href={m.file_url} target="_blank" rel="noopener noreferrer">
                           <Button variant="outline" size="sm" className="gap-1.5 rounded-xl h-8 text-xs">
@@ -613,20 +744,28 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                         </a>
                       )}
                       {user.role === "teacher" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleDeleteMaterial(m.id, m.title)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <ArchiveToggleButton
+                            isArchived={!!m.is_archived}
+                            onArchive={() => handleArchiveMaterial(m.id, m.title, true)}
+                            onRestore={() => handleArchiveMaterial(m.id, m.title, false)}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleDeleteMaterial(m.id, m.title)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
                 ))}
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         {/* ── Assessment Tab ── */}
@@ -650,49 +789,83 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             )}
           </div>
 
+          {/* Teacher: Active / Archived sub-tabs */}
+          {user.role === "teacher" && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setQuizView("active")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  quizView === "active"
+                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
+                    : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                Active
+                <span className="bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                  {activeQuizzes.filter((q) => q.title.toLowerCase().includes(search.toLowerCase())).length}
+                </span>
+              </button>
+              <button
+                onClick={() => setQuizView("archived")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  quizView === "archived"
+                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                    : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                <Archive className="w-3.5 h-3.5" />
+                Archived
+                <span className="bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                  {archivedQuizzes.filter((q) => q.title.toLowerCase().includes(search.toLowerCase())).length}
+                </span>
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
             </div>
-          ) : quizzes.filter((q) => q.title.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
-            <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-              <FileQuestion className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p className="font-medium">No assessments yet</p>
-              {user.role === "teacher" && (
-                <Link href="/quiz">
-                  <Button className="mt-4 gap-2 rounded-xl" size="sm">
-                    <Plus className="w-4 h-4" />Create First Assessment
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {quizzes
-                .filter((q) => q.title.toLowerCase().includes(search.toLowerCase()))
-                .map((q) => {
+          ) : (() => {
+            const displayList = user.role === "teacher"
+              ? (quizView === "active" ? activeQuizzes : archivedQuizzes)
+              : studentQuizzes;
+            const filtered = displayList.filter((q) => q.title.toLowerCase().includes(search.toLowerCase()));
+
+            if (filtered.length === 0) return (
+              <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+                <FileQuestion className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p className="font-medium">
+                  {quizView === "archived" ? "No archived assessments" : "No assessments yet"}
+                </p>
+                {user.role === "teacher" && quizView === "active" && (
+                  <Link href="/quiz">
+                    <Button className="mt-4 gap-2 rounded-xl" size="sm">
+                      <Plus className="w-4 h-4" />Create First Assessment
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            );
+
+            return (
+              <div className="space-y-2">
+                {filtered.map((q) => {
                   const quizType = q.quiz_type || "formatif";
                   const isScheduled = q.published_at && new Date(q.published_at) > new Date();
-                  const typeColors: Record<string, string> = {
-                    formatif: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-                    sumatif_tengah: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-                    sumatif_akhir: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-                  };
-                  const typeLabels: Record<string, string> = {
-                    formatif: "Formatif",
-                    sumatif_tengah: "STS",
-                    sumatif_akhir: "SAS",
-                  };
                   return (
                     <div
                       key={q.id}
-                      className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
+                      className={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group ${q.is_archived ? "opacity-70" : ""}`}
                     >
                       <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center flex-shrink-0">
                         <FileQuestion className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{q.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{q.title}</p>
+                          {q.is_archived && <Badge variant="secondary" className="text-[10px] flex-shrink-0 gap-1"><Archive className="w-2.5 h-2.5" />Archived</Badge>}
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${typeColors[quizType]}`}>
                             {typeLabels[quizType]}
@@ -708,16 +881,38 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                           <span className="text-xs text-gray-400">{formatDate(q.created_at)}</span>
                         </div>
                       </div>
-                      <Link href={`/quiz/${q.id}`} className="flex-shrink-0">
-                        <Button variant="outline" size="sm" className="rounded-xl h-8 text-xs">
-                          {user.role === "teacher" ? "Manage" : "Start"}
-                        </Button>
-                      </Link>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {!q.is_archived && (
+                          <Link href={`/quiz/${q.id}`}>
+                            <Button variant="outline" size="sm" className="rounded-xl h-8 text-xs">
+                              {user.role === "teacher" ? "Manage" : "Start"}
+                            </Button>
+                          </Link>
+                        )}
+                        {user.role === "teacher" && (
+                          <>
+                            <ArchiveToggleButton
+                              isArchived={!!q.is_archived}
+                              onArchive={() => handleArchiveQuiz(q.id, q.title, true)}
+                              onRestore={() => handleArchiveQuiz(q.id, q.title, false)}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDeleteQuiz(q.id, q.title)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         {/* ── Students Tab ── */}
@@ -825,7 +1020,6 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             </div>
           )}
 
-          {/* Summary */}
           {students.length > 0 && (
             <Card className="border-0 shadow-sm bg-gray-50 dark:bg-gray-800/50">
               <CardContent className="pt-4 pb-4">
@@ -883,6 +1077,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Create Student Account Dialog */}
       <Dialog open={showCreateStudent} onOpenChange={setShowCreateStudent}>
         <DialogContent className="rounded-2xl">
@@ -925,7 +1120,11 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowCreateStudent(false); setNewStudentForm({ name: "", email: "", password: "" }); }} className="rounded-xl">
+            <Button
+              variant="outline"
+              onClick={() => { setShowCreateStudent(false); setNewStudentForm({ name: "", email: "", password: "" }); }}
+              className="rounded-xl"
+            >
               Cancel
             </Button>
             <Button onClick={handleCreateStudent} disabled={creatingStudent} className="rounded-xl">

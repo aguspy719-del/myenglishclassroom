@@ -115,3 +115,21 @@ ALTER TABLE public.classes
 UPDATE public.classes
 SET class_code = UPPER(SUBSTRING(MD5(id::text), 1, 6))
 WHERE class_code IS NULL;
+
+-- ============================================================
+-- Archive support for materials, assignments, and quizzes
+-- Run this if you want per-item archive inside each class
+-- ============================================================
+ALTER TABLE public.materials
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE public.assignments
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE public.quizzes
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;
+
+-- Indexes for faster filtering
+CREATE INDEX IF NOT EXISTS idx_materials_archived ON public.materials(class_id, is_archived);
+CREATE INDEX IF NOT EXISTS idx_assignments_archived ON public.assignments(class_id, is_archived);
+CREATE INDEX IF NOT EXISTS idx_quizzes_archived ON public.quizzes(class_id, is_archived);
