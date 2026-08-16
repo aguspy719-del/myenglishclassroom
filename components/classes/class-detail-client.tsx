@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatDate, formatDateTime, getDeadlineStatus, getInitials } from "@/lib/utils";
+import { ClassGradesTab } from "@/components/classes/class-grades-tab";
 import type { User, Class, Material, Assignment, Quiz } from "@/types";
 
 interface ClassDetailClientProps {
@@ -410,7 +411,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
-        <TabsList className="w-full grid grid-cols-4 h-auto">
+        <TabsList className="w-full grid grid-cols-5 h-auto">
           <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
           <TabsTrigger value="materials" className="text-xs">
             Materials
@@ -420,6 +421,11 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             Assessment
             {activeQuizzes.length > 0 && <span className="ml-1 text-[10px] opacity-70">({activeQuizzes.length})</span>}
           </TabsTrigger>
+          {user.role === "teacher" && (
+            <TabsTrigger value="grades" className="text-xs">
+              Grades
+            </TabsTrigger>
+          )}
           <TabsTrigger value="students" className="text-xs">
             Students
             {students.length > 0 && <span className="ml-1 text-[10px] opacity-70">({students.length})</span>}
@@ -914,6 +920,13 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             );
           })()}
         </TabsContent>
+
+        {/* ── Grades Tab (Teacher only) ── */}
+        {user.role === "teacher" && (
+          <TabsContent value="grades" className="mt-0">
+            <ClassGradesTab classData={classData} />
+          </TabsContent>
+        )}
 
         {/* ── Students Tab ── */}
         <TabsContent value="students" className="mt-4 space-y-4">
