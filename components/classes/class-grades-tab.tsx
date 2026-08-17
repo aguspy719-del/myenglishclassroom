@@ -317,14 +317,14 @@ export function ClassGradesTab({ classData }: ClassGradesTabProps) {
                   </div>
                 </td>
                 {assignmentCols.map((a) => (
-                  <td key={a.id} className="px-3 py-3 text-center">
+                  <td key={a.id} className="px-3 py-3 text-center whitespace-nowrap">
                     <ScoreCell val={row.assignments[a.id]} />
                   </td>
                 ))}
-                <td className="px-3 py-3 text-center"><ScoreCell val={row.avgTugas} /></td>
-                <td className="px-3 py-3 text-center"><ScoreCell val={row.avgFormatif} /></td>
-                <td className="px-3 py-3 text-center"><ScoreCell val={row.avgSTS} /></td>
-                <td className="px-3 py-3 text-center"><ScoreCell val={row.avgSAS} /></td>
+                <td className="px-3 py-3 text-center whitespace-nowrap"><ScoreCell val={row.avgTugas} /></td>
+                <td className="px-3 py-3 text-center whitespace-nowrap"><ScoreCell val={row.avgFormatif} /></td>
+                <td className="px-3 py-3 text-center whitespace-nowrap"><ScoreCell val={row.avgSTS} /></td>
+                <td className="px-3 py-3 text-center whitespace-nowrap"><ScoreCell val={row.avgSAS} /></td>
                 <td className="px-3 py-3 text-center bg-gray-50/50 dark:bg-gray-800/50">
                   {row.nilaiAkhir === "-" ? (
                     <span className="text-gray-400 text-sm">—</span>
