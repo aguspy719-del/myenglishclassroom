@@ -5,14 +5,16 @@ import { useSearchParams } from "next/navigation";
 import {
   UserCheck, CheckCircle, XCircle, Clock, AlertCircle,
   Calendar, Trash2, RefreshCw, ChevronDown, ChevronUp, BarChart2,
-  FileSpreadsheet, Search, Loader2, TableProperties, MapPin,
+  FileSpreadsheet, Search, Loader2, TableProperties, MapPin, Plus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatDate, formatDateTime, getInitials } from "@/lib/utils";
@@ -89,6 +91,17 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
   const [rekapLoading, setRekapLoading] = useState(false);
   const [rekapSearch, setRekapSearch] = useState("");
   const [exporting, setExporting] = useState(false);
+
+  // Teacher: tambah record manual
+  const [showManualDialog, setShowManualDialog] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    class_id: "",
+    student_id: "",
+    date: new Date().toISOString().split("T")[0],
+    status: "excused" as AttendanceStatus,
+  });
+  const [manualStudents, setManualStudents] = useState<{ id: string; name: string }[]>([]);
+  const [savingManual, setSavingManual] = useState(false);
 
   // Student: geolocation state
   const [locationStatus, setLocationStatus] = useState<"idle" | "checking" | "ok" | "denied" | "tooFar">("idle");
@@ -169,7 +182,12 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       if (!students || students.length === 0) continue;
 
       const { data: records } = await supabase
-        .from("attendance").select("student_id, status").eq("class_id", cls.id);
+        .from("attendance").select("student_id, status, date").eq("class_id", cls.id);
+
+      // Total pertemuan = jumlah tanggal UNIK yang ada absensi di kelas ini
+      // Kalau hari libur tidak ada yang absen = tidak terhitung otomatis
+      const uniqueDates = new Set((records || []).map((r) => r.date));
+      const totalPertemuan = uniqueDates.size;
 
       students.forEach((student) => {
         const sr = (records || []).filter((r) => r.student_id === student.id);
@@ -177,8 +195,9 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
         const late = sr.filter((r) => r.status === "late").length;
         const absent = sr.filter((r) => r.status === "absent").length;
         const excused = sr.filter((r) => r.status === "excused").length;
-        const total = sr.length;
-        const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
+        const total = totalPertemuan; // pakai total pertemuan kelas, bukan total record siswa
+        // Hadir = present + late + excused (izin tetap hadir secara administrasi)
+        const rate = total > 0 ? Math.round(((present + late + excused) / total) * 100) : 0;
         allRows.push({ studentId: student.id, studentName: student.name, present, late, absent, excused, total, rate });
       });
     }
@@ -192,6 +211,62 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       fetchRekap(rekapClass);
     }
   }, [activeTab, rekapClass, classes]);
+
+  // ── Load siswa saat kelas dipilih di dialog manual ─────────
+  const loadManualStudents = async (classId: string) => {
+    if (!classId) { setManualStudents([]); return; }
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("users").select("id, name").eq("class_id", classId).eq("role", "student").order("name");
+    setManualStudents(data || []);
+    setManualForm((prev) => ({ ...prev, student_id: "" }));
+  };
+
+  // ── Simpan record manual oleh guru ────────────────────────
+  const handleSaveManual = async () => {
+    if (!manualForm.class_id || !manualForm.student_id || !manualForm.date) {
+      toast.error("Isi semua field");
+      return;
+    }
+    setSavingManual(true);
+    const supabase = createClient();
+
+    // Cek apakah sudah ada record untuk siswa + tanggal + kelas ini
+    const { data: existing } = await supabase
+      .from("attendance")
+      .select("id")
+      .eq("student_id", manualForm.student_id)
+      .eq("class_id", manualForm.class_id)
+      .eq("date", manualForm.date)
+      .maybeSingle();
+
+    if (existing) {
+      // Update yang sudah ada
+      const { error } = await supabase
+        .from("attendance")
+        .update({ status: manualForm.status, timestamp: new Date().toISOString() })
+        .eq("id", existing.id);
+      if (error) { toast.error("Gagal update: " + error.message); }
+      else { toast.success("Record diupdate"); }
+    } else {
+      // Insert baru
+      const { error } = await supabase.from("attendance").insert([{
+        student_id: manualForm.student_id,
+        class_id: manualForm.class_id,
+        date: manualForm.date,
+        status: manualForm.status,
+        timestamp: new Date().toISOString(),
+      }]);
+      if (error) { toast.error("Gagal menyimpan: " + error.message); }
+      else { toast.success("Record berhasil ditambahkan"); }
+    }
+
+    setSavingManual(false);
+    setShowManualDialog(false);
+    setManualForm({ class_id: "", student_id: "", date: new Date().toISOString().split("T")[0], status: "excused" });
+    setManualStudents([]);
+    fetchData();
+  };
 
   // ── Export rekap Excel ─────────────────────────────────────
   const handleExportRekap = async () => {
@@ -216,8 +291,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
           const late = sr.filter((r) => r.status === "late").length;
           const absent = sr.filter((r) => r.status === "absent").length;
           const excused = sr.filter((r) => r.status === "excused").length;
-          const total = sr.length;
-          const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
+          // Total pertemuan = tanggal unik di kelas, bukan record per siswa
+          const uniqueDates = new Set((records || []).map((r) => r.date));
+          const total = uniqueDates.size;
+          const rate = total > 0 ? Math.round(((present + late + excused) / total) * 100) : 0;
           return {
             "No": idx + 1,
             "Nama Siswa": student.name,
@@ -538,6 +615,14 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                   className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
+              <Button
+                onClick={() => setShowManualDialog(true)}
+                size="sm"
+                className="gap-2 rounded-xl flex-shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                Tambah Manual
+              </Button>
             </div>
 
             {/* Per-class Summary */}
@@ -778,6 +863,117 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
             )}
           </TabsContent>
         </Tabs>
+      )}
+
+      {/* ── Dialog Tambah Record Manual (Guru) ── */}
+      {user.role === "teacher" && (
+        <Dialog open={showManualDialog} onOpenChange={(open) => {
+          setShowManualDialog(open);
+          if (!open) {
+            setManualForm({ class_id: "", student_id: "", date: new Date().toISOString().split("T")[0], status: "excused" });
+            setManualStudents([]);
+          }
+        }}>
+          <DialogContent className="rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Tambah Record Absensi Manual
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-xl text-xs text-blue-700 dark:text-blue-300">
+                📌 Gunakan untuk input izin, sakit, atau koreksi absensi siswa yang tidak bisa absen sendiri.
+              </div>
+
+              {/* Kelas */}
+              <div className="space-y-2">
+                <Label>Kelas *</Label>
+                <Select
+                  value={manualForm.class_id}
+                  onValueChange={(v) => {
+                    setManualForm((prev) => ({ ...prev, class_id: v }));
+                    loadManualStudents(v);
+                  }}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Pilih kelas..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>{cls.class_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Siswa */}
+              <div className="space-y-2">
+                <Label>Siswa *</Label>
+                <Select
+                  value={manualForm.student_id}
+                  onValueChange={(v) => setManualForm((prev) => ({ ...prev, student_id: v }))}
+                  disabled={manualStudents.length === 0}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder={manualStudents.length === 0 ? "Pilih kelas dulu..." : "Pilih siswa..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {manualStudents.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tanggal */}
+              <div className="space-y-2">
+                <Label>Tanggal *</Label>
+                <input
+                  type="date"
+                  value={manualForm.date}
+                  onChange={(e) => setManualForm((prev) => ({ ...prev, date: e.target.value }))}
+                  className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <Label>Status *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.entries(statusConfig) as [AttendanceStatus, typeof statusConfig[AttendanceStatus]][]).map(([s, config]) => {
+                    const Icon = config.icon;
+                    const isSelected = manualForm.status === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setManualForm((prev) => ({ ...prev, status: s }))}
+                        className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                            : "border-gray-200 dark:border-gray-700 hover:border-blue-300"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        {config.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowManualDialog(false)} className="rounded-xl">
+                Batal
+              </Button>
+              <Button onClick={handleSaveManual} disabled={savingManual} className="rounded-xl">
+                {savingManual ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Simpan
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
