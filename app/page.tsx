@@ -56,16 +56,26 @@ const features = [
   { icon: ClipboardList, title: "Online Assignments", desc: "Submit assignments digitally with ease", color: "bg-purple-500", light: "bg-purple-50 dark:bg-purple-950" },
   { icon: Star, title: "Transparent Grades", desc: "View grades and feedback instantly", color: "bg-yellow-500", light: "bg-yellow-50 dark:bg-yellow-950" },
   { icon: Users, title: "Digital Attendance", desc: "Modern attendance tracking system", color: "bg-green-500", light: "bg-green-50 dark:bg-green-950" },
+  { icon: Award, title: "Assessments", desc: "Quizzes & tests with instant results", color: "bg-red-500", light: "bg-red-50 dark:bg-red-950" },
 ];
 
 export default async function LandingPage() {
   const supabase = createClient();
-  const [{ data: classes }, { data: countData }] = await Promise.all([
+  const [{ data: classes }, { data: countData }, { data: teacherData }] = await Promise.all([
     supabase.from("classes").select("*").order("grade").order("class_name"),
     supabase.rpc("get_student_count"),
+    supabase.from("users").select("name, avatar_url, bio, tagline, certifications, years_experience").eq("role", "teacher").single(),
   ]);
 
   const totalStudents = (countData as number) || 0;
+  const teacher = teacherData as any || {
+    name: "Agus Supriyono, S.Pd.,MM",
+    avatar_url: null,
+    bio: "English Teacher · SMK Negeri 1 Buduran",
+    tagline: null,
+    certifications: ["English", "TOEFL Certified", "10+ Years"],
+    years_experience: 10,
+  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -150,7 +160,7 @@ export default async function LandingPage() {
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Everything You Need</h2>
             <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">All tools for learning English in one platform</p>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {features.map((feature) => {
               const Icon = feature.icon;
               return (
@@ -177,17 +187,24 @@ export default async function LandingPage() {
           <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 sm:p-8 text-white">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32 blur-2xl" />
             <div className="relative flex flex-col sm:flex-row items-center gap-6">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl">
-                <GraduationCap className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl overflow-hidden">
+                {teacher.avatar_url ? (
+                  <img src={teacher.avatar_url} alt={teacher.name} className="w-full h-full object-cover" />
+                ) : (
+                  <GraduationCap className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+                )}
               </div>
               <div className="text-center sm:text-left flex-1">
                 <p className="text-blue-200 text-sm font-medium mb-1">Your English Teacher</p>
-                <h2 className="text-2xl sm:text-3xl font-bold mb-1">Agus Supriyono, S.Pd.,MM</h2>
-                <p className="text-blue-100 mb-3">English Teacher · SMK Negeri 1 Buduran</p>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-1">{teacher.name}</h2>
+                <p className="text-blue-100 mb-3">{teacher.bio || "English Teacher · SMK Negeri 1 Buduran"}</p>
+                {teacher.tagline && (
+                  <p className="text-yellow-300 text-sm italic mb-3">"{teacher.tagline}"</p>
+                )}
                 <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                  <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">English</span>
-                  <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">TOEFL Certified</span>
-                  <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">10+ Years</span>
+                  {(teacher.certifications || ["English", "TOEFL Certified", "10+ Years"]).map((cert: string) => (
+                    <span key={cert} className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">{cert}</span>
+                  ))}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 flex-shrink-0">

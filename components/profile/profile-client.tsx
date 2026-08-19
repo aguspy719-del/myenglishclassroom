@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User as UserIcon, Mail, Shield, Loader2, Save, Star, Trophy, Bell, BellOff } from "lucide-react";
+import { User as UserIcon, Mail, Shield, Loader2, Save, Star, Trophy, Bell, BellOff, Globe } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { getInitials, formatDate } from "@/lib/utils";
@@ -27,6 +28,15 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [subscribing, setSubscribing] = useState(false);
+
+  // Teacher landing profile
+  const [teacherProfile, setTeacherProfile] = useState({
+    bio: (initialUser as any).bio || "",
+    tagline: (initialUser as any).tagline || "",
+    certifications: ((initialUser as any).certifications || ["English", "TOEFL Certified", "10+ Years"]).join(", "),
+    years_experience: (initialUser as any).years_experience || 0,
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -74,6 +84,24 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
     if (error) toast.error("Failed to save name");
     else { toast.success("Name updated!"); setUser({ ...user, name }); }
     setSaving(false);
+  };
+
+  const handleSaveTeacherProfile = async () => {
+    setSavingProfile(true);
+    const supabase = createClient();
+    const certs = teacherProfile.certifications
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+    const { error } = await supabase.from("users").update({
+      bio: teacherProfile.bio || null,
+      tagline: teacherProfile.tagline || null,
+      certifications: certs,
+      years_experience: Number(teacherProfile.years_experience) || 0,
+    }).eq("id", user.id);
+    if (error) toast.error("Failed to save profile");
+    else toast.success("Landing page profile updated! ✅");
+    setSavingProfile(false);
   };
 
   const handleChangePassword = async () => {
@@ -221,6 +249,68 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Teacher Landing Page Profile */}
+      {user.role === "teacher" && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Globe className="w-4 h-4 text-blue-600" />
+              Landing Page Profile
+            </CardTitle>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Tampil di halaman utama website</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Bio / Jabatan</Label>
+              <Input
+                placeholder="English Teacher · SMK Negeri 1 Buduran"
+                value={teacherProfile.bio}
+                onChange={(e) => setTeacherProfile({ ...teacherProfile, bio: e.target.value })}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tagline / Quote (opsional)</Label>
+              <Input
+                placeholder="Inspiring students to love English"
+                value={teacherProfile.tagline}
+                onChange={(e) => setTeacherProfile({ ...teacherProfile, tagline: e.target.value })}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Sertifikasi / Badge</Label>
+              <Input
+                placeholder="English, TOEFL Certified, 10+ Years"
+                value={teacherProfile.certifications}
+                onChange={(e) => setTeacherProfile({ ...teacherProfile, certifications: e.target.value })}
+                className="rounded-xl"
+              />
+              <p className="text-xs text-gray-400">Pisahkan dengan koma</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Pengalaman Mengajar (tahun)</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="10"
+                value={teacherProfile.years_experience}
+                onChange={(e) => setTeacherProfile({ ...teacherProfile, years_experience: Number(e.target.value) })}
+                className="rounded-xl w-32"
+              />
+            </div>
+            <Button
+              onClick={handleSaveTeacherProfile}
+              disabled={savingProfile}
+              className="gap-2 rounded-xl"
+            >
+              {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Simpan Profile Landing Page
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Account Info */}
       <Card className="border-0 shadow-sm">
