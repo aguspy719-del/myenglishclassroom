@@ -38,6 +38,21 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
   });
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Schedule
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+
+  useEffect(() => {
+    if (initialUser.role === "teacher") {
+      const fetchSchedules = async () => {
+        const supabase = createClient();
+        const { data } = await supabase.from("schedules").select("*").order("sort_order");
+        setSchedules(data || []);
+      };
+      fetchSchedules();
+    }
+  }, [initialUser.role]);
+
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
       setNotifPermission(Notification.permission);
@@ -91,7 +106,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
     const supabase = createClient();
     const certs = teacherProfile.certifications
       .split(",")
-      .map((c) => c.trim())
+      .map((c: string) => c.trim())
       .filter(Boolean);
     const { error } = await supabase.from("users").update({
       bio: teacherProfile.bio || null,
@@ -102,6 +117,42 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
     if (error) toast.error("Failed to save profile");
     else toast.success("Landing page profile updated! ✅");
     setSavingProfile(false);
+  };
+
+  const handleScheduleChange = (idx: number, field: string, value: string) => {
+    setSchedules((prev) => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
+  };
+
+  const handleAddSchedule = () => {
+    setSchedules((prev) => [...prev, { id: null, day: "Monday", time: "07:30 - 09:00", class_name: "", sort_order: prev.length + 1 }]);
+  };
+
+  const handleDeleteSchedule = async (idx: number, id: string | null) => {
+    if (id) {
+      const supabase = createClient();
+      await supabase.from("schedules").delete().eq("id", id);
+    }
+    setSchedules((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSaveSchedules = async () => {
+    setSavingSchedule(true);
+    const supabase = createClient();
+    try {
+      for (let i = 0; i < schedules.length; i++) {
+        const s = schedules[i];
+        if (s.id) {
+          await supabase.from("schedules").update({ day: s.day, time: s.time, class_name: s.class_name, sort_order: i + 1 }).eq("id", s.id);
+        } else {
+          const { data } = await supabase.from("schedules").insert({ day: s.day, time: s.time, class_name: s.class_name, sort_order: i + 1 }).select().single();
+          if (data) setSchedules((prev) => prev.map((item, idx) => idx === i ? data : item));
+        }
+      }
+      toast.success("Schedule updated! ✅");
+    } catch {
+      toast.error("Failed to save schedule");
+    }
+    setSavingSchedule(false);
   };
 
   const handleChangePassword = async () => {
@@ -307,6 +358,71 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
             >
               {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Simpan Profile Landing Page
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Schedule */}
+      {user.role === "teacher" && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-indigo-600" />
+                  Jadwal Mengajar
+                </CardTitle>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Tampil di landing page</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={handleAddSchedule} className="gap-1 rounded-xl text-xs">
+                + Tambah
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {schedules.map((s, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <div className="grid grid-cols-3 gap-2 flex-1">
+                  <Input
+                    placeholder="Hari"
+                    value={s.day}
+                    onChange={(e) => handleScheduleChange(idx, "day", e.target.value)}
+                    className="rounded-xl h-9 text-xs"
+                  />
+                  <Input
+                    placeholder="07:30 - 09:00"
+                    value={s.time}
+                    onChange={(e) => handleScheduleChange(idx, "time", e.target.value)}
+                    className="rounded-xl h-9 text-xs"
+                  />
+                  <Input
+                    placeholder="Kelas"
+                    value={s.class_name}
+                    onChange={(e) => handleScheduleChange(idx, "class_name", e.target.value)}
+                    className="rounded-xl h-9 text-xs"
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-red-500 hover:bg-red-50 flex-shrink-0"
+                  onClick={() => handleDeleteSchedule(idx, s.id)}
+                >
+                  <span className="text-sm">✕</span>
+                </Button>
+              </div>
+            ))}
+            {schedules.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">Belum ada jadwal. Klik "+ Tambah"</p>
+            )}
+            <Button
+              onClick={handleSaveSchedules}
+              disabled={savingSchedule}
+              className="gap-2 rounded-xl w-full"
+            >
+              {savingSchedule ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Simpan Jadwal
             </Button>
           </CardContent>
         </Card>

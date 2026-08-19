@@ -19,17 +19,6 @@ const classColors = [
   "from-green-500 to-green-600",
 ];
 
-const schedule = [
-  { day: "Monday", time: "07:30 - 09:00", class: "XI Butik 1" },
-  { day: "Monday", time: "09:15 - 10:45", class: "XI Butik 2" },
-  { day: "Tuesday", time: "07:30 - 09:00", class: "XI Garmen" },
-  { day: "Tuesday", time: "10:00 - 11:30", class: "XI Desain" },
-  { day: "Wednesday", time: "07:30 - 09:00", class: "XII Butik 1" },
-  { day: "Wednesday", time: "09:15 - 10:45", class: "XII Butik 2" },
-  { day: "Thursday", time: "07:30 - 09:00", class: "XII Garmen" },
-  { day: "Friday", time: "07:30 - 09:00", class: "XII Desain" },
-];
-
 const announcements = [
   {
     title: "Speaking Assignment Submission",
@@ -61,10 +50,11 @@ const features = [
 
 export default async function LandingPage() {
   const supabase = createClient();
-  const [{ data: classes }, { data: countData }, { data: teacherData }] = await Promise.all([
+  const [{ data: classes }, { data: countData }, { data: teacherData }, { data: scheduleData }] = await Promise.all([
     supabase.from("classes").select("*").order("grade").order("class_name"),
     supabase.rpc("get_student_count"),
     supabase.from("users").select("name, avatar_url, bio, tagline, certifications, years_experience").eq("role", "teacher").single(),
+    supabase.from("schedules").select("*").order("sort_order"),
   ]);
 
   const totalStudents = (countData as number) || 0;
@@ -76,6 +66,7 @@ export default async function LandingPage() {
     certifications: ["English", "TOEFL Certified", "10+ Years"],
     years_experience: 10,
   };
+  const schedules = (scheduleData as any[]) || [];
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -256,9 +247,9 @@ export default async function LandingPage() {
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Teaching Schedule</h2>
           </div>
           <div className="max-w-2xl mx-auto space-y-2">
-            {schedule.map((item, idx) => (
+            {schedules.map((item, idx) => (
               <div
-                key={`${item.day}-${idx}`}
+                key={item.id || idx}
                 className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
               >
                 <div className="flex items-center gap-3">
@@ -270,9 +261,12 @@ export default async function LandingPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">{item.time}</p>
                   </div>
                 </div>
-                <Badge variant="info" className="text-xs">{item.class}</Badge>
+                <Badge variant="info" className="text-xs">{item.class_name}</Badge>
               </div>
             ))}
+            {schedules.length === 0 && (
+              <p className="text-center text-gray-400 py-8">No schedule yet</p>
+            )}
           </div>
         </div>
       </section>
