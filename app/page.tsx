@@ -172,7 +172,8 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Teacher Profile */}
+      {/* Teacher Profile — hanya tampil kalau ada data teacher */}
+      {teacherData && (
       <section className="py-16 px-4 bg-white dark:bg-gray-950">
         <div className="max-w-6xl mx-auto">
           <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 sm:p-8 text-white">
@@ -193,7 +194,7 @@ export default async function LandingPage() {
                   <p className="text-yellow-300 text-sm italic mb-3">"{teacher.tagline}"</p>
                 )}
                 <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                  {(teacher.certifications || ["English", "TOEFL Certified", "10+ Years"]).map((cert: string) => (
+                  {(teacher.certifications?.length > 0 ? teacher.certifications : []).map((cert: string) => (
                     <span key={cert} className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">{cert}</span>
                   ))}
                 </div>
@@ -212,8 +213,7 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* Classes - Dynamic from DB */}
+      )}
       <section className="py-16 px-4 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
@@ -239,7 +239,8 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Schedule */}
+      {/* Schedule — hanya tampil kalau ada data */}
+      {schedules.length > 0 && (
       <section className="py-16 px-4 bg-white dark:bg-gray-950">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
@@ -264,12 +265,10 @@ export default async function LandingPage() {
                 <Badge variant="info" className="text-xs">{item.class_name}</Badge>
               </div>
             ))}
-            {schedules.length === 0 && (
-              <p className="text-center text-gray-400 py-8">No schedule yet</p>
-            )}
           </div>
         </div>
       </section>
+      )}
 
       {/* Announcements */}
       <section className="py-16 px-4 bg-gray-50 dark:bg-gray-900">
