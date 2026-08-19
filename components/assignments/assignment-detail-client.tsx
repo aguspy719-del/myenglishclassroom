@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Clock, Download, Upload, File, X, Loader2,
-  CheckCircle, Star, Users, AlertCircle, PenLine, FileText,
+  CheckCircle, Star, Users, AlertCircle, PenLine, FileText, CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
@@ -166,7 +169,13 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
   const [gradingId, setGradingId] = useState<string | null>(null);
   const [gradeForm, setGradeForm] = useState({ score: "", feedback: "" });
 
-  const deadlineStatus = getDeadlineStatus(assignment.deadline);
+  // Extend deadline
+  const [currentDeadline, setCurrentDeadline] = useState(assignment.deadline);
+  const [showExtendDialog, setShowExtendDialog] = useState(false);
+  const [newDeadline, setNewDeadline] = useState("");
+  const [extending, setExtending] = useState(false);
+
+  const deadlineStatus = getDeadlineStatus(currentDeadline);
   const isPast = deadlineStatus === "overdue";
 
   useEffect(() => {
@@ -276,6 +285,57 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
     setAllSubmissions(data || []);
   };
 
+  const handleExtendDeadline = async () => {
+    if (!newDeadline) { toast.error("Pilih tanggal deadline baru"); return; }
+    const newDate = new Date(newDeadline);
+    if (newDate <= new Date()) { toast.error("Deadline baru harus di masa depan"); return; }
+
+    setExtending(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("assignments")
+      .update({ deadline: newDate.toISOString() })
+      .eq("id", assignment.id);
+
+    if (error) {
+      toast.error("Gagal memperpanjang deadline");
+    } else {
+      setCurrentDeadline(newDate.toISOString());
+      toast.success("Deadline berhasil diperpanjang! ✅");
+      setShowExtendDialog(false);
+      setNewDeadline("");
+
+      // Notify students
+      try {
+        const classId = (assignment.class as any)?.id || (assignment as any).class_id;
+        if (classId) {
+          const { data: students } = await supabase
+            .from("users")
+            .select("id")
+            .eq("class_id", classId)
+            .eq("role", "student");
+          if (students && students.length > 0) {
+            await fetch("/api/push/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userIds: students.map((s) => s.id),
+                payload: {
+                  title: "⏰ Deadline Diperpanjang",
+                  body: `${assignment.title} — Deadline baru: ${newDate.toLocaleDateString("id-ID")}`,
+                  url: `/assignments/${assignment.id}`,
+                },
+              }),
+            });
+          }
+        }
+      } catch {
+        // Push failure not critical
+      }
+    }
+    setExtending(false);
+  };
+
   // Back URL
   const classId = (assignment.class as any)?.id || (assignment as any).class_id;
   const backUrl = classId ? `/classes/${classId}` : "/classes";
@@ -303,9 +363,31 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
       {/* Assignment Info */}
       <Card className="border-0 shadow-sm">
         <CardContent className="pt-5 pb-5">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
-            <Clock className="w-4 h-4" />
-            <span>Deadline: <strong>{formatDateTime(assignment.deadline)}</strong></span>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <Clock className="w-4 h-4 flex-shrink-0" />
+              <span>Deadline: <strong>{formatDateTime(currentDeadline)}</strong></span>
+              {isPast && (
+                <Badge variant="destructive" className="text-[10px]">Closed</Badge>
+              )}
+            </div>
+            {user.role === "teacher" && (
+              <Button
+                size="sm"
+                variant={isPast ? "default" : "outline"}
+                className="gap-2 rounded-xl flex-shrink-0 text-xs"
+                onClick={() => {
+                  // Pre-fill with current deadline + 7 days as suggestion
+                  const suggested = new Date(currentDeadline);
+                  suggested.setDate(suggested.getDate() + 7);
+                  setNewDeadline(suggested.toISOString().slice(0, 16));
+                  setShowExtendDialog(true);
+                }}
+              >
+                <CalendarClock className="w-3.5 h-3.5" />
+                {isPast ? "Buka Kembali" : "Perpanjang"}
+              </Button>
+            )}
           </div>
           {assignment.description && (
             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm leading-relaxed">
@@ -502,6 +584,62 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
           </CardContent>
         </Card>
       )}
+
+      {/* Extend Deadline Dialog */}
+      <Dialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="w-5 h-5 text-blue-600" />
+              {isPast ? "Buka Kembali Tugas" : "Perpanjang Deadline"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {isPast && (
+              <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-xl text-xs text-orange-700 dark:text-orange-300">
+                ⚠️ Tugas ini sudah ditutup. Setelah diperpanjang, siswa bisa submit kembali.
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Deadline saat ini</Label>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                {formatDateTime(currentDeadline)}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Deadline baru *</Label>
+              <Input
+                type="datetime-local"
+                min={new Date().toISOString().slice(0, 16)}
+                value={newDeadline}
+                onChange={(e) => setNewDeadline(e.target.value)}
+                className="rounded-xl"
+              />
+              <p className="text-xs text-gray-500">Siswa akan mendapat notifikasi otomatis</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setShowExtendDialog(false); setNewDeadline(""); }}
+              className="rounded-xl"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleExtendDeadline}
+              disabled={extending || !newDeadline}
+              className="rounded-xl gap-2"
+            >
+              {extending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />Menyimpan...</>
+              ) : (
+                <><CalendarClock className="w-4 h-4" />Simpan Deadline</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
