@@ -90,7 +90,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="font-bold text-sm text-gray-900 dark:text-white leading-none">English LMS</p>
+              <p className="font-bold text-sm text-gray-900 dark:text-white leading-none">My Classroom</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">SMK N 1 Buduran</p>
             </div>
           </Link>

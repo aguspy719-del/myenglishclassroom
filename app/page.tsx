@@ -77,7 +77,7 @@ export default async function LandingPage() {
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="font-bold text-gray-900 dark:text-white leading-none">English LMS</p>
+              <p className="font-bold text-gray-900 dark:text-white leading-none">My Classroom</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">SMK Negeri 1 Buduran</p>
             </div>
           </div>
@@ -331,9 +331,9 @@ export default async function LandingPage() {
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
               <GraduationCap className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-white">English LMS</span>
+            <span className="font-bold text-white">My Classroom</span>
           </div>
-          <p className="text-sm">© 2026 English LMS — Agus Supriyono, S.Pd.,MM · SMK Negeri 1 Buduran</p>
+          <p className="text-sm">© 2026 My Classroom — Agus Supriyono, S.Pd.,MM · SMK Negeri 1 Buduran</p>
           <p className="text-xs mt-2 text-gray-600">Built with ❤️ for better English education</p>
         </div>
       </footer>

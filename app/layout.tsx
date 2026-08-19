@@ -13,13 +13,17 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "English LMS - Agus Supriyono, S.Pd.,MM",
-  description: "English Learning Management System for SMK students",
+  title: "My Classroom - Agus Supriyono, S.Pd.,MM",
+  description: "My Classroom - English Learning for SMK Negeri 1 Buduran",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon.svg",
+    apple: "/icons/icon.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "English LMS",
+    title: "My Classroom",
   },
 };
 

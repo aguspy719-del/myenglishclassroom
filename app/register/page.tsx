@@ -135,7 +135,7 @@ export default function RegisterPage() {
               <GraduationCap className="w-9 h-9 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">Create Account</h1>
-            <p className="text-blue-200 text-sm mt-1">Join English LMS today</p>
+            <p className="text-blue-200 text-sm mt-1">Join My Classroom today</p>
           </div>
 
           {/* Card */}
@@ -247,7 +247,7 @@ export default function RegisterPage() {
           </div>
 
           <p className="text-center text-xs text-blue-200 mt-6">
-            © 2026 English LMS — Agus Supriyono, S.Pd.,MM
+            © 2026 My Classroom — Agus Supriyono, S.Pd.,MM
           </p>
         </div>
       </div>

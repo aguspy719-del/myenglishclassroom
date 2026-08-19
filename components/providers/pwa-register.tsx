@@ -88,7 +88,7 @@ export function PWARegister() {
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-white" />
-            <p className="text-white text-sm font-semibold">Install English LMS</p>
+            <p className="text-white text-sm font-semibold">Install My Classroom</p>
           </div>
           <button
             onClick={handleMinimize}

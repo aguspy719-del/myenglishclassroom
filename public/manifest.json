@@ -1,7 +1,7 @@
 {
-  "name": "English LMS - SMK Negeri 1 Buduran",
-  "short_name": "English LMS",
-  "description": "English Learning Management System for SMK students",
+  "name": "My Classroom - SMK Negeri 1 Buduran",
+  "short_name": "My Classroom",
+  "description": "My Classroom - English Learning for SMK Negeri 1 Buduran",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
