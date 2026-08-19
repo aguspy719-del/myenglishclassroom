@@ -17,8 +17,8 @@ export const metadata: Metadata = {
   description: "My Classroom - English Learning for SMK Negeri 1 Buduran",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icons/icon.svg",
-    apple: "/icons/icon.svg",
+    icon: "/icons/icon-512x512.png.png",
+    apple: "/icons/icon-192x192.png.png",
   },
   appleWebApp: {
     capable: true,
