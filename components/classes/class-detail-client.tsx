@@ -52,7 +52,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
   // Sub-tab states for archive views (teacher only)
   const [materialView, setMaterialView] = useState<"active" | "archived">("active");
-  const [assignmentView, setAssignmentView] = useState<"active" | "archived">("active");
+  const [assignmentView, setAssignmentView] = useState<"active" | "closed" | "archived">("active");
   const [quizView, setQuizView] = useState<"active" | "archived">("active");
 
   // Student management
@@ -411,11 +411,17 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
-        <TabsList className={`w-full grid h-auto ${user.role === "teacher" ? "grid-cols-5" : "grid-cols-4"}`}>
+        <TabsList className={`w-full grid h-auto ${user.role === "teacher" ? "grid-cols-6" : "grid-cols-5"}`}>
           <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
           <TabsTrigger value="materials" className="text-xs">
             Materials
             {activeMaterials.length > 0 && <span className="ml-1 text-[10px] opacity-70">({activeMaterials.length})</span>}
+          </TabsTrigger>
+          <TabsTrigger value="assignments" className="text-xs">
+            Assignments
+            {(activeAssignments.length + overdueAssignments.length) > 0 && (
+              <span className="ml-1 text-[10px] opacity-70">({activeAssignments.length + overdueAssignments.length})</span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="assessments" className="text-xs">
             Assessment
@@ -769,6 +775,177 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+            );
+          })()}
+        </TabsContent>
+
+        {/* ── Assignments Tab ── */}
+        <TabsContent value="assignments" className="mt-4 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search assignments..."
+                className="pl-9 rounded-xl"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            {user.role === "teacher" && (
+              <Link href={`/assignments/create?class=${classData.id}`}>
+                <Button size="sm" className="gap-2 rounded-xl flex-shrink-0">
+                  <Plus className="w-4 h-4" />Create
+                </Button>
+              </Link>
+            )}
+          </div>
+
+          {/* Teacher: Active / Archived sub-tabs */}
+          {user.role === "teacher" && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAssignmentView("active")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  assignmentView === "active"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                    : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                Active
+                <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                  {activeAssignments.filter((a) => a.title.toLowerCase().includes(search.toLowerCase())).length}
+                </span>
+              </button>
+              <button
+                onClick={() => setAssignmentView("closed")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  assignmentView === "closed"
+                    ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                    : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Closed
+                <span className="bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                  {overdueAssignments.filter((a) => a.title.toLowerCase().includes(search.toLowerCase())).length}
+                </span>
+              </button>
+              <button
+                onClick={() => setAssignmentView("archived")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  assignmentView === "archived"
+                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                    : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                <Archive className="w-3.5 h-3.5" />
+                Archived
+                <span className="bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                  {archivedAssignments.filter((a) => a.title.toLowerCase().includes(search.toLowerCase())).length}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
+            </div>
+          ) : (() => {
+            let displayList: AssignmentWithArchive[];
+            if (user.role === "teacher") {
+              if (assignmentView === "archived") {
+                displayList = archivedAssignments;
+              } else if (assignmentView === "closed") {
+                displayList = overdueAssignments;
+              } else {
+                displayList = activeAssignments;
+              }
+            } else {
+              displayList = [...activeAssignments, ...overdueAssignments];
+            }
+            const filtered = displayList.filter((a) => a.title.toLowerCase().includes(search.toLowerCase()));
+
+            if (filtered.length === 0) return (
+              <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+                <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p className="font-medium">
+                  {assignmentView === "archived" ? "No archived assignments" : assignmentView === "closed" ? "No closed assignments" : "No active assignments"}
+                </p>
+                {user.role === "teacher" && assignmentView === "active" && (
+                  <Link href={`/assignments/create?class=${classData.id}`}>
+                    <Button className="mt-4 gap-2 rounded-xl" size="sm">
+                      <Plus className="w-4 h-4" />Create First Assignment
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            );
+
+            return (
+              <div className="space-y-2">
+                {filtered.map((a) => {
+                  const status = getDeadlineStatus(a.deadline);
+                  const isClosed = status === "overdue";
+                  return (
+                    <div
+                      key={a.id}
+                      className={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group ${a.is_archived ? "opacity-70" : ""}`}
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isClosed ? "bg-red-100 dark:bg-red-900" : "bg-blue-100 dark:bg-blue-900"}`}>
+                        <ClipboardList className={`w-5 h-5 ${isClosed ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{a.title}</p>
+                          {a.is_archived && (
+                            <Badge variant="secondary" className="text-[10px] flex-shrink-0 gap-1">
+                              <Archive className="w-2.5 h-2.5" />Archived
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />{formatDateTime(a.deadline)}
+                          </span>
+                          <Badge
+                            variant={isClosed ? "destructive" : status === "today" ? "warning" : "success"}
+                            className="text-[10px]"
+                          >
+                            {isClosed ? "Closed" : status === "today" ? "Due Today" : "Active"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {!a.is_archived && (
+                          <Link href={`/assignments/${a.id}`}>
+                            <Button variant="outline" size="sm" className="rounded-xl h-8 text-xs">
+                              {user.role === "teacher" ? "View" : isClosed ? "View" : "Submit"}
+                            </Button>
+                          </Link>
+                        )}
+                        {user.role === "teacher" && (
+                          <>
+                            <ArchiveToggleButton
+                              isArchived={!!a.is_archived}
+                              onArchive={() => handleArchiveAssignment(a.id, a.title, true)}
+                              onRestore={() => handleArchiveAssignment(a.id, a.title, false)}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDeleteAssignment(a.id, a.title)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}
