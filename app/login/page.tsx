@@ -44,7 +44,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-700 to-green-600 flex flex-col">
       {/* Back button */}
       <div className="p-4">
         <Link href="/">
@@ -63,7 +63,7 @@ export default function LoginPage() {
               <GraduationCap className="w-9 h-9 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">My Classroom</h1>
-            <p className="text-blue-200 text-sm mt-1">SMK Negeri 1 Buduran</p>
+            <p className="text-green-200 text-sm mt-1">SMK Negeri 1 Buduran</p>
           </div>
 
           {/* Card */}
@@ -114,7 +114,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+                className="w-full h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg"
                 disabled={loading}
               >
                 {loading ? (
@@ -126,14 +126,14 @@ export default function LoginPage() {
             <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Don&apos;t have an account?{" "}
-                <Link href="/register" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                <Link href="/register" className="text-green-600 dark:text-green-400 font-semibold hover:underline">
                   Register here
                 </Link>
               </p>
             </div>
           </div>
 
-          <p className="text-center text-xs text-blue-200 mt-6">
+          <p className="text-center text-xs text-green-200 mt-6">
             © 2026 My Classroom — Agus Supriyono, S.Pd.,MM
           </p>
         </div>

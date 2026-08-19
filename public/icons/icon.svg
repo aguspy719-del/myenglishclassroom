@@ -2,78 +2,72 @@
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#14532d"/>
-      <stop offset="100%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+    <linearGradient id="bulbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#22c55e"/>
     </linearGradient>
   </defs>
 
-  <!-- Background -->
-  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="90" fill="url(#bg)"/>
 
-  <!-- ── OPEN BOOK ── -->
-  <!-- Left cover -->
-  <path d="M50 345 L50 205 Q50 190 66 187 L242 170 L242 362 L66 378 Q50 380 50 364 Z"
-        fill="#f97316"/>
+  <!-- ── OPEN BOOK (white, flat, bottom half) ── -->
   <!-- Left page -->
-  <path d="M66 195 L242 178 L242 360 L70 375 Q58 376 58 364 L58 207 Q58 195 66 195 Z"
-        fill="#fef9ee"/>
+  <path d="M48 460 L48 310 Q48 295 62 288 L245 268 L245 430 Q180 435 120 450 Z"
+        fill="white"/>
+  <!-- Left page edge layers (green shades) -->
+  <path d="M48 430 L48 460 L120 450 L245 438 L245 430 Z" fill="#4ade80" opacity="0.5"/>
+  <path d="M48 445 L48 460 L120 455 L245 444 L245 438 Z" fill="#16a34a" opacity="0.6"/>
+
   <!-- Right page -->
-  <path d="M270 178 L446 195 Q454 195 454 207 L454 364 Q454 376 442 375 L270 360 Z"
-        fill="#fef9ee"/>
-  <!-- Right cover -->
-  <path d="M462 205 L462 345 Q462 362 446 378 L270 362 L270 170 L446 187 Q462 190 462 205 Z"
-        fill="#f97316"/>
+  <path d="M464 460 L464 310 Q464 295 450 288 L267 268 L267 430 Q332 435 392 450 Z"
+        fill="white"/>
+  <!-- Right page edge layers -->
+  <path d="M464 430 L464 460 L392 450 L267 438 L267 430 Z" fill="#4ade80" opacity="0.5"/>
+  <path d="M464 445 L464 460 L392 455 L267 444 L267 438 Z" fill="#16a34a" opacity="0.6"/>
 
-  <!-- Spine -->
-  <rect x="242" y="170" width="26" height="192" fill="#ea580c" rx="2"/>
-
-  <!-- Left page lines -->
-  <line x1="80"  y1="238" x2="224" y2="228" stroke="#d1d5db" stroke-width="9" stroke-linecap="round"/>
-  <line x1="80"  y1="266" x2="222" y2="257" stroke="#d1d5db" stroke-width="9" stroke-linecap="round"/>
-  <line x1="80"  y1="294" x2="223" y2="286" stroke="#d1d5db" stroke-width="9" stroke-linecap="round"/>
-  <line x1="80"  y1="322" x2="220" y2="315" stroke="#d1d5db" stroke-width="9" stroke-linecap="round"/>
-
-  <!-- Right page lines -->
-  <line x1="288" y1="228" x2="430" y2="238" stroke="#d1d5db" stroke-width="9" stroke-linecap="round"/>
-  <line x1="288" y1="257" x2="428" y2="266" stroke="#d1d5db" stroke-width="9" stroke-linecap="round"/>
-  <line x1="288" y1="286" x2="429" y2="294" stroke="#d1d5db" stroke-width="9" stroke-linecap="round"/>
-  <line x1="288" y1="315" x2="426" y2="322" stroke="#d1d5db" stroke-width="9" stroke-linecap="round"/>
+  <!-- Book spine bottom point -->
+  <path d="M245 430 L256 460 L267 430 L267 268 L256 272 L245 268 Z" fill="#15803d"/>
 
   <!-- ── LIGHT BULB ── -->
-  <!-- Rays -->
-  <line x1="256" y1="48"  x2="256" y2="24"  stroke="#fde047" stroke-width="9"  stroke-linecap="round"/>
-  <line x1="302" y1="62"  x2="318" y2="40"  stroke="#fde047" stroke-width="9"  stroke-linecap="round"/>
-  <line x1="336" y1="96"  x2="358" y2="80"  stroke="#fde047" stroke-width="9"  stroke-linecap="round"/>
-  <line x1="210" y1="62"  x2="194" y2="40"  stroke="#fde047" stroke-width="9"  stroke-linecap="round"/>
-  <line x1="176" y1="96"  x2="154" y2="80"  stroke="#fde047" stroke-width="9"  stroke-linecap="round"/>
+  <!-- Rays (mix white and light green, alternating) -->
+  <!-- top center -->
+  <rect x="249" y="52" width="14" height="36" rx="7" fill="white" transform="rotate(0 256 256)"/>
+  <!-- top right 1 -->
+  <rect x="249" y="52" width="14" height="28" rx="7" fill="#86efac" transform="rotate(30 256 256)"/>
+  <!-- top right 2 -->
+  <rect x="249" y="52" width="14" height="24" rx="7" fill="white" transform="rotate(60 256 256)"/>
+  <!-- right -->
+  <rect x="249" y="52" width="14" height="28" rx="7" fill="#86efac" transform="rotate(90 256 256)"/>
+  <!-- top left 1 -->
+  <rect x="249" y="52" width="14" height="28" rx="7" fill="#86efac" transform="rotate(-30 256 256)"/>
+  <!-- top left 2 -->
+  <rect x="249" y="52" width="14" height="24" rx="7" fill="white" transform="rotate(-60 256 256)"/>
+  <!-- left -->
+  <rect x="249" y="52" width="14" height="28" rx="7" fill="#86efac" transform="rotate(-90 256 256)"/>
 
-  <!-- Bulb -->
-  <circle cx="256" cy="148" r="74" fill="#fde047"/>
+  <!-- Bulb circle body -->
+  <circle cx="256" cy="210" r="95" fill="url(#bulbGrad)"/>
+  <!-- Bulb white rim -->
+  <circle cx="256" cy="210" r="95" fill="none" stroke="white" stroke-width="10"/>
 
-  <!-- Pencils inside bulb -->
-  <rect x="232" y="146" width="15" height="66" rx="3" fill="#ef4444"/>
-  <rect x="249" y="146" width="15" height="66" rx="3" fill="#22c55e"/>
-  <rect x="266" y="146" width="15" height="66" rx="3" fill="#3b82f6"/>
+  <!-- Pencil inside bulb -->
+  <!-- Pencil body - 3 stripes dark green -->
+  <rect x="234" y="175" width="17" height="72" rx="4" fill="#166534"/>
+  <rect x="247" y="170" width="18" height="77" rx="4" fill="#15803d"/>
+  <rect x="261" y="175" width="17" height="72" rx="4" fill="#166534"/>
+  <!-- Pencil tip point -->
+  <polygon points="234,247 278,247 256,278" fill="#14532d"/>
+  <!-- Pencil top (eraser flat) -->
+  <rect x="234" y="168" width="44" height="10" rx="4" fill="#4ade80"/>
 
-  <!-- Pencil tip -->
-  <polygon points="232,212 281,212 256,238" fill="#ca8a04"/>
+  <!-- Bulb base / coil (white stripes) -->
+  <rect x="228" y="295" width="56" height="10" rx="5" fill="white"/>
+  <rect x="228" y="309" width="56" height="10" rx="5" fill="white"/>
+  <rect x="228" y="323" width="56" height="10" rx="5" fill="white"/>
 
-  <!-- Coil rings -->
-  <rect x="230" y="214" width="52" height="9"  rx="4" fill="#166534" opacity="0.75"/>
-  <rect x="230" y="225" width="52" height="9"  rx="4" fill="#166534" opacity="0.75"/>
-  <rect x="230" y="236" width="52" height="9"  rx="4" fill="#166534" opacity="0.75"/>
-
-  <!-- Base nub -->
-  <rect x="236" y="246" width="40" height="13" rx="6" fill="#eab308"/>
-
-  <!-- ── NAME ── -->
-  <text
-    x="256"
-    y="448"
-    font-family="'Arial Rounded MT Bold', Arial, sans-serif"
-    font-size="52"
-    font-weight="900"
-    text-anchor="middle"
-    fill="white"
-    letter-spacing="1"
-  >My Classroom</text>
+  <!-- Bulb neck -->
+  <rect x="234" y="335" width="44" height="18" rx="8" fill="#86efac"/>
 </svg>
