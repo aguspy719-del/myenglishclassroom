@@ -73,7 +73,7 @@ export default async function LandingPage() {
       <nav className="sticky top-0 z-50 glass bg-white/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center shadow-md">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -86,7 +86,7 @@ export default async function LandingPage() {
               <Button variant="ghost" size="sm" className="hidden sm:flex">Register</Button>
             </Link>
             <Link href="/login">
-              <Button size="sm" className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-md">
+              <Button size="sm" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md">
                 Login
               </Button>
             </Link>
@@ -95,59 +95,49 @@ export default async function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden min-h-[580px] flex items-center py-20 px-4">
-        {/* Background image */}
-        <div className="absolute inset-0">
-          <img
-            src="/images/hero.jpg.png"
-            alt="My Classroom"
-            className="w-full h-full object-cover object-center"
-          />
-          {/* Gradient overlay — hijau gelap dari kiri, transparan ke kanan */}
-          <div className="absolute inset-0 bg-gradient-to-r from-green-900/90 via-green-800/75 to-green-700/40" />
-          <div className="absolute inset-0 bg-gradient-to-t from-green-950/60 via-transparent to-transparent" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 py-20 px-4">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
         </div>
-
-        <div className="relative max-w-6xl mx-auto text-white w-full">
-          <div className="max-w-xl">
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6 text-sm font-medium">
-              <span className="w-2 h-2 bg-green-400 rounded-full pulse-soft" />
-              SMK Negeri 1 Buduran · English Subject
-            </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-lg">
-              Welcome to
-              <br />
-              <span className="text-yellow-300">My Classroom</span>
-              <br />
-              <span className="text-2xl sm:text-3xl font-semibold text-green-200">Learn Today, Shine Tomorrow</span>
-            </h1>
-            <p className="text-lg sm:text-xl text-green-100 mb-8 max-w-lg leading-relaxed drop-shadow">
-              Your digital English classroom. Access materials, submit assignments, and track your progress — all in one place.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/register">
-                <Button size="lg" className="w-full sm:w-auto bg-white text-green-700 hover:bg-green-50 font-bold shadow-xl gap-2 text-base px-8 h-12">
-                  Get Started Free <ArrowRight className="w-5 h-5" />
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button size="lg" className="w-full sm:w-auto bg-white/20 backdrop-blur-sm border-2 border-white text-white hover:bg-white hover:text-green-700 font-semibold text-base px-8 h-12">
-                  Sign In
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-3 gap-4 max-w-sm mt-12">
-              {[
-                { value: String(classes?.length || 8), label: "Classes" },
-                { value: String(totalStudents), label: "Students" },
-                { value: "100%", label: "Digital" },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-white/15 backdrop-blur-sm rounded-2xl p-4">
-                  <p className="text-2xl font-bold text-white">{stat.value}</p>
-                  <p className="text-xs text-green-200">{stat.label}</p>
-                </div>
-              ))}
-            </div>
+        <div className="relative max-w-6xl mx-auto text-center text-white">
+          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6 text-sm font-medium">
+            <span className="w-2 h-2 bg-green-400 rounded-full pulse-soft" />
+            SMK Negeri 1 Buduran · English Subject
+          </div>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight">
+            Welcome to
+            <br />
+            <span className="text-yellow-300">My Classroom</span>
+            <br />
+            with Mr. Agus
+          </h1>
+          <p className="text-lg sm:text-xl text-blue-100 mb-8 max-w-2xl mx-auto leading-relaxed">
+            Your digital English classroom. Access materials, submit assignments, and track your progress — all in one place.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/register">
+              <Button size="lg" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-blue-50 font-bold shadow-xl gap-2 text-base px-8 h-12">
+                Get Started Free <ArrowRight className="w-5 h-5" />
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" className="w-full sm:w-auto bg-white/20 backdrop-blur-sm border-2 border-white text-white hover:bg-white hover:text-blue-600 font-semibold text-base px-8 h-12">
+                Sign In
+              </Button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto mt-12">
+            {[
+              { value: String(classes?.length || 8), label: "Classes" },
+              { value: String(totalStudents), label: "Students" },
+              { value: "100%", label: "Digital" },
+            ].map((stat) => (
+              <div key={stat.label} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
+                <p className="text-2xl font-bold text-white">{stat.value}</p>
+                <p className="text-xs text-blue-200">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -184,16 +174,16 @@ export default async function LandingPage() {
       {/* Teacher Profile */}
       <section className="py-16 px-4 bg-white dark:bg-gray-950">
         <div className="max-w-6xl mx-auto">
-          <div className="relative overflow-hidden bg-gradient-to-r from-green-700 via-green-600 to-green-500 rounded-3xl p-6 sm:p-8 text-white">
+          <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 sm:p-8 text-white">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32 blur-2xl" />
             <div className="relative flex flex-col sm:flex-row items-center gap-6">
               <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl">
                 <GraduationCap className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
               </div>
               <div className="text-center sm:text-left flex-1">
-                <p className="text-green-200 text-sm font-medium mb-1">Your English Teacher</p>
+                <p className="text-blue-200 text-sm font-medium mb-1">Your English Teacher</p>
                 <h2 className="text-2xl sm:text-3xl font-bold mb-1">Agus Supriyono, S.Pd.,MM</h2>
-                <p className="text-green-100 mb-3">English Teacher · SMK Negeri 1 Buduran</p>
+                <p className="text-blue-100 mb-3">English Teacher · SMK Negeri 1 Buduran</p>
                 <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                   <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">English</span>
                   <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">TOEFL Certified</span>
@@ -203,11 +193,11 @@ export default async function LandingPage() {
               <div className="grid grid-cols-2 gap-3 flex-shrink-0">
                 <div className="bg-white/15 rounded-2xl p-4 text-center">
                   <p className="text-3xl font-bold">{classes?.length || 8}</p>
-                  <p className="text-xs text-green-200">Classes</p>
+                  <p className="text-xs text-blue-200">Classes</p>
                 </div>
                 <div className="bg-white/15 rounded-2xl p-4 text-center">
                   <p className="text-3xl font-bold">{totalStudents}</p>
-                  <p className="text-xs text-green-200">Students</p>
+                  <p className="text-xs text-blue-200">Students</p>
                 </div>
               </div>
             </div>
@@ -308,7 +298,7 @@ export default async function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 px-4 bg-gradient-to-br from-green-800 via-green-700 to-green-600 relative overflow-hidden">
+      <section className="py-16 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 left-1/4 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
@@ -318,15 +308,15 @@ export default async function LandingPage() {
             <Award className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to Start Learning?</h2>
-          <p className="text-green-100 mb-8 text-lg">Join your classmates and access all English learning materials</p>
+          <p className="text-blue-100 mb-8 text-lg">Join your classmates and access all English learning materials</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/register">
-              <Button size="lg" className="w-full sm:w-auto bg-white text-green-700 hover:bg-green-50 font-bold gap-2 px-8 h-12">
+              <Button size="lg" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-blue-50 font-bold gap-2 px-8 h-12">
                 Register Now <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
             <Link href="/login">
-              <Button size="lg" className="w-full sm:w-auto bg-white/20 backdrop-blur-sm border-2 border-white text-white hover:bg-white hover:text-green-700 font-semibold px-8 h-12">
+              <Button size="lg" className="w-full sm:w-auto bg-white/20 backdrop-blur-sm border-2 border-white text-white hover:bg-white hover:text-blue-600 font-semibold px-8 h-12">
                 Sign In
               </Button>
             </Link>
@@ -338,7 +328,7 @@ export default async function LandingPage() {
       <footer className="bg-gray-950 text-gray-400 py-8 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2.5 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
               <GraduationCap className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-white">My Classroom</span>
