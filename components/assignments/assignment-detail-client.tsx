@@ -321,7 +321,7 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
               body: JSON.stringify({
                 userIds: students.map((s) => s.id),
                 payload: {
-                  title: "⏰ Deadline Diperpanjang",
+                  title: "⏰ Deadline Diubah",
                   body: `${assignment.title} — Deadline baru: ${newDate.toLocaleDateString("id-ID")}`,
                   url: `/assignments/${assignment.id}`,
                 },
@@ -385,7 +385,7 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
                 }}
               >
                 <CalendarClock className="w-3.5 h-3.5" />
-                {isPast ? "Buka Kembali" : "Perpanjang"}
+                Ubah Deadline
               </Button>
             )}
           </div>
@@ -591,13 +591,13 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CalendarClock className="w-5 h-5 text-blue-600" />
-              {isPast ? "Buka Kembali Tugas" : "Perpanjang Deadline"}
+              Ubah Deadline
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {isPast && (
               <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-xl text-xs text-orange-700 dark:text-orange-300">
-                ⚠️ Tugas ini sudah ditutup. Setelah diperpanjang, siswa bisa submit kembali.
+                ⚠️ Tugas ini sudah ditutup. Setelah deadline diubah ke masa depan, siswa bisa submit kembali.
               </div>
             )}
             <div className="space-y-2">
