@@ -72,7 +72,7 @@ export function PWARegister() {
     return (
       <button
         onClick={handleExpand}
-        className="fixed bottom-24 lg:bottom-6 right-4 z-50 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-all hover:scale-110"
+        className="fixed bottom-24 lg:bottom-6 right-4 z-50 w-12 h-12 bg-emerald-600 text-white rounded-full shadow-lg shadow-emerald-500/30 flex items-center justify-center hover:bg-emerald-700 transition-all hover:scale-110"
         title="Install App"
       >
         <Smartphone className="w-5 h-5" />
@@ -85,7 +85,7 @@ export function PWARegister() {
     <div className="fixed bottom-24 lg:bottom-6 right-4 z-50 w-72 animate-in slide-in-from-bottom-4 duration-300">
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
         {/* Top bar */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-white" />
             <p className="text-white text-sm font-semibold">Install My Classroom</p>
@@ -107,7 +107,7 @@ export function PWARegister() {
           <div className="flex gap-2">
             <button
               onClick={handleInstall}
-              className="flex-1 bg-blue-600 text-white text-sm py-2 rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5"
+              className="flex-1 bg-emerald-600 text-white text-sm py-2 rounded-xl font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5" />
               Install
