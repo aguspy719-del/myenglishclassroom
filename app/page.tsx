@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 const features = [
   { icon: BookOpen,     title: "Digital Materials",   desc: "Access learning materials anytime, anywhere",    color: "bg-emerald-500" },
@@ -40,15 +40,15 @@ const announcements = [
 ];
 
 export default async function LandingPage() {
-  const supabase = createClient();
-  const [{ data: classes }, { data: countData }, { data: teacherData }, { data: scheduleData }] = await Promise.all([
+  const supabase = createServiceClient();
+  const [{ data: classes }, { count: studentCount }, { data: teacherData }, { data: scheduleData }] = await Promise.all([
     supabase.from("classes").select("*").order("grade").order("class_name"),
-    supabase.rpc("get_student_count"),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "student"),
     supabase.from("users").select("name, avatar_url, bio, tagline, certifications, years_experience").eq("role", "teacher").single(),
     supabase.from("schedules").select("*").order("sort_order"),
   ]);
 
-  const totalStudents = (countData as number) || 0;
+  const totalStudents = studentCount ?? 0;
   const teacher = teacherData as any || {
     name: "Agus Supriyono, S.Pd.,MM",
     avatar_url: null,
