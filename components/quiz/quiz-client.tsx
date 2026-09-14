@@ -170,19 +170,26 @@ export function QuizClient({ user }: QuizClientProps) {
 
   const getQuizTypeConfig = (type: string) => QUIZ_TYPES.find((t) => t.value === type) || QUIZ_TYPES[0];
 
+  // Safe date parsing — never crashes on junk data like the string "null"
+  const safeDate = (v?: string | null): Date | null => {
+    if (!v || v === "null") return null;
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
   const isScheduled = (quiz: any) =>
-    quiz.is_published === false && quiz.published_at && new Date(quiz.published_at) > new Date();
+    quiz.is_published === false && !!safeDate(quiz.published_at) && safeDate(quiz.published_at)! > new Date();
   const isDraft = (quiz: any) =>
-    quiz.is_published === false && (!quiz.published_at || new Date(quiz.published_at) <= new Date());
+    quiz.is_published === false && !safeDate(quiz.published_at);
   const isClosed = (quiz: any) =>
-    quiz.available_until && new Date(quiz.available_until) <= new Date();
+    !!safeDate(quiz.available_until) && safeDate(quiz.available_until)! <= new Date();
 
   const filtered = quizzes.filter((q) => {
     const matchSearch = q.title.toLowerCase().includes(search.toLowerCase());
     const matchTab = activeTab === "all" || (q as any).quiz_type === activeTab;
     // Students never see closed assessments
-    const closedForStudent = user.role === "student" &&
-      q.available_until && new Date(q.available_until) <= new Date();
+    const until = safeDate(q.available_until);
+    const closedForStudent = user.role === "student" && !!until && until <= new Date();
     return matchSearch && matchTab && !closedForStudent;
   });
 

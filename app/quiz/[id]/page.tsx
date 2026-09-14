@@ -40,11 +40,19 @@ export default async function QuizTakePage({
     // Not for this class → students shouldn't even see it
     if (quiz.class_id && quiz.class_id !== user.class_id) redirect("/quiz");
 
+    // Safe date parsing — never crashes on junk data like the string "null"
+    const safeDate = (v?: string | null): Date | null => {
+      if (!v || v === "null") return null;
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
     // Not sent yet (draft), or scheduled but time hasn't come, or already closed.
     // Scheduled quizzes open automatically once published_at passes (no cron needed).
-    const notSent = quiz.is_published === false &&
-      (!quiz.published_at || new Date(quiz.published_at) > now);
-    const closed = quiz.available_until && new Date(quiz.available_until) <= now;
+    const pub = safeDate(quiz.published_at);
+    const notSent = quiz.is_published === false && (!pub || pub > now);
+    const until = safeDate(quiz.available_until);
+    const closed = !!until && until <= now;
 
     if (notSent || closed) redirect("/quiz");
 

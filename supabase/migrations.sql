@@ -58,6 +58,21 @@ ALTER TABLE public.quizzes
   ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT TRUE,
   ADD COLUMN IF NOT EXISTS available_until TIMESTAMPTZ;
 
+-- Repair: if published_at was created as TEXT (legacy forms wrote the string 'null'),
+-- convert it to a real timestamp and discard junk values
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'quizzes'
+      AND column_name = 'published_at' AND data_type = 'text'
+  ) THEN
+    ALTER TABLE public.quizzes
+      ALTER COLUMN published_at TYPE timestamptz
+      USING NULLIF(published_at, 'null')::timestamptz;
+  END IF;
+END $$;
+
 ALTER TABLE public.quiz_attempts
   ADD COLUMN IF NOT EXISTS violations INTEGER NOT NULL DEFAULT 0;
 

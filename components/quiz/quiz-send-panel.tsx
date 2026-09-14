@@ -17,10 +17,17 @@ interface QuizSendPanelProps {
   attemptCount: number;
 }
 
-// toLocalInput: ISO → "YYYY-MM-DDTHH:mm" in the browser's timezone
+// Safe date parsing — never crashes on junk data like the string "null"
+function safeDate(v?: string | null): Date | null {
+  if (!v || v === "null") return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// toLocalInput: Date → "YYYY-MM-DDTHH:mm" in the browser's timezone
 function toLocalInput(iso?: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
+  const d = safeDate(iso);
+  if (!d) return "";
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
@@ -34,11 +41,11 @@ export function QuizSendPanel({ quiz, questionCount, attemptCount }: QuizSendPan
   const [saving, setSaving] = useState(false);
   const [deadlineInput, setDeadlineInput] = useState(toLocalInput(quiz.available_until));
 
-  const publishedAt = state.published_at ? new Date(state.published_at) : null;
+  const publishedAt = safeDate(state.published_at);
   const isScheduled = !state.is_published && !!publishedAt && publishedAt > new Date();
   const isDraft = !state.is_published && (!publishedAt || publishedAt <= new Date());
   const isSent = state.is_published && (!publishedAt || publishedAt <= new Date());
-  const isClosed = !!state.available_until && new Date(state.available_until) <= new Date();
+  const isClosed = !!safeDate(state.available_until) && safeDate(state.available_until)! <= new Date();
 
   const toIso = (local: string) => (local ? new Date(local).toISOString() : null);
 
@@ -188,9 +195,10 @@ export function QuizSendPanel({ quiz, questionCount, attemptCount }: QuizSendPan
             <Input
               type="datetime-local"
               value={toLocalInput(state.published_at)}
-              onChange={(e) =>
-                setState((s) => ({ ...s, published_at: e.target.value ? new Date(e.target.value).toISOString() : "" }))
-              }
+              onChange={(e) => {
+                const v = e.target.value;
+                setState((s) => ({ ...s, published_at: v ? new Date(v).toISOString() : "" }));
+              }}
               className="rounded-xl flex-1"
             />
             <Button onClick={handleSchedule} disabled={saving || !publishedAt} variant="outline" className="gap-2 rounded-xl">
@@ -218,7 +226,7 @@ export function QuizSendPanel({ quiz, questionCount, attemptCount }: QuizSendPan
             <Button onClick={() => handleSetDeadline(deadlineInput)} disabled={saving} variant="outline" className="gap-2 rounded-xl">
               Save Deadline
             </Button>
-            {state.available_until && (
+            {state.available_until && safeDate(state.available_until) && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -230,7 +238,7 @@ export function QuizSendPanel({ quiz, questionCount, attemptCount }: QuizSendPan
               </Button>
             )}
           </div>
-          {state.available_until && (
+          {state.available_until && safeDate(state.available_until) && (
             <p className="text-xs text-orange-600 dark:text-orange-400">
               🔒 Closes automatically on {new Date(state.available_until).toLocaleString()}
             </p>
