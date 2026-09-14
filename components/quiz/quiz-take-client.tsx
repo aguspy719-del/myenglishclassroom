@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
@@ -7,18 +7,18 @@ import {
   Plus, Trash2, Loader2, Trophy, Users, BarChart2, FileText, PenLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { cn, getGradeColor, getGradeLabel, formatDateTime } from "@/lib/utils";
 import { QuizAntiCheat } from "./quiz-anti-cheat";
+import { QuizSendPanel } from "./quiz-send-panel";
 import type { User, Quiz, QuizQuestion } from "@/types";
 
 interface QuizTakeClientProps {
@@ -26,6 +26,9 @@ interface QuizTakeClientProps {
   quiz: Quiz;
   questions: QuizQuestion[];
 }
+
+const LETTERS = ["A", "B", "C", "D"] as const;
+const OPT_KEYS = ["a", "b", "c", "d"] as const;
 
 const emptyMC = () => ({
   id: crypto.randomUUID(),
@@ -41,6 +44,25 @@ const emptyEssay = () => ({
   correct_answer: "a" as const, max_score: 20,
 });
 
+// Deterministic shuffle — same order for the whole attempt (survives refresh)
+function seededShuffle<T>(arr: T[], seed: string): T[] {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const rand = () => {
+    h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+    return Math.abs(h % 10000) / 10000;
+  };
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export function QuizTakeClient({ user, quiz, questions: initialQuestions }: QuizTakeClientProps) {
   const [questions, setQuestions] = useState<QuizQuestion[]>(initialQuestions);
   const [started, setStarted] = useState(false);
@@ -50,8 +72,14 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [essayAnswers, setEssayAnswers] = useState<Record<string, string>>({});
-  const [score, setScore] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ score: number | null; correctCount: number; mcCount: number; essaySaved: number } | null>(null);
+  const [submitError, setSubmitError] = useState("");
   const [timeLeft, setTimeLeft] = useState((quiz.time_limit || 30) * 60);
+
+  // Shuffle maps, created once when the student starts
+  const [shuffledQs, setShuffledQs] = useState<QuizQuestion[] | null>(null);
+  const [optionMaps, setOptionMaps] = useState<Record<string, string[]>>({});
 
   // Check if already attempted on mount (client-side guard)
   useEffect(() => {
@@ -71,60 +99,47 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
       });
   }, [quiz.id, user.id, user.role]);
 
-  const handleFinish = useCallback(async () => {
-    if (finished) return;
-    const mcQs = questions.filter((q) => (q as any).question_type !== "essay");
-    const essayQs = questions.filter((q) => (q as any).question_type === "essay");
-    const isEssayOnly = mcQs.length === 0 && essayQs.length > 0;
-    const correct = mcQs.filter((q) => answers[q.id] === q.correct_answer).length;
-    const finalScore = mcQs.length > 0 ? Math.round((correct / mcQs.length) * 100) : 0;
-    setScore(finalScore);
-    setFinished(true);
-
-    const supabase = createClient();
-
-    // Save attempt — essay-only saves null score until teacher grades
-    const { error: attemptError } = await supabase.from("quiz_attempts").insert([{
-      quiz_id: quiz.id,
-      student_id: user.id,
-      score: isEssayOnly ? null : finalScore,
-      completed_at: new Date().toISOString(),
-      started_at: new Date().toISOString(),
-    }]);
-
-    if (attemptError) {
-      console.error("[Quiz] Failed to save attempt:", attemptError);
-      toast.error("Failed to save your attempt. Please contact your teacher.");
-    }
-
-    // Award XP
-    if (finalScore >= 75) {
-      import("@/lib/gamification").then(({ awardPoints }) => {
-        awardPoints(user.id, 100, `completing ${quiz.title}`);
-      });
-    }
-    if (finalScore === 100) {
-      import("@/lib/gamification").then(({ awardBadge }) => {
-        awardBadge(user.id, "perfect_score");
-      });
-    }
-
-    // Save essay answers (essayQs already declared above)
-    for (const q of essayQs) {
-      if (essayAnswers[q.id]) {
-        await supabase.from("essay_answers").upsert({
-          quiz_id: quiz.id,
-          question_id: q.id,
-          student_id: user.id,
-          answer: essayAnswers[q.id],
-          submitted_at: new Date().toISOString(),
-        });
+  const startQuiz = () => {
+    const qs = seededShuffle(initialQuestions, quiz.id + user.id);
+    const maps: Record<string, string[]> = {};
+    qs.forEach((q) => {
+      if ((q as any).question_type !== "essay") {
+        maps[q.id] = seededShuffle([...OPT_KEYS], q.id + user.id);
       }
-    }
-  }, [answers, essayAnswers, questions, quiz.id, quiz.title, user.id, finished]);
+    });
+    setShuffledQs(qs);
+    setOptionMaps(maps);
+    setStarted(true);
+  };
 
-  const handleFinishRef = useRef(handleFinish);
-  useEffect(() => { handleFinishRef.current = handleFinish; }, [handleFinish]);
+  // Submit through the server API — correct answers never live in the browser
+  const handleSubmit = useCallback(async () => {
+    if (finished || submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/quiz/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId: quiz.id, mc: answers, essays: essayAnswers }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitError(data?.error || "Failed to submit. Check your connection and try again.");
+        toast.error(data?.error || "Failed to submit");
+        setSubmitting(false);
+        return;
+      }
+      setResult(data);
+      setFinished(true);
+    } catch {
+      setSubmitError("Network error — your answers were NOT saved. Press Finish again.");
+      toast.error("Network error — try again");
+    }
+    setSubmitting(false);
+  }, [answers, essayAnswers, finished, submitting, quiz.id]);
+
+  const handleFinishRef = useRef(handleSubmit);
+  useEffect(() => { handleFinishRef.current = handleSubmit; }, [handleSubmit]);
 
   useEffect(() => {
     if (!started || finished) return;
@@ -147,7 +162,7 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
   // Client-side guard: already attempted
   if (alreadyAttempted) {
     return (
-      <QuizAntiCheat isActive={false} onForceSubmit={() => {}}>
+      <QuizAntiCheat isActive={false} quizId={quiz.id} onForceSubmit={() => {}}>
         <div className="max-w-lg mx-auto text-center space-y-6 py-8">
           <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle className="w-12 h-12 text-gray-400" />
@@ -189,14 +204,29 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
     );
   }
 
+  // Server said the window is closed / not open yet
+  if (submitError && !finished) {
+    return (
+      <QuizAntiCheat isActive={false} quizId={quiz.id} onForceSubmit={() => {}}>
+        <div className="max-w-lg mx-auto text-center space-y-6 py-8">
+          <div className="w-24 h-24 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto">
+            <Clock className="w-12 h-12 text-red-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Assessment Unavailable</h2>
+          <p className="text-gray-500 dark:text-gray-400">{submitError}</p>
+          <Link href="/quiz">
+            <Button className="gap-2 rounded-xl"><ArrowLeft className="w-4 h-4" />Back to Assessment List</Button>
+          </Link>
+        </div>
+      </QuizAntiCheat>
+    );
+  }
+
   const quizType = (quiz as any).quiz_type || "formatif";
 
-  if (finished) {
-    const mcQs = questions.filter((q) => (q as any).question_type !== "essay");
-    const essayQs = questions.filter((q) => (q as any).question_type === "essay");
-    const correct = mcQs.filter((q) => answers[q.id] === q.correct_answer).length;
+  if (finished && result) {
     return (
-      <QuizAntiCheat isActive={false} onForceSubmit={handleFinish}>
+      <QuizAntiCheat isActive={false} quizId={quiz.id} onForceSubmit={() => {}}>
         <div className="max-w-lg mx-auto text-center space-y-6 py-8">
           <div className="w-24 h-24 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto">
             <Trophy className="w-12 h-12 text-yellow-600 dark:text-yellow-400" />
@@ -207,18 +237,18 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
           </div>
           <Card className="border-0 shadow-sm">
             <CardContent className="pt-6 pb-6 space-y-3">
-              {mcQs.length > 0 && (
+              {result.mcCount > 0 && (
                 <>
-                  <p className={`text-6xl font-bold ${getGradeColor(score)}`}>{score}</p>
+                  <p className={`text-6xl font-bold ${getGradeColor(result.score || 0)}`}>{result.score}</p>
                   <p className="text-gray-500 dark:text-gray-400">Multiple Choice Score</p>
-                  <Badge className="text-lg px-4 py-1">{getGradeLabel(score)}</Badge>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Correct: {correct} of {mcQs.length}</p>
+                  <Badge className="text-lg px-4 py-1">{getGradeLabel(result.score || 0)}</Badge>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Correct: {result.correctCount} of {result.mcCount}</p>
                 </>
               )}
-              {essayQs.length > 0 && (
+              {result.essaySaved > 0 && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-xl">
                   <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
-                    ✍️ {essayQs.length} essay answer{essayQs.length > 1 ? "s" : ""} submitted
+                    ✍️ {result.essaySaved} essay answer{result.essaySaved > 1 ? "s" : ""} submitted
                   </p>
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Essay will be graded by your teacher</p>
                 </div>
@@ -237,7 +267,7 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
     const mcCount = questions.filter((q) => (q as any).question_type !== "essay").length;
     const essayCount = questions.filter((q) => (q as any).question_type === "essay").length;
     return (
-      <QuizAntiCheat isActive={false} onForceSubmit={handleFinish}>
+      <QuizAntiCheat isActive={false} quizId={quiz.id} onForceSubmit={() => {}}>
         <div className="max-w-lg mx-auto space-y-6">
           <div className="flex items-center gap-4">
             <Link href="/quiz"><Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button></Link>
@@ -263,12 +293,14 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
                 {quiz.time_limit && <div className="text-center"><p className="text-2xl font-bold text-gray-900 dark:text-white">{quiz.time_limit}</p><p>Minutes</p></div>}
               </div>
               <div className="p-3 bg-red-50 dark:bg-red-950 rounded-xl text-sm text-red-700 dark:text-red-300 font-medium">
-                ⚠️ 1 attempt only. Switching tabs will trigger warnings and may auto-submit.
+                ⚠️ 1 attempt only. Questions are shuffled per student. Leaving the page triggers a loud alarm — 3 warnings = auto-submit.
               </div>
               {questions.length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400">No questions yet.</p>
               ) : (
-                <Button size="lg" className="w-full rounded-xl" onClick={() => setStarted(true)}>Start Assessment</Button>
+                <Button size="lg" className="w-full rounded-xl" onClick={startQuiz} disabled={submitting}>
+                  Start Assessment
+                </Button>
               )}
             </CardContent>
           </Card>
@@ -277,15 +309,17 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
     );
   }
 
-  const currentQuestion = questions[currentQ];
+  const activeQuestions = shuffledQs || questions;
+  const currentQuestion = activeQuestions[currentQ];
+  if (!currentQuestion) return null;
   const isEssay = (currentQuestion as any).question_type === "essay";
-  const progress = ((currentQ + 1) / questions.length) * 100;
+  const progress = ((currentQ + 1) / activeQuestions.length) * 100;
 
   return (
-    <QuizAntiCheat isActive={true} onForceSubmit={handleFinish} maxWarnings={3}>
+    <QuizAntiCheat isActive={true} quizId={quiz.id} onForceSubmit={handleSubmit} maxWarnings={3}>
       <div className="max-w-2xl mx-auto space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Question {currentQ + 1} of {questions.length}</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">Question {currentQ + 1} of {activeQuestions.length}</span>
           <div className={cn("flex items-center gap-2 font-mono font-bold text-lg", timeLeft < 60 ? "text-red-600" : "text-gray-900 dark:text-white")}>
             <Clock className="w-5 h-5" />{formatTime(timeLeft)}
           </div>
@@ -312,14 +346,14 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
               />
             ) : (
               <div className="space-y-3">
-                {(["a", "b", "c", "d"] as const).map((opt) => {
-                  const isSelected = answers[currentQuestion.id] === opt;
+                {(optionMaps[currentQuestion.id] || [...OPT_KEYS]).map((actualOpt, idx) => {
+                  const isSelected = answers[currentQuestion.id] === actualOpt;
                   return (
-                    <button key={opt} onClick={() => setAnswers({ ...answers, [currentQuestion.id]: opt })}
+                    <button key={actualOpt} onClick={() => setAnswers({ ...answers, [currentQuestion.id]: actualOpt })}
                       className={cn("w-full text-left p-4 rounded-xl border-2 transition-all",
                         isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200 dark:border-gray-700 hover:border-blue-300")}>
-                      <span className={cn("font-bold mr-3 flex-shrink-0", isSelected ? "text-blue-600" : "text-gray-500")}>{opt.toUpperCase()}.</span>
-                      <span className="whitespace-pre-wrap">{currentQuestion[`option_${opt}` as keyof QuizQuestion] as string}</span>
+                      <span className={cn("font-bold mr-3 flex-shrink-0", isSelected ? "text-blue-600" : "text-gray-500")}>{LETTERS[idx]}.</span>
+                      <span className="whitespace-pre-wrap">{currentQuestion[`option_${actualOpt}` as keyof QuizQuestion] as string}</span>
                     </button>
                   );
                 })}
@@ -331,13 +365,16 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
           <Button variant="outline" onClick={() => setCurrentQ(Math.max(0, currentQ - 1))} disabled={currentQ === 0} className="gap-2 rounded-xl">
             <ChevronLeft className="w-4 h-4" />Previous
           </Button>
-          {currentQ === questions.length - 1
-            ? <Button onClick={handleFinish} className="gap-2 rounded-xl"><CheckCircle className="w-4 h-4" />Finish</Button>
+          {currentQ === activeQuestions.length - 1
+            ? <Button onClick={handleSubmit} disabled={submitting} className="gap-2 rounded-xl">
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                {submitting ? "Submitting..." : "Finish"}
+              </Button>
             : <Button onClick={() => setCurrentQ(currentQ + 1)} className="gap-2 rounded-xl">Next<ChevronRight className="w-4 h-4" /></Button>
           }
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
-          {questions.map((q, idx) => {
+          {activeQuestions.map((q, idx) => {
             const isEssayQ = (q as any).question_type === "essay";
             const answered = isEssayQ ? !!essayAnswers[q.id] : !!answers[q.id];
             return (
@@ -375,24 +412,39 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
   const [copyTargets, setCopyTargets] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
 
+  const refreshData = useCallback(async () => {
+    const supabase = createClient();
+    const [a, e] = await Promise.all([
+      supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("completed_at", "is", null).order("completed_at", { ascending: false }),
+      supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
+    ]);
+    setAttempts(a.data || []);
+    setEssayAnswers(e.data || []);
+    setLoadingAttempts(false);
+  }, [quiz.id]);
+
   useEffect(() => {
     const load = async () => {
       const supabase = createClient();
-      const [a, e, s] = await Promise.all([
-        supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("completed_at", "is", null).order("completed_at", { ascending: false }),
-        supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
-        supabase.from("quizzes").select("id, title, class:classes(class_name)").eq("quiz_type", (quiz as any).quiz_type || "formatif").neq("id", quiz.id).order("created_at", { ascending: false }),
-      ]);
-      setAttempts(a.data || []);
-      setEssayAnswers(e.data || []);
+      const s = await supabase
+        .from("quizzes")
+        .select("id, title, class:classes(class_name)")
+        .eq("quiz_type", (quiz as any).quiz_type || "formatif")
+        .neq("id", quiz.id)
+        .order("created_at", { ascending: false });
       setSameTypeQuizzes(s.data || []);
-      setLoadingAttempts(false);
+      refreshData();
     };
     load();
-  }, [quiz.id]);
+  }, [quiz.id, refreshData]);
 
-  const addDraft = (type: "multiple_choice" | "essay") =>
+  const addDraft = (type: "multiple_choice" | "essay") => {
     setDrafts((p) => [...p, type === "essay" ? emptyEssay() : emptyMC()]);
+    // Scroll the new card into view so the flow feels obvious
+    setTimeout(() => {
+      document.getElementById("draft-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
 
   const updateDraft = (id: string, field: string, value: string) =>
     setDrafts((p) => p.map((d) => d.id === id ? { ...d, [field]: value } : d));
@@ -400,13 +452,26 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
   const removeDraft = (id: string) => setDrafts((p) => p.filter((d) => d.id !== id));
 
   const saveDrafts = async () => {
-    const valid = drafts.filter((d) => d.question && (d.question_type === "essay" || (d.option_a && d.option_b && d.option_c && d.option_d)));
-    if (valid.length === 0) { toast.error("Fill in all required fields"); return; }
+    // Clear, specific validation so the teacher knows exactly what is missing
+    const problems: string[] = [];
+    drafts.forEach((d, i) => {
+      const n = i + 1;
+      if (!d.question.trim()) problems.push(`Question ${n}: the question text is empty`);
+      if (d.question_type === "multiple_choice") {
+        for (const k of OPT_KEYS) {
+          if (!d[`option_${k}`]?.trim()) problems.push(`Question ${n}: option ${k.toUpperCase()} is empty`);
+        }
+      }
+    });
+    if (problems.length > 0) {
+      toast.error(problems.slice(0, 3).join(" · "));
+      return;
+    }
     setSaving(true);
     const supabase = createClient();
     const { data, error } = await supabase.from("quiz_questions").insert(
-      valid.map((d, idx) => ({
-        quiz_id: quiz.id, question: d.question, question_type: d.question_type,
+      drafts.map((d, idx) => ({
+        quiz_id: quiz.id, question: d.question.trim(), question_type: d.question_type,
         option_a: d.option_a || "", option_b: d.option_b || "",
         option_c: d.option_c || "", option_d: d.option_d || "",
         correct_answer: d.correct_answer || "a", max_score: d.max_score || 10,
@@ -445,7 +510,8 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
     if (error) toast.error("Failed"); else { toast.success("Deleted"); setQuestions(questions.filter((q) => q.id !== id)); }
   };
 
-  const gradeEssay = async (answerId: string, essayScore: number, feedback: string) => {    const supabase = createClient();
+  const gradeEssay = async (answerId: string, essayScore: number, feedback: string) => {
+    const supabase = createClient();
     const { error } = await supabase.from("essay_answers").update({ score: essayScore, feedback }).eq("id", answerId);
     if (error) { toast.error("Failed"); return; }
 
@@ -477,25 +543,22 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
 
     if (!attempt) return;
 
-    // Calculate essay contribution
     const mcCount = questions.filter((q) => (q as any).question_type !== "essay").length;
     const essayCount = questions.filter((q) => (q as any).question_type === "essay").length;
     const totalQuestions = mcCount + essayCount;
 
     if (totalQuestions === 0) return;
 
-    // MC score is already stored as percentage of MC questions
+    // MC score is stored as percentage of MC questions
     const mcScore = mcCount > 0 ? (attempt.score || 0) * mcCount / 100 : 0;
 
-    // Essay score: sum of (score/max_score) for each essay
+    // Essay score: sum of (score/max_score) per essay
     const essayTotalScore = (allEssayAnswers || []).reduce((sum, ea) => {
       const maxScore = (ea.question as any)?.max_score || 10;
       return sum + ((ea.score || 0) / maxScore) * 100;
     }, 0);
     const essayAvg = essayCount > 0 ? essayTotalScore / essayCount : 0;
 
-    // Final score = weighted average
-    const finalScore = Math.round((mcScore + essayAvg * essayCount / totalQuestions * totalQuestions) / totalQuestions);
     const combinedScore = Math.round(
       (mcCount * (attempt.score || 0) + essayCount * essayAvg) / totalQuestions
     );
@@ -504,14 +567,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
       .update({ score: combinedScore })
       .eq("id", attempt.id);
 
-    // Refresh attempts list
-    const { data: updatedAttempts } = await supabase
-      .from("quiz_attempts")
-      .select("*, student:users(name,email)")
-      .eq("quiz_id", quiz.id)
-      .not("completed_at", "is", null)
-      .order("completed_at", { ascending: false });
-    setAttempts(updatedAttempts || []);
+    refreshData();
   };
 
   const deleteEssayAnswer = async (answerId: string, studentName: string) => {
@@ -541,6 +597,13 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
         </div>
       </div>
 
+      {/* Send & access control */}
+      <QuizSendPanel
+        quiz={quiz}
+        questionCount={questions.length}
+        attemptCount={attempts.length}
+      />
+
       <Tabs defaultValue="questions">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="questions" className="gap-1"><BarChart2 className="w-4 h-4" />Questions ({questions.length})</TabsTrigger>
@@ -550,25 +613,36 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
 
         {/* Questions Tab */}
         <TabsContent value="questions" className="mt-4 space-y-4">
-          <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => addDraft("multiple_choice")} variant="outline" size="sm" className="gap-1 rounded-xl">
-              <Plus className="w-4 h-4" /><FileText className="w-4 h-4" />Add MC
-            </Button>
-            <Button onClick={() => addDraft("essay")} variant="outline" size="sm" className="gap-1 rounded-xl">
-              <Plus className="w-4 h-4" /><PenLine className="w-4 h-4" />Add Essay
-            </Button>
-            {questions.length > 0 && sameTypeQuizzes.length > 0 && (
-              <Button onClick={() => setShowCopy(!showCopy)} variant="outline" size="sm" className="gap-1 rounded-xl border-green-400 text-green-700 hover:bg-green-50 dark:text-green-400">
-                <Users className="w-4 h-4" />Copy to Other Classes
-              </Button>
-            )}
-            {drafts.length > 0 && (
-              <Button onClick={saveDrafts} disabled={saving} size="sm" className="gap-1 rounded-xl ml-auto">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                Save {drafts.length} Question{drafts.length > 1 ? "s" : ""}
-              </Button>
-            )}
-          </div>
+          {/* Step-by-step builder — clear flow for making MC questions */}
+          <Card className="border-2 border-dashed border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/30">
+            <CardContent className="pt-4 pb-4">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">How to add questions:</p>
+              <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
+                <li>Tap <b>Add Multiple Choice</b> or <b>Add Essay</b> below</li>
+                <li>Write the question, fill options A–D, then <b>tap the circle</b> next to the correct answer</li>
+                <li>Tap <b>Save Questions</b> — then send via the panel above</li>
+              </ol>
+              <div className="flex gap-2 flex-wrap mt-3">
+                <Button onClick={() => addDraft("multiple_choice")} size="sm" className="gap-1 rounded-xl">
+                  <Plus className="w-4 h-4" /><FileText className="w-4 h-4" />Add Multiple Choice
+                </Button>
+                <Button onClick={() => addDraft("essay")} variant="outline" size="sm" className="gap-1 rounded-xl">
+                  <Plus className="w-4 h-4" /><PenLine className="w-4 h-4" />Add Essay
+                </Button>
+                {questions.length > 0 && sameTypeQuizzes.length > 0 && (
+                  <Button onClick={() => setShowCopy(!showCopy)} variant="outline" size="sm" className="gap-1 rounded-xl border-green-400 text-green-700 hover:bg-green-50 dark:text-green-400">
+                    <Users className="w-4 h-4" />Copy to Other Classes
+                  </Button>
+                )}
+                {drafts.length > 0 && (
+                  <Button onClick={saveDrafts} disabled={saving} size="sm" className="gap-1 rounded-xl ml-auto">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    Save {drafts.length} Question{drafts.length > 1 ? "s" : ""}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Copy panel */}
           {showCopy && (
@@ -605,50 +679,86 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
             </Card>
           )}
 
-          {/* Draft questions */}
-          {drafts.map((draft, idx) => (
-            <Card key={draft.id} className="border-2 border-blue-300 dark:border-blue-700">
-              <CardContent className="pt-4 pb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Badge className={draft.question_type === "essay" ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"}>
-                    {draft.question_type === "essay" ? "✍️ Essay" : "📝 MC"} — New #{idx + 1}
-                  </Badge>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeDraft(draft.id)}><Trash2 className="w-4 h-4" /></Button>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Question *</Label>
-                  <Textarea placeholder="Write question..." value={draft.question} onChange={(e) => updateDraft(draft.id, "question", e.target.value)} rows={2} className="rounded-xl text-sm" />
-                </div>
-                {draft.question_type === "multiple_choice" && (
-                  <>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(["a", "b", "c", "d"] as const).map((opt) => (
-                        <div key={opt} className="space-y-1">
-                          <Label className="text-xs">Option {opt.toUpperCase()} *</Label>
-                          <Input placeholder={`Option ${opt.toUpperCase()}`} value={draft[`option_${opt}`]} onChange={(e) => updateDraft(draft.id, `option_${opt}`, e.target.value)} className="rounded-xl text-sm h-9" />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Label className="text-xs whitespace-nowrap">Correct:</Label>
-                      <Select value={draft.correct_answer} onValueChange={(v) => updateDraft(draft.id, "correct_answer", v)}>
-                        <SelectTrigger className="w-32 h-8 rounded-xl text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {(["a", "b", "c", "d"] as const).map((opt) => <SelectItem key={opt} value={opt}>Option {opt.toUpperCase()}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-                {draft.question_type === "essay" && (
-                  <div className="flex items-center gap-3">
-                    <Label className="text-xs whitespace-nowrap">Max Score:</Label>
-                    <Input type="number" min="1" max="100" value={draft.max_score} onChange={(e) => updateDraft(draft.id, "max_score", e.target.value)} className="w-24 h-8 rounded-xl text-sm" />
+          {/* Draft questions — numbered, guided flow */}
+          <div id="draft-editor" className="space-y-4">
+            {drafts.map((draft, idx) => (
+              <Card key={draft.id} className="border-2 border-blue-400 dark:border-blue-600 shadow-md">
+                <CardContent className="pt-4 pb-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Badge className={draft.question_type === "essay" ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"}>
+                      {draft.question_type === "essay" ? "✍️ Essay" : "📝 Multiple Choice"} — New #{idx + 1}
+                    </Badge>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeDraft(draft.id)}><Trash2 className="w-4 h-4" /></Button>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+
+                  {/* STEP 1 — question text */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                      Write the question *
+                    </Label>
+                    <Textarea placeholder="e.g. Choose the correct sentence..." value={draft.question} onChange={(e) => updateDraft(draft.id, "question", e.target.value)} rows={2} className="rounded-xl text-sm" />
+                  </div>
+
+                  {/* STEP 2 — options (MC only) */}
+                  {draft.question_type === "multiple_choice" && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                          Fill options A–D *
+                        </Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {OPT_KEYS.map((opt) => (
+                            <div key={opt} className="space-y-1">
+                              <Label className="text-xs text-gray-500">Option {opt.toUpperCase()}</Label>
+                              <Input placeholder={`Option ${opt.toUpperCase()}`} value={draft[`option_${opt}`]} onChange={(e) => updateDraft(draft.id, `option_${opt}`, e.target.value)} className="rounded-xl text-sm h-9" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* STEP 3 — tap the correct answer */}
+                      <div className="space-y-1.5">
+                        <Label className="text-sm flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-green-600 text-white text-[10px] font-bold flex items-center justify-center">3</span>
+                          Tap the circle next to the <span className="text-green-600 font-bold">correct answer</span>
+                        </Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {OPT_KEYS.map((opt) => {
+                            const isCorrect = draft.correct_answer === opt;
+                            const filled = !!draft[`option_${opt}`]?.trim();
+                            return (
+                              <button key={opt} type="button"
+                                onClick={() => updateDraft(draft.id, "correct_answer", opt)}
+                                disabled={!filled}
+                                className={cn("flex items-center gap-2 p-2.5 rounded-xl border-2 text-left text-sm transition-all disabled:opacity-40",
+                                  isCorrect ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-gray-200 dark:border-gray-700 hover:border-green-300")}>
+                                <span className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                                  isCorrect ? "border-green-500 bg-green-500" : "border-gray-300")}>
+                                  {isCorrect && <CheckCircle className="w-3 h-3 text-white" />}
+                                </span>
+                                <span className="font-bold text-xs text-gray-500">{opt.toUpperCase()}.</span>
+                                <span className="truncate">{draft[`option_${opt}`] || `Option ${opt.toUpperCase()}`}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Essay max score */}
+                  {draft.question_type === "essay" && (
+                    <div className="flex items-center gap-3">
+                      <Label className="text-xs whitespace-nowrap">Max Score:</Label>
+                      <Input type="number" min="1" max="100" value={draft.max_score} onChange={(e) => updateDraft(draft.id, "max_score", e.target.value)} className="w-24 h-8 rounded-xl text-sm" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
           {/* Saved questions */}
           {questions.length === 0 && drafts.length === 0 ? (
@@ -675,7 +785,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                           <p className="font-medium text-gray-900 dark:text-white text-sm mb-3 whitespace-pre-wrap leading-relaxed">{q.question}</p>
                           {!isEssayQ && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {(["a", "b", "c", "d"] as const).map((opt) => (
+                              {OPT_KEYS.map((opt) => (
                                 <div key={opt} className={cn("p-2 rounded-xl text-xs", q.correct_answer === opt ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-semibold" : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400")}>
                                   <span className="font-bold mr-1">{opt.toUpperCase()}.</span>
                                   <span className="whitespace-pre-wrap">{q[`option_${opt}` as keyof QuizQuestion] as string}</span>
@@ -698,24 +808,12 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
 
         {/* Results Tab */}
         <TabsContent value="results" className="mt-4 space-y-4">
-          {/* Refresh button */}
           <div className="flex justify-end">
             <Button
               variant="outline"
               size="sm"
               className="gap-2 rounded-xl text-xs"
-              onClick={async () => {
-                setLoadingAttempts(true);
-                const supabase = createClient();
-                const [a, e] = await Promise.all([
-                  supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("completed_at", "is", null).order("completed_at", { ascending: false }),
-                  supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
-                ]);
-                setAttempts(a.data || []);
-                setEssayAnswers(e.data || []);
-                setLoadingAttempts(false);
-                toast.success("Refreshed!");
-              }}
+              onClick={async () => { await refreshData(); toast.success("Refreshed!"); }}
             >
               🔄 Refresh Results
             </Button>
@@ -750,7 +848,14 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 flex-shrink-0">{idx + 1}</div>
                     <div className="min-w-0">
-                      <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{a.student?.name || "Student"}</p>
+                      <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                        {a.student?.name || "Student"}
+                        {(a.violations || 0) > 0 && (
+                          <Badge className="ml-2 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-[10px]">
+                            ⚠ {a.violations} violation{(a.violations || 0) > 1 ? "s" : ""}
+                          </Badge>
+                        )}
+                      </p>
                       <p className="text-xs text-gray-500">{a.completed_at ? formatDateTime(a.completed_at) : "-"}</p>
                     </div>
                   </div>
@@ -766,17 +871,10 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                         const supabase = createClient();
                         const { error } = await supabase.from("quiz_attempts").delete().eq("id", a.id);
                         if (error) { toast.error("Failed to reset"); return; }
-                        // Also delete essay answers
                         await supabase.from("essay_answers").delete()
                           .eq("quiz_id", quiz.id).eq("student_id", a.student_id || a.student?.id);
-                        toast.success(`Attempt reset for ${a.student?.name}. Refreshing...`);
-                        // Refresh all data after reset
-                        const [newAttempts, newEssays] = await Promise.all([
-                          supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("completed_at", "is", null).order("completed_at", { ascending: false }),
-                          supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
-                        ]);
-                        setAttempts(newAttempts.data || []);
-                        setEssayAnswers(newEssays.data || []);
+                        toast.success(`Attempt reset for ${a.student?.name}.`);
+                        refreshData();
                       }}
                     >
                       Reset
@@ -820,13 +918,11 @@ function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="pt-4 pb-4 space-y-3">
-        {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
               {essayAnswer.student?.name || "Student"}
             </p>
-            {/* Question — collapsible */}
             <div className="mt-1">
               <p className={`text-xs text-gray-500 dark:text-gray-400 ${!showQuestion && isLongQuestion ? "line-clamp-2" : "whitespace-pre-wrap"}`}>
                 {questionText}
@@ -855,7 +951,6 @@ function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
           </div>
         </div>
 
-        {/* Student Answer */}
         <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
           <p className="text-xs font-semibold text-gray-500 mb-1.5">Student Answer:</p>
           <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed break-words">
@@ -863,7 +958,6 @@ function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
           </p>
         </div>
 
-        {/* Grading form */}
         {editing && (
           <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-700">
             <div className="flex gap-3">
@@ -895,4 +989,3 @@ function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
     </Card>
   );
 }
-

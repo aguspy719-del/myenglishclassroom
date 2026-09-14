@@ -95,8 +95,21 @@ export interface Quiz {
   // Extended fields
   quiz_type?: "formatif" | "sumatif_tengah" | "sumatif_akhir";
   published_at?: string;
+  // Send/access control
+  is_published?: boolean;
+  available_until?: string;
   class?: Class;
   question_count?: number;
+}
+
+export interface QuizViolation {
+  id: string;
+  attempt_id?: string;
+  quiz_id: string;
+  student_id: string;
+  type: string;
+  detail?: string;
+  created_at: string;
 }
 
 export interface QuizQuestion {
@@ -121,6 +134,7 @@ export interface QuizAttempt {
   score?: number;
   completed_at?: string;
   started_at: string;
+  violations?: number;
 }
 
 export interface Grade {

@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { AlertTriangle, Shield, Eye, EyeOff } from "lucide-react";
+import { AlertTriangle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 interface QuizAntiCheatProps {
   children: React.ReactNode;
   onForceSubmit: () => void;
   isActive: boolean;
   maxWarnings?: number;
+  /** Quiz id — used to log violations server-side */
+  quizId?: string;
 }
 
 // Detect iOS
@@ -28,6 +29,7 @@ export function QuizAntiCheat({
   onForceSubmit,
   isActive,
   maxWarnings = 3,
+  quizId,
 }: QuizAntiCheatProps) {
   const [warnings, setWarnings] = useState(0);
   const [showWarning, setShowWarning] = useState(false);
@@ -39,26 +41,72 @@ export function QuizAntiCheat({
 
   useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
 
-  const addWarning = useCallback((reason: string) => {
+  const playAlarm = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 880;
+      gain.gain.value = 1; // MAX volume — cannot be lowered from the page
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      // 3 sharp bursts
+      for (let i = 0; i < 3; i++) {
+        gain.gain.setValueAtTime(1, ctx.currentTime + i * 0.45);
+        gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.45 + 0.3);
+      }
+      osc.start();
+      osc.stop(ctx.currentTime + 1.5);
+      osc.onended = () => ctx.close().catch(() => {});
+    } catch (e) {}
+  }, []);
+
+  const speakWarning = useCallback(() => {
+    try {
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate([400, 100, 400, 100, 400]);
+      }
+    } catch (e) {}
+    try {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const msg = new SpeechSynthesisUtterance("Warning! Stay on the assessment page!");
+      msg.lang = "en-US";
+      msg.rate = 0.9;
+      msg.volume = 1;
+      window.speechSynthesis.speak(msg);
+    } catch (e) {}
+  }, []);
+
+  const addWarning = useCallback((reason: string, type: string) => {
     if (!isActiveRef.current) return;
 
-    // Speak warning — triggered after user interaction (fullscreen click)
+    playAlarm();
     speakWarning();
 
     warningsRef.current += 1;
     const current = warningsRef.current;
     setWarnings(current);
 
+    // Fire-and-forget server log so violations survive page close
+    if (quizId) {
+      void fetch("/api/quiz/report-violation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId, type, detail: reason }),
+        keepalive: true,
+      }).catch(() => {});
+    }
+
     if (current >= maxWarnings) {
-      toast.error("Maximum warnings reached. Quiz auto-submitted!");
       onForceSubmit();
       return;
     }
 
     setWarningMessage(reason);
     setShowWarning(true);
-    toast.warning(`⚠️ Warning ${current}/${maxWarnings}: ${reason}`);
-  }, [maxWarnings, onForceSubmit]);
+  }, [maxWarnings, onForceSubmit, playAlarm, speakWarning, quizId]);
 
   // Tab/window visibility detection — works on ALL platforms
   useEffect(() => {
@@ -66,15 +114,15 @@ export function QuizAntiCheat({
 
     const handleVisibilityChange = () => {
       if (document.hidden && isActiveRef.current) {
-        addWarning("You switched tabs or minimized the browser");
+        addWarning("You switched tabs or minimized the browser", "tab_switch");
       }
     };
 
     const handleBlur = () => {
-      // Small delay to avoid false positives
+      // Small delay to avoid double-counting with visibilitychange
       setTimeout(() => {
         if (document.hidden && isActiveRef.current) {
-          addWarning("You left the quiz window");
+          // visibilitychange already handled it
         }
       }, 500);
     };
@@ -88,54 +136,72 @@ export function QuizAntiCheat({
     };
   }, [isActive, addWarning]);
 
-  // Disable right-click
+  // Fullscreen exit detection
   useEffect(() => {
     if (!isActive) return;
-    const handler = (e: MouseEvent) => e.preventDefault();
-    document.addEventListener("contextmenu", handler);
-    return () => document.removeEventListener("contextmenu", handler);
-  }, [isActive]);
+    const handler = () => {
+      if (!document.fullscreenElement && isActiveRef.current && isFullscreen) {
+        addWarning("You exited fullscreen mode", "fullscreen_exit");
+        setIsFullscreen(false);
+        setShowFullscreenPrompt(true);
+      }
+    };
+    document.addEventListener("fullscreenchange", handler);
+    document.addEventListener("webkitfullscreenchange", handler);
+    return () => {
+      document.removeEventListener("fullscreenchange", handler);
+      document.removeEventListener("webkitfullscreenchange", handler);
+    };
+  }, [isActive, isFullscreen, addWarning]);
 
-  // Disable keyboard shortcuts
+  // Clipboard + devtools shortcuts + context menu lockdown
   useEffect(() => {
     if (!isActive) return;
-    const handler = (e: KeyboardEvent) => {
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        ["c", "v", "a", "f", "u", "s", "p"].includes(e.key.toLowerCase())
-      ) {
+
+    const noEvent = (e: Event) => e.preventDefault();
+    const keyHandler = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "a", "f", "u", "s", "p"].includes(k)) {
         e.preventDefault();
       }
-      if (e.key === "F12" || e.key === "PrintScreen") e.preventDefault();
+      if (e.key === "F12" || e.key === "PrintScreen" || (e.ctrlKey && e.shiftKey && ["i", "j", "c"].includes(k))) {
+        e.preventDefault();
+      }
+      if (e.key === "Escape") e.preventDefault(); // don't let Esc leave fullscreen easily
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    const copyHandler = (e: ClipboardEvent) => e.preventDefault();
+
+    document.addEventListener("contextmenu", noEvent);
+    document.addEventListener("keydown", keyHandler);
+    document.addEventListener("copy", copyHandler);
+    document.addEventListener("cut", copyHandler);
+    document.addEventListener("paste", copyHandler);
+    document.addEventListener("dragstart", noEvent);
+
+    return () => {
+      document.removeEventListener("contextmenu", noEvent);
+      document.removeEventListener("keydown", keyHandler);
+      document.removeEventListener("copy", copyHandler);
+      document.removeEventListener("cut", copyHandler);
+      document.removeEventListener("paste", copyHandler);
+      document.removeEventListener("dragstart", noEvent);
+    };
   }, [isActive]);
 
-  // Pre-warm speech synthesis on user interaction
-  const speakWarning = useCallback(() => {
-    // Vibrate — works on Android, ignored on iOS/desktop
-    try {
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        navigator.vibrate([300, 100, 300, 100, 300]); // pattern: buzz-pause-buzz-pause-buzz
-      }
-    } catch (e) {}
+  // Warn before leaving the page (close/refresh/back)
+  useEffect(() => {
+    if (!isActive) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+      return "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isActive]);
 
-    // Speak
-    try {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-      window.speechSynthesis.cancel();
-      const msg = new SpeechSynthesisUtterance("Do you want to exit the exam?");
-      msg.lang = "en-US";
-      msg.rate = 0.85;
-      msg.volume = 1;
-      window.speechSynthesis.speak(msg);
-    } catch (e) {}
-  }, []);
-
-  // Fullscreen — try native API, fallback gracefully for iOS
   const enterFullscreen = async () => {
-    // Pre-warm speech synthesis on user gesture (required by browser policy)
+    // Pre-warm speech synthesis + alarm audio on user gesture (browser policy)
     try {
       if ("speechSynthesis" in window) {
         const warmup = new SpeechSynthesisUtterance(" ");
@@ -173,32 +239,13 @@ export function QuizAntiCheat({
     }
     if (!isActive) {
       setShowFullscreenPrompt(false);
-      // Exit fullscreen when done
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
     }
   }, [isActive]);
 
-  // Listen for fullscreen change
-  useEffect(() => {
-    const handler = () => {
-      if (!document.fullscreenElement && isActive && isFullscreen) {
-        // User exited fullscreen manually
-        addWarning("You exited fullscreen mode");
-        setIsFullscreen(false);
-        setShowFullscreenPrompt(true);
-      }
-    };
-    document.addEventListener("fullscreenchange", handler);
-    document.addEventListener("webkitfullscreenchange", handler);
-    return () => {
-      document.removeEventListener("fullscreenchange", handler);
-      document.removeEventListener("webkitfullscreenchange", handler);
-    };
-  }, [isActive, isFullscreen, addWarning]);
-
-  // Warning overlay
+  // Warning overlay — blocks everything, no way to dismiss without acknowledging
   if (showWarning && isActive) {
     return (
       <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4">
@@ -227,7 +274,7 @@ export function QuizAntiCheat({
     );
   }
 
-  // Fullscreen prompt
+  // Fullscreen prompt — must enter fullscreen to start (no skip on Android/desktop)
   if (showFullscreenPrompt && isActive) {
     const iosDevice = isIOS();
     const androidDevice = isAndroid();
@@ -244,14 +291,14 @@ export function QuizAntiCheat({
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
             {iosDevice
               ? "This assessment uses secure mode. Stay on this page while taking the quiz."
-              : "This assessment requires focused mode to prevent cheating."}
+              : "Fullscreen is required to keep the assessment honest."}
           </p>
 
           <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-xl mb-6 text-left space-y-1.5">
             <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-300">Rules during assessment:</p>
-            <p className="text-xs text-yellow-600 dark:text-yellow-400">• Switching apps/tabs = warning</p>
+            <p className="text-xs text-yellow-600 dark:text-yellow-400">• Leaving the page = loud alarm + warning</p>
             <p className="text-xs text-yellow-600 dark:text-yellow-400">• {maxWarnings} warnings = auto-submit</p>
-            <p className="text-xs text-yellow-600 dark:text-yellow-400">• Right-click disabled</p>
+            <p className="text-xs text-yellow-600 dark:text-yellow-400">• Copy/paste, right-click blocked</p>
             {!iosDevice && <p className="text-xs text-yellow-600 dark:text-yellow-400">• Fullscreen required</p>}
           </div>
 
@@ -262,13 +309,6 @@ export function QuizAntiCheat({
             <Shield className="w-5 h-5" />
             {iosDevice ? "Start Assessment" : "Enter Fullscreen & Start"}
           </Button>
-
-          <button
-            onClick={() => setShowFullscreenPrompt(false)}
-            className="mt-3 text-xs text-gray-400 hover:text-gray-600 underline"
-          >
-            Skip (not recommended)
-          </button>
         </div>
       </div>
     );

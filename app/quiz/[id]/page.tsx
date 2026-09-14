@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { QuizTakeClient } from "@/components/quiz/quiz-take-client";
 import { AlreadyAttempted } from "@/components/quiz/already-attempted";
-import type { User } from "@/types";
+import type { User, Quiz } from "@/types";
 
 // Never cache this page — always check fresh attempt status
 export const dynamic = "force-dynamic";
@@ -30,10 +30,25 @@ export default async function QuizTakePage({
   if (!quizRes.data) notFound();
 
   const user: User = profileRes.data;
-  const quiz = quizRes.data;
+  const quiz = quizRes.data as Quiz;
+  const questions = questionsRes.data || [];
 
-  // Check if student already attempted — ALL types are 1 attempt only
+  // ── Server-side access gating for students ──
   if (user.role === "student") {
+    const now = new Date();
+
+    // Not for this class → students shouldn't even see it
+    if (quiz.class_id && quiz.class_id !== user.class_id) redirect("/quiz");
+
+    // Not sent yet (draft), or scheduled but time hasn't come, or already closed.
+    // Scheduled quizzes open automatically once published_at passes (no cron needed).
+    const notSent = quiz.is_published === false &&
+      (!quiz.published_at || new Date(quiz.published_at) > now);
+    const closed = quiz.available_until && new Date(quiz.available_until) <= now;
+
+    if (notSent || closed) redirect("/quiz");
+
+    // Check if student already attempted — ALL types are 1 attempt only
     const { data: existingAttempt } = await supabase
       .from("quiz_attempts")
       .select("id, score, completed_at")
@@ -55,7 +70,7 @@ export default async function QuizTakePage({
       <QuizTakeClient
         user={user}
         quiz={quiz}
-        questions={questionsRes.data || []}
+        questions={questions}
       />
     </DashboardLayout>
   );

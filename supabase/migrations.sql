@@ -52,6 +52,38 @@ ALTER TABLE public.quiz_questions
   ADD COLUMN IF NOT EXISTS question_type TEXT DEFAULT 'multiple_choice',
   ADD COLUMN IF NOT EXISTS max_score INTEGER DEFAULT 10;
 
+-- 5b. Quiz send/schedule + anti-cheat violation log
+--     (full version with policies in supabase/quiz-send-and-anticheat.sql)
+ALTER TABLE public.quizzes
+  ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS available_until TIMESTAMPTZ;
+
+ALTER TABLE public.quiz_attempts
+  ADD COLUMN IF NOT EXISTS violations INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS public.quiz_violations (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  attempt_id UUID REFERENCES public.quiz_attempts(id) ON DELETE CASCADE,
+  quiz_id UUID NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  detail TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.quiz_violations ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.push_sent (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  quiz_id UUID NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending',
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.push_sent ENABLE ROW LEVEL SECURITY;
+
 -- 6. Notifications table
 CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, FileText, Clock, Trash2, Search, CheckSquare, Square, Calendar } from "lucide-react";
+import { Plus, FileText, Clock, Trash2, Search, CheckSquare, Square, Calendar, EyeOff, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +41,9 @@ export function QuizClient({ user }: QuizClientProps) {
     description: "",
     time_limit: "",
     quiz_type: "formatif",
+    send_mode: "now" as "now" | "schedule" | "draft",
     published_at: "",
+    available_until: "",
   });
 
   const fetchData = async () => {
@@ -54,7 +56,9 @@ export function QuizClient({ user }: QuizClientProps) {
     if (user.role === "student" && user.class_id) {
       query = query
         .eq("class_id", user.class_id)
-        .or(`published_at.is.null,published_at.lte.${new Date().toISOString()}`);
+        // Visible when explicitly sent OR when the schedule time has passed
+        // (works even without the cron job)
+        .or(`is_published.eq.true,published_at.lte.${new Date().toISOString()}`);
     }
 
     const [quizzesRes, classesRes] = await Promise.all([
@@ -86,13 +90,24 @@ export function QuizClient({ user }: QuizClientProps) {
     setCreating(true);
     const supabase = createClient();
 
+    const publishAt = form.send_mode === "schedule" && form.published_at
+      ? new Date(form.published_at).toISOString()
+      : null;
+    const availableUntil = form.available_until
+      ? new Date(form.available_until).toISOString()
+      : null;
+
     const insertData = selectedClasses.map((classId) => ({
       class_id: classId,
       title: form.title,
       description: form.description || null,
       time_limit: form.time_limit ? parseInt(form.time_limit) : null,
       quiz_type: form.quiz_type,
-      published_at: form.published_at ? new Date(form.published_at).toISOString() : null,
+      // "now" = sent immediately, "schedule" = hidden until the clock hits published_at,
+      // "draft" = hidden until the teacher sends it from the quiz page
+      is_published: form.send_mode !== "draft",
+      published_at: publishAt,
+      available_until: availableUntil,
     }));
 
     const { error } = await supabase.from("quizzes").insert(insertData);
@@ -100,9 +115,8 @@ export function QuizClient({ user }: QuizClientProps) {
     if (error) {
       toast.error("Failed to Create Assessment");
     } else {
-      // Push notification to students (only if publishing now, not scheduled)
-      const isPublishingNow = !form.published_at || new Date(form.published_at) <= new Date();
-      if (isPublishingNow) {
+      // Push notification to students (only when publishing now, not scheduled/draft)
+      if (form.send_mode === "now") {
         try {
           const { data: students } = await supabase
             .from("users")
@@ -126,17 +140,17 @@ export function QuizClient({ user }: QuizClientProps) {
         } catch { /* push failure should not block */ }
       }
 
-      const scheduled = form.published_at && new Date(form.published_at) > new Date();
-      toast.success(
-        scheduled
-          ? `Assessment scheduled for ${new Date(form.published_at).toLocaleString()}`
-          : selectedClasses.length === 1
-            ? "Assessment created successfully!"
-            : `Assessment created for ${selectedClasses.length} classes!`
-      );
+      const messages: Record<string, string> = {
+        now: selectedClasses.length === 1
+          ? "Assessment created and sent!"
+          : `Assessment sent to ${selectedClasses.length} classes!`,
+        schedule: `Scheduled! Students get access on ${publishAt ? new Date(publishAt).toLocaleString() : ""}`,
+        draft: "Draft created. Send it from the assessment page when ready.",
+      };
+      toast.success(messages[form.send_mode]);
       setShowCreate(false);
       setSelectedClasses([]);
-      setForm({ title: "", description: "", time_limit: "", quiz_type: "formatif", published_at: "" });
+      setForm({ title: "", description: "", time_limit: "", quiz_type: "formatif", send_mode: "now", published_at: "", available_until: "" });
       fetchData();
     }
     setCreating(false);
@@ -156,12 +170,20 @@ export function QuizClient({ user }: QuizClientProps) {
 
   const getQuizTypeConfig = (type: string) => QUIZ_TYPES.find((t) => t.value === type) || QUIZ_TYPES[0];
 
-  const isScheduled = (quiz: any) => quiz.published_at && new Date(quiz.published_at) > new Date();
+  const isScheduled = (quiz: any) =>
+    quiz.is_published === false && quiz.published_at && new Date(quiz.published_at) > new Date();
+  const isDraft = (quiz: any) =>
+    quiz.is_published === false && (!quiz.published_at || new Date(quiz.published_at) <= new Date());
+  const isClosed = (quiz: any) =>
+    quiz.available_until && new Date(quiz.available_until) <= new Date();
 
   const filtered = quizzes.filter((q) => {
     const matchSearch = q.title.toLowerCase().includes(search.toLowerCase());
     const matchTab = activeTab === "all" || (q as any).quiz_type === activeTab;
-    return matchSearch && matchTab;
+    // Students never see closed assessments
+    const closedForStudent = user.role === "student" &&
+      q.available_until && new Date(q.available_until) <= new Date();
+    return matchSearch && matchTab && !closedForStudent;
   });
 
   return (
@@ -220,6 +242,9 @@ export function QuizClient({ user }: QuizClientProps) {
               {filtered.map((quiz) => {
                 const typeConfig = getQuizTypeConfig((quiz as any).quiz_type || "formatif");
                 const scheduled = isScheduled(quiz);
+                const draft = isDraft(quiz);
+                const closed = isClosed(quiz);
+                const hiddenFromStudents = scheduled || draft || closed;
                 return (
                   <Card key={quiz.id} className="hover:shadow-md transition-shadow group border-0 shadow-sm">
                     <CardContent className="pt-5 pb-5">
@@ -256,10 +281,24 @@ export function QuizClient({ user }: QuizClientProps) {
                             <Calendar className="w-3 h-3" />Scheduled
                           </span>
                         )}
+                        {draft && user.role === "teacher" && (
+                          <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            <EyeOff className="w-3 h-3" />Draft
+                          </span>
+                        )}
+                        {closed && (
+                          <span className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+                            <XCircle className="w-3 h-3" />Closed
+                          </span>
+                        )}
                       </div>
                       <Link href={`/quiz/${quiz.id}`}>
-                        <Button className="w-full rounded-xl" size="sm" disabled={scheduled && user.role === "student"}>
-                          {user.role === "teacher" ? "Manage" : scheduled ? "Not Available Yet" : "Start Assessment"}
+                        <Button className="w-full rounded-xl" size="sm" disabled={hiddenFromStudents && user.role === "student"}>
+                          {user.role === "teacher"
+                            ? (draft ? "Manage (Draft)" : closed ? "Manage (Closed)" : "Manage")
+                            : scheduled ? "Not Available Yet"
+                            : closed ? "Closed"
+                            : "Start Assessment"}
                         </Button>
                       </Link>
                     </CardContent>
@@ -276,7 +315,7 @@ export function QuizClient({ user }: QuizClientProps) {
         setShowCreate(open);
         if (!open) {
           setSelectedClasses([]);
-          setForm({ title: "", description: "", time_limit: "", quiz_type: "formatif", published_at: "" });
+          setForm({ title: "", description: "", time_limit: "", quiz_type: "formatif", send_mode: "now", published_at: "", available_until: "" });
         }
       }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -386,21 +425,76 @@ export function QuizClient({ user }: QuizClientProps) {
               <Input type="number" placeholder="e.g. 30" min="1" value={form.time_limit} onChange={(e) => setForm({ ...form, time_limit: e.target.value })} className="rounded-xl" />
             </div>
 
-            {/* Scheduled publish */}
+            {/* Send mode — clear 3-choice flow */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Publish Schedule (optional)</Label>
-                {form.published_at && (
-                  <button type="button" onClick={() => setForm({ ...form, published_at: "" })} className="text-xs text-red-500 hover:underline">
-                    Clear (publish now)
+              <Label>When should students get access? *</Label>
+              <div className="grid grid-cols-1 gap-2">
+                {([
+                  { value: "now", label: "Send now", desc: "Students can access immediately", icon: "📤" },
+                  { value: "schedule", label: "Schedule sending", desc: "Students get access at a set time", icon: "⏰" },
+                  { value: "draft", label: "Save as draft", desc: "Not visible — send later from the assessment page", icon: "📋" },
+                ] as const).map((mode) => (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, send_mode: mode.value })}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
+                      form.send_mode === mode.value
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                        : "border-gray-200 dark:border-gray-700 hover:border-blue-300"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border-2 flex-shrink-0",
+                      form.send_mode === mode.value ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                    )} />
+                    <span className="text-lg">{mode.icon}</span>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{mode.label}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{mode.desc}</p>
+                    </div>
                   </button>
-                )}
+                ))}
               </div>
-              <Input type="datetime-local" min={minDateTime} value={form.published_at} onChange={(e) => setForm({ ...form, published_at: e.target.value })} className="rounded-xl" />
+
+              {form.send_mode === "schedule" && (
+                <div className="pt-1 space-y-1.5">
+                  <Input
+                    type="datetime-local"
+                    min={minDateTime}
+                    value={form.published_at}
+                    onChange={(e) => setForm({ ...form, published_at: e.target.value })}
+                    className="rounded-xl"
+                  />
+                  {form.published_at && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400">
+                      ⏰ Students get access on {new Date(form.published_at).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              )}
+              {form.send_mode === "draft" && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  📋 You can add questions first, then tap <b>Send Now</b> on the assessment page.
+                </p>
+              )}
+            </div>
+
+            {/* Access deadline */}
+            <div className="space-y-2">
+              <Label>Access deadline (optional)</Label>
+              <Input
+                type="datetime-local"
+                min={minDateTime}
+                value={form.available_until}
+                onChange={(e) => setForm({ ...form, available_until: e.target.value })}
+                className="rounded-xl"
+              />
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {form.published_at
-                  ? `⏰ Assessment will be visible to students on ${new Date(form.published_at).toLocaleString()}`
-                  : "Leave empty to publish immediately"}
+                {form.available_until
+                  ? `🔒 Automatically closes on ${new Date(form.available_until).toLocaleString()}`
+                  : "Leave empty = stays open until you close it manually"}
               </p>
             </div>
           </div>
