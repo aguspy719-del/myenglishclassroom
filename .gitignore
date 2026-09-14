@@ -35,3 +35,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# one-off migration scripts (contain secrets — never commit)
+/create-auth-users.mjs
+/import-all-data.mjs
+/export-all-users.mjs
+/delete-images.mjs
+/download-submissions.js
+/delete-submissions.js
+
+# exported student data
+/users-all.json
+/submissions-backup/

@@ -57,8 +57,10 @@ export interface Submission {
   feedback?: string;
   submitted_at: string;
   // Text submission support
-  submission_type?: "file" | "text";
+  submission_type?: "file" | "text" | "link";
   text_answer?: string;
+  // External link submission (Google Drive, TikTok, YouTube, etc.)
+  link_url?: string;
   assignment?: Assignment;
   student?: User;
 }

@@ -4,8 +4,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft, Clock, Download, Upload, File, X, Loader2,
-  CheckCircle, Star, Users, AlertCircle, PenLine, FileText, CalendarClock,
+  ArrowLeft, Clock, Download, Upload, Loader2,
+  CheckCircle, Star, Users, AlertCircle, PenLine, Link2, CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
-  formatDateTime, formatFileSize,
+  formatDateTime,
   getDeadlineStatus, getGradeColor, getGradeLabel,
 } from "@/lib/utils";
 import type { User, Assignment, Submission } from "@/types";
@@ -29,17 +29,28 @@ interface AssignmentDetailClientProps {
   assignment: Assignment;
 }
 
+// Validate an http(s) URL for link submissions
+function isValidUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 // ── Submit Form Component ──────────────────────────────────
 function SubmitForm({
-  submitMode, setSubmitMode, file, setFile,
-  textAnswer, setTextAnswer, submitting, onSubmit, isResubmit = false,
+  submitMode, setSubmitMode,
+  textAnswer, setTextAnswer, linkUrl, setLinkUrl,
+  submitting, onSubmit, isResubmit = false,
 }: {
-  submitMode: "file" | "text";
-  setSubmitMode: (m: "file" | "text") => void;
-  file: File | null;
-  setFile: (f: File | null) => void;
+  submitMode: "text" | "link";
+  setSubmitMode: (m: "text" | "link") => void;
   textAnswer: string;
   setTextAnswer: (t: string) => void;
+  linkUrl: string;
+  setLinkUrl: (l: string) => void;
   submitting: boolean;
   onSubmit: () => void;
   isResubmit?: boolean;
@@ -60,15 +71,15 @@ function SubmitForm({
           Write Answer
         </button>
         <button
-          onClick={() => setSubmitMode("file")}
+          onClick={() => setSubmitMode("link")}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-            submitMode === "file"
+            submitMode === "link"
               ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
               : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-blue-300"
           }`}
         >
-          <FileText className="w-4 h-4" />
-          Upload File
+          <Link2 className="w-4 h-4" />
+          Attach Link
         </button>
       </div>
 
@@ -83,45 +94,25 @@ function SubmitForm({
         />
       )}
 
-      {/* File upload */}
-      {submitMode === "file" && (
-        <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-6 text-center hover:border-blue-400 transition-colors">
-          {file ? (
-            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-xl">
-              <div className="flex items-center gap-3">
-                <File className="w-5 h-5 text-blue-600" />
-                <div className="text-left">
-                  <p className="text-sm font-medium">{file.name}</p>
-                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
-                </div>
-              </div>
-              <Button type="button" variant="ghost" size="icon" onClick={() => setFile(null)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <label className="cursor-pointer">
-              <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Click to select file</p>
-              <p className="text-xs text-gray-400 mt-1">PDF, DOCX, JPG, PNG, MP4. Max 50MB</p>
-              <input
-                type="file"
-                className="hidden"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp4"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f && f.size <= 50 * 1024 * 1024) setFile(f);
-                  else if (f) toast.error("File too large. Max 50MB");
-                }}
-              />
-            </label>
-          )}
+      {/* Link submission */}
+      {submitMode === "link" && (
+        <div className="space-y-2">
+          <Input
+            type="url"
+            placeholder="https://drive.google.com/... atau https://vt.tiktok.com/..."
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            className="h-12 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Upload tugas ke Google Drive / TikTok / YouTube dulu, lalu paste link-nya di sini. Pastikan link bisa diakses guru (untuk Drive: set "Anyone with the link").
+          </p>
         </div>
       )}
 
       <Button
         onClick={onSubmit}
-        disabled={submitting || (submitMode === "file" ? !file : !textAnswer.trim())}
+        disabled={submitting || (submitMode === "link" ? !linkUrl.trim() : !textAnswer.trim())}
         className="w-full gap-2 rounded-xl h-12"
         size="lg"
       >
@@ -161,9 +152,9 @@ function ExpandableAnswer({ answer }: { answer: string }) {
 export function AssignmentDetailClient({ user, assignment }: AssignmentDetailClientProps) {
   const [mySubmission, setMySubmission] = useState<Submission | null>(null);
   const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
-  const [file, setFile] = useState<File | null>(null);
   const [textAnswer, setTextAnswer] = useState("");
-  const [submitMode, setSubmitMode] = useState<"file" | "text">("text");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [submitMode, setSubmitMode] = useState<"text" | "link">("text");
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [gradingId, setGradingId] = useState<string | null>(null);
@@ -201,31 +192,24 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
   }, [assignment.id, user.id, user.role]);
 
   const handleSubmit = async () => {
-    if (submitMode === "file" && !file) { toast.error("Please select a file"); return; }
+    if (submitMode === "link" && !linkUrl.trim()) { toast.error("Please paste your link"); return; }
+    if (submitMode === "link" && !isValidUrl(linkUrl.trim())) {
+      toast.error("Link tidak valid. Pastikan diawali http:// atau https://");
+      return;
+    }
     if (submitMode === "text" && !textAnswer.trim()) { toast.error("Please write your answer"); return; }
     if (isPast) { toast.error("Deadline has passed"); return; }
 
     setSubmitting(true);
     const supabase = createClient();
     try {
-      let fileUrl = "";
-      if (submitMode === "file" && file) {
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("submissions").upload(`${assignment.id}/${fileName}`, file, { upsert: true });
-        if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from("submissions").getPublicUrl(`${assignment.id}/${fileName}`);
-        fileUrl = urlData.publicUrl;
-      }
-
       const submissionData: any = {
         assignment_id: assignment.id,
         student_id: user.id,
         submitted_at: new Date().toISOString(),
         submission_type: submitMode,
       };
-      if (fileUrl) submissionData.file_url = fileUrl;
+      if (submitMode === "link") submissionData.link_url = linkUrl.trim();
       if (submitMode === "text") submissionData.text_answer = textAnswer.trim();
 
       let error;
@@ -237,7 +221,7 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
       if (error) throw error;
 
       toast.success("Assignment submitted! 🎉");
-      setFile(null);
+      setLinkUrl("");
       setTextAnswer("");
       const { data } = await supabase.from("submissions").select("*")
         .eq("assignment_id", assignment.id).eq("student_id", user.id).single();
@@ -424,6 +408,13 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
                     <p className="font-semibold text-green-800 dark:text-green-200">Submitted!</p>
                     <p className="text-sm text-green-600 dark:text-green-400">{formatDateTime(mySubmission.submitted_at)}</p>
                   </div>
+                  {(mySubmission as any).link_url && (
+                    <a href={(mySubmission as any).link_url} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm" className="gap-2 rounded-xl">
+                        <Link2 className="w-3.5 h-3.5" />Open Link
+                      </Button>
+                    </a>
+                  )}
                   {mySubmission.file_url && (
                     <a href={mySubmission.file_url} target="_blank" rel="noopener noreferrer">
                       <Button variant="outline" size="sm" className="gap-2 rounded-xl">
@@ -467,8 +458,8 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
                     <p className="text-sm text-gray-500 mb-3 font-medium">Update your submission:</p>
                     <SubmitForm
                       submitMode={submitMode} setSubmitMode={setSubmitMode}
-                      file={file} setFile={setFile}
                       textAnswer={textAnswer} setTextAnswer={setTextAnswer}
+                      linkUrl={linkUrl} setLinkUrl={setLinkUrl}
                       submitting={submitting} onSubmit={handleSubmit} isResubmit
                     />
                   </div>
@@ -483,8 +474,8 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
                 ) : (
                   <SubmitForm
                     submitMode={submitMode} setSubmitMode={setSubmitMode}
-                    file={file} setFile={setFile}
                     textAnswer={textAnswer} setTextAnswer={setTextAnswer}
+                    linkUrl={linkUrl} setLinkUrl={setLinkUrl}
                     submitting={submitting} onSubmit={handleSubmit}
                   />
                 )}
@@ -533,6 +524,13 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
+                        {(sub as any).link_url && (
+                          <a href={(sub as any).link_url} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm" className="gap-1 rounded-xl text-xs">
+                              <Link2 className="w-3 h-3" />Open Link
+                            </Button>
+                          </a>
+                        )}
                         {sub.file_url && (
                           <a href={sub.file_url} target="_blank" rel="noopener noreferrer">
                             <Button variant="outline" size="sm" className="gap-1 rounded-xl text-xs">

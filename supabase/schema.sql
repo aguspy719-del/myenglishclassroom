@@ -349,8 +349,13 @@ ALTER TABLE public.quizzes
 -- Text-based assignment submissions
 ALTER TABLE public.submissions
   ADD COLUMN IF NOT EXISTS submission_type TEXT DEFAULT 'file'
-    CHECK (submission_type IN ('file', 'text')),
+    CHECK (submission_type IN ('file', 'text', 'link')),
   ADD COLUMN IF NOT EXISTS text_answer TEXT;
+
+-- External link submissions (Google Drive, TikTok, YouTube, etc.)
+-- Zero storage cost: files live outside Supabase (student's own Drive/social media)
+ALTER TABLE public.submissions
+  ADD COLUMN IF NOT EXISTS link_url TEXT;
 
 -- Essay question support in quizzes
 ALTER TABLE public.quiz_questions
