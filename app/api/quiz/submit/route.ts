@@ -94,17 +94,6 @@ export async function POST(request: NextRequest) {
 
     const submittedAt = new Date().toISOString();
 
-    // Save attempt (violations count is merged in by the caller client right before finishing;
-    // read it here from the latest in-progress attempt if any)
-    const { data: lastViolation } = await supabase
-      .from("quiz_violations")
-      .select("attempt_id")
-      .eq("quiz_id", quizId)
-      .eq("student_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
     const { data: attempt, error: attemptErr } = await supabase
       .from("quiz_attempts")
       .insert([{
@@ -125,18 +114,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Attach any pre-submit violations (logged while the attempt was in progress)
-    if (lastViolation?.attempt_id) {
-      await supabase
-        .from("quiz_violations")
-        .update({ attempt_id: attempt.id })
-        .eq("attempt_id", lastViolation.attempt_id);
-      const { count } = await supabase
-        .from("quiz_violations")
-        .select("id", { count: "exact", head: true })
-        .eq("attempt_id", attempt.id);
+    const { data: orphanViolations } = await supabase
+      .from("quiz_violations")
+      .update({ attempt_id: attempt.id })
+      .eq("quiz_id", quizId)
+      .eq("student_id", user.id)
+      .is("attempt_id", null)
+      .select("id");
+    if (orphanViolations && orphanViolations.length > 0) {
       await supabase
         .from("quiz_attempts")
-        .update({ violations: count || 0 })
+        .update({ violations: orphanViolations.length })
         .eq("id", attempt.id);
     }
 

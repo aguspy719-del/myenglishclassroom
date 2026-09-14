@@ -35,6 +35,10 @@ DROP POLICY IF EXISTS "Teachers can view violations" ON public.quiz_violations;
 CREATE POLICY "Students can log own violations" ON public.quiz_violations
   FOR INSERT WITH CHECK (auth.uid() = student_id);
 
+CREATE POLICY "Students can update own violations" ON public.quiz_violations
+  FOR UPDATE USING (auth.uid() = student_id)
+  WITH CHECK (auth.uid() = student_id);
+
 CREATE POLICY "Teachers can view violations" ON public.quiz_violations
   FOR SELECT USING (
     auth.uid() = student_id OR public.get_user_role() = 'teacher'

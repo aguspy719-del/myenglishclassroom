@@ -73,6 +73,11 @@ CREATE TABLE IF NOT EXISTS public.quiz_violations (
 
 ALTER TABLE public.quiz_violations ENABLE ROW LEVEL SECURITY;
 
+-- Students attach their logged violations to the attempt on submit
+CREATE POLICY "Students can update own violations" ON public.quiz_violations
+  FOR UPDATE USING (auth.uid() = student_id)
+  WITH CHECK (auth.uid() = student_id);
+
 CREATE TABLE IF NOT EXISTS public.push_sent (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   quiz_id UUID NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
