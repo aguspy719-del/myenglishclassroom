@@ -10,43 +10,31 @@ import { Badge } from "@/components/ui/badge";
 import { createServiceClient } from "@/lib/supabase/server";
 
 const features = [
-  { icon: BookOpen,     title: "Digital Materials",   desc: "Access learning materials anytime, anywhere",    color: "bg-emerald-500" },
-  { icon: ClipboardList, title: "Online Assignments",  desc: "Submit assignments digitally with ease",          color: "bg-teal-500" },
-  { icon: Star,         title: "Transparent Grades",  desc: "View grades and feedback instantly",              color: "bg-green-500" },
-  { icon: Users,        title: "Digital Attendance",  desc: "GPS-verified modern attendance system",           color: "bg-cyan-500" },
-  { icon: Award,        title: "Assessments",         desc: "Quizzes & tests with instant results",            color: "bg-lime-500" },
-  { icon: FileSpreadsheet, title: "Grade Recap",      desc: "Export full report cards to Excel instantly",     color: "bg-teal-600" },
-];
-
-const announcements = [
-  {
-    title: "Speaking Assignment Submission",
-    content: "The speaking assignment for class XI Butik 1 must be submitted no later than Friday, May 16, 2026.",
-    date: "May 10, 2026",
-    type: "deadline",
-  },
-  {
-    title: "AKM Quiz Next Week",
-    content: "An AKM quiz will be held for all Grade XI classes next week. Study the Hope & Plan material.",
-    date: "May 8, 2026",
-    type: "info",
-  },
-  {
-    title: "New Material Available",
-    content: "Meeting 4 material for the Daily Activities topic has been uploaded. Please download it.",
-    date: "May 5, 2026",
-    type: "material",
-  },
+  { icon: BookOpen,     title: "Digital Materials",   desc: "Access learning materials anytime, anywhere",    color: "from-emerald-500 to-emerald-700" },
+  { icon: ClipboardList, title: "Online Assignments",  desc: "Submit assignments digitally with ease",          color: "from-teal-500 to-teal-700" },
+  { icon: Star,         title: "Transparent Grades",  desc: "View grades and feedback instantly",              color: "from-green-500 to-green-700" },
+  { icon: Users,        title: "Digital Attendance",  desc: "GPS-verified modern attendance system",           color: "from-cyan-500 to-cyan-700" },
+  { icon: Award,        title: "Assessments",         desc: "Quizzes & tests with instant results",            color: "from-lime-500 to-lime-700" },
+  { icon: FileSpreadsheet, title: "Grade Recap",      desc: "Export full report cards to Excel instantly",     color: "from-teal-600 to-emerald-800" },
 ];
 
 export default async function LandingPage() {
   const supabase = createServiceClient();
-  const [{ data: classes }, { count: studentCount }, { data: teacherData }, { data: scheduleData }] = await Promise.all([
+  const [{ data: classes }, { count: studentCount }, { data: teacherData }, { data: scheduleData }, { data: announcementData }] = await Promise.all([
     supabase.from("classes").select("*").order("grade").order("class_name"),
     supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "student"),
     supabase.from("users").select("name, avatar_url, bio, tagline, certifications, years_experience").eq("role", "teacher").single(),
     supabase.from("schedules").select("*").order("sort_order"),
+    supabase.from("announcements").select("*").order("created_at", { ascending: false }).limit(3),
   ]);
+
+  // Latest announcements from the database, falling back to defaults
+  const announcements = ((announcementData as any[]) || []).map((a) => ({
+    title: a.title as string,
+    content: a.content as string,
+    date: new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    type: "info",
+  }));
 
   const totalStudents = studentCount ?? 0;
   const teacher = teacherData as any || {
@@ -205,7 +193,7 @@ export default async function LandingPage() {
               const Icon = feature.icon;
               return (
                 <div key={feature.title} className="group bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-300 transition-all duration-300 hover:-translate-y-1">
-                  <div className={`w-12 h-12 rounded-xl ${feature.color} flex items-center justify-center mb-4 shadow-md group-hover:shadow-lg transition-shadow`}>
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all`}>
                     <Icon className="w-5 h-5 text-white" />
                   </div>
                   <h3 className="font-bold text-gray-900 text-sm mb-1.5 leading-tight">{feature.title}</h3>
@@ -358,30 +346,28 @@ export default async function LandingPage() {
             <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">Latest Updates</h2>
           </div>
           <div className="max-w-3xl mx-auto space-y-3">
-            {announcements.map((ann) => {
-              const typeConfig = {
-                deadline: { color: "text-rose-600", bg: "bg-rose-50 border-rose-200", label: "Deadline" },
-                material: { color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200", label: "Material" },
-                info:     { color: "text-blue-600",  bg: "bg-blue-50 border-blue-200",   label: "Info" },
-              }[ann.type] || { color: "text-blue-600", bg: "bg-blue-50 border-blue-200", label: "Info" };
-              return (
-                <div key={ann.title} className="flex gap-4 p-5 bg-white border border-gray-200 hover:shadow-md hover:border-gray-300 rounded-2xl transition-all">
-                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 ${typeConfig.bg}`}>
-                    <Bell className={`w-4 h-4 ${typeConfig.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${typeConfig.bg} ${typeConfig.color}`}>
-                        {typeConfig.label}
-                      </span>
-                      <span className="text-xs text-gray-400">{ann.date}</span>
-                    </div>
-                    <p className="font-bold text-gray-900 text-sm">{ann.title}</p>
-                    <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{ann.content}</p>
-                  </div>
+            {announcements.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <Bell className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No announcements yet</p>
+              </div>
+            ) : announcements.map((ann) => (
+              <div key={ann.title} className="flex gap-4 p-5 bg-white border border-gray-200 hover:shadow-md hover:border-emerald-300 rounded-2xl transition-all">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <Bell className="w-4 h-4 text-emerald-600" />
                 </div>
-              );
-            })}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-emerald-50 border-emerald-200 text-emerald-700">
+                      Announcement
+                    </span>
+                    <span className="text-xs text-gray-400">{ann.date}</span>
+                  </div>
+                  <p className="font-bold text-gray-900 text-sm">{ann.title}</p>
+                  <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{ann.content}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
