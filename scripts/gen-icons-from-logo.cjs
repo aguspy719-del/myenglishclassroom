@@ -1,0 +1,133 @@
+const zlib = require("zlib");
+const fs = require("fs");
+
+// ── PNG decode ──────────────────────────────────────────────
+function readPNG(path) {
+  const buf = fs.readFileSync(path);
+  let pos = 8, ihdr = null;
+  const idat = [];
+  while (pos < buf.length) {
+    const len = buf.readUInt32BE(pos);
+    const type = buf.toString("ascii", pos + 4, pos + 8);
+    const data = buf.slice(pos + 8, pos + 8 + len);
+    if (type === "IHDR") ihdr = { w: data.readUInt32BE(0), h: data.readUInt32BE(4), colorType: data[9] };
+    if (type === "IDAT") idat.push(data);
+    pos += 12 + len;
+  }
+  const ch = ihdr.colorType === 6 ? 4 : 3;
+  const stride = ihdr.w * ch;
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const out = Buffer.alloc(ihdr.h * stride);
+  let rp = 0;
+  for (let y = 0; y < ihdr.h; y++) {
+    const f = raw[rp++];
+    const row = y * stride, prev = row - stride;
+    for (let x = 0; x < stride; x++) {
+      const a = x >= ch ? out[row + x - ch] : 0;
+      const b = y > 0 ? out[prev + x] : 0;
+      const c = x >= ch && y > 0 ? out[prev + x - ch] : 0;
+      let v = raw[rp + x];
+      if (f === 1) v += a; else if (f === 2) v += b; else if (f === 3) v += (a + b) >> 1;
+      else if (f === 4) { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); v += (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c); }
+      out[row + x] = v & 0xff;
+    }
+    rp += stride;
+  }
+  return { w: ihdr.w, h: ihdr.h, ch, px: out };
+}
+
+// ── Encode PNG (RGB, no alpha — always opaque) ──────────────
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t;
+})();
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+function chunk(type, data) {
+  const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+  const td = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td));
+  return Buffer.concat([len, td, crc]);
+}
+function encodePNG(w, h, rgb) {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8; ihdr[9] = 2; // 8-bit RGB
+  const raw = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) {
+    raw[y * (w * 3 + 1)] = 0; // filter none
+    rgb.copy(raw, y * (w * 3 + 1) + 1, y * w * 3, (y + 1) * w * 3);
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", zlib.deflateSync(raw, { level: 9 })),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+// ── Area-average resize (premultiplied alpha, no dark halo) ─
+function resize(src, tw, th) {
+  const out = Buffer.alloc(tw * th * 4);
+  const sx = src.w / tw, sy = src.h / th;
+  for (let y = 0; y < th; y++) {
+    const y0 = Math.floor(y * sy), y1 = Math.min(Math.floor((y + 1) * sy), src.h);
+    for (let x = 0; x < tw; x++) {
+      const x0 = Math.floor(x * sx), x1 = Math.min(Math.floor((x + 1) * sx), src.w);
+      let r = 0, g = 0, b = 0, a = 0, n = 0;
+      for (let yy = y0; yy < y1; yy++) {
+        for (let xx = x0; xx < x1; xx++) {
+          const o = (yy * src.w + xx) * src.ch;
+          const al = src.ch === 4 ? src.px[o + 3] : 255;
+          r += src.px[o] * al; g += src.px[o + 1] * al; b += src.px[o + 2] * al; a += al; n++;
+        }
+      }
+      const o2 = (y * tw + x) * 4;
+      if (a > 0) {
+        out[o2] = Math.round(r / a); out[o2 + 1] = Math.round(g / a); out[o2 + 2] = Math.round(b / a); out[o2 + 3] = Math.round(a / n);
+      } else out[o2 + 3] = 0;
+    }
+  }
+  return { w: tw, h: th, px: out };
+}
+
+// ── Composite RGBA over white → opaque RGB ──────────────────
+function overWhite(img) {
+  const out = Buffer.alloc(img.w * img.h * 3);
+  for (let i = 0, j = 0; i < img.px.length; i += 4, j += 3) {
+    const a = img.px[i + 3] / 255;
+    out[j] = Math.round(img.px[i] * a + 255 * (1 - a));
+    out[j + 1] = Math.round(img.px[i + 1] * a + 255 * (1 - a));
+    out[j + 2] = Math.round(img.px[i + 2] * a + 255 * (1 - a));
+  }
+  return out;
+}
+
+// ── Maskable: logo at 80% centered on white full-bleed ──────
+function maskable(src, size) {
+  const inner = resize(src, Math.round(size * 0.8), Math.round(size * 0.8));
+  const rgb = Buffer.alloc(size * size * 3, 255); // white canvas
+  const off = Math.floor((size - inner.w) / 2);
+  for (let y = 0; y < inner.h; y++) {
+    const line = overWhite({ w: inner.w, h: 1, px: inner.px.slice(y * inner.w * 4, (y + 1) * inner.w * 4) });
+    line.copy(rgb, ((y + off) * size + off) * 3);
+  }
+  return encodePNG(size, size, rgb);
+}
+
+const src = readPNG("public/icons/logo-myclassroom.png");
+console.log(`Source: logo-myclassroom.png ${src.w}x${src.h}`);
+
+// Standard "any" icons — full logo on white
+fs.writeFileSync("public/icons/icon-192.png", encodePNG(192, 192, overWhite(resize(src, 192, 192))));
+fs.writeFileSync("public/icons/icon-512.png", encodePNG(512, 512, overWhite(resize(src, 512, 512))));
+// Maskable — safe zone
+fs.writeFileSync("public/icons/icon-maskable-192.png", maskable(src, 192));
+fs.writeFileSync("public/icons/icon-maskable-512.png", maskable(src, 512));
+// Apple touch icon
+fs.writeFileSync("public/apple-touch-icon.png", encodePNG(180, 180, overWhite(resize(src, 180, 180))));
+console.log("Generated: icon-192, icon-512, icon-maskable-192, icon-maskable-512, apple-touch-icon");
