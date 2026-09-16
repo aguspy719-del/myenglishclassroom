@@ -1,7 +1,20 @@
+/**
+ * Generate all PWA icons from public/icons/logonew.png (the source logo).
+ *
+ * - icon-192.png / icon-512.png  → transparent RGBA (logo only, NO background)
+ * - icon-maskable-*.png          → white full-bleed + logo at 80% safe zone
+ *                                  (Android REQUIRES opaque maskable icons;
+ *                                  transparency renders as black garbage)
+ * - apple-touch-icon.png         → white opaque (iOS renders transparency black)
+ *
+ * Usage: node scripts/gen-icons-from-logo.cjs
+ */
 const zlib = require("zlib");
 const fs = require("fs");
 
-// ── PNG decode ──────────────────────────────────────────────
+const SOURCE = "public/icons/logonew.png";
+
+// ── PNG decode (supports RGB + RGBA) ────────────────────────
 function readPNG(path) {
   const buf = fs.readFileSync(path);
   let pos = 8, ihdr = null;
@@ -36,7 +49,34 @@ function readPNG(path) {
   return { w: ihdr.w, h: ihdr.h, ch, px: out };
 }
 
-// ── Encode PNG (RGB, no alpha — always opaque) ──────────────
+// ── Trim fully-transparent borders (logo fills the icon) ────
+function trim(img, marginPct = 0.02) {
+  let minX = img.w, minY = img.h, maxX = 0, maxY = 0;
+  for (let y = 0; y < img.h; y++) {
+    for (let x = 0; x < img.w; x++) {
+      const a = img.px[(y * img.w + x) * img.ch + 3];
+      if (a > 8) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (minX > maxX || minY > maxY) return img; // fully transparent — leave as-is
+  const mw = maxX - minX + 1, mh = maxY - minY + 1;
+  const mx = Math.round(mw * marginPct), my = Math.round(mh * marginPct);
+  minX = Math.max(0, minX - mx); minY = Math.max(0, minY - my);
+  maxX = Math.min(img.w - 1, maxX + mx); maxY = Math.min(img.h - 1, maxY + my);
+  const w = maxX - minX + 1, h = maxY - minY + 1;
+  const px = Buffer.alloc(w * h * img.ch);
+  for (let y = 0; y < h; y++) {
+    img.px.copy(px, y * w * img.ch, ((y + minY) * img.w + minX) * img.ch, ((y + minY) * img.w + minX + w) * img.ch);
+  }
+  return { w, h, ch: img.ch, px };
+}
+
+// ── Encode PNG (colorType 2 = RGB opaque, 6 = RGBA transparent) ─
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
   for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
@@ -53,14 +93,16 @@ function chunk(type, data) {
   const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td));
   return Buffer.concat([len, td, crc]);
 }
-function encodePNG(w, h, rgb) {
+function encodePNG(w, h, px, colorType) {
+  const ch = colorType === 6 ? 4 : 3;
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4);
-  ihdr[8] = 8; ihdr[9] = 2; // 8-bit RGB
-  const raw = Buffer.alloc((w * 3 + 1) * h);
+  ihdr[8] = 8; ihdr[9] = colorType;
+  const stride = w * ch;
+  const raw = Buffer.alloc((stride + 1) * h);
   for (let y = 0; y < h; y++) {
-    raw[y * (w * 3 + 1)] = 0; // filter none
-    rgb.copy(raw, y * (w * 3 + 1) + 1, y * w * 3, (y + 1) * w * 3);
+    raw[y * (stride + 1)] = 0; // filter none
+    px.copy(raw, y * (stride + 1) + 1, y * stride, (y + 1) * stride);
   }
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -72,7 +114,7 @@ function encodePNG(w, h, rgb) {
 
 // ── Area-average resize (premultiplied alpha, no dark halo) ─
 function resize(src, tw, th) {
-  const out = Buffer.alloc(tw * th * 4);
+  const out = Buffer.alloc(tw * th * 4); // always RGBA internally
   const sx = src.w / tw, sy = src.h / th;
   for (let y = 0; y < th; y++) {
     const y0 = Math.floor(y * sy), y1 = Math.min(Math.floor((y + 1) * sy), src.h);
@@ -95,7 +137,7 @@ function resize(src, tw, th) {
   return { w: tw, h: th, px: out };
 }
 
-// ── Composite RGBA over white → opaque RGB ──────────────────
+// ── RGBA → opaque RGB over white ────────────────────────────
 function overWhite(img) {
   const out = Buffer.alloc(img.w * img.h * 3);
   for (let i = 0, j = 0; i < img.px.length; i += 4, j += 3) {
@@ -116,18 +158,20 @@ function maskable(src, size) {
     const line = overWhite({ w: inner.w, h: 1, px: inner.px.slice(y * inner.w * 4, (y + 1) * inner.w * 4) });
     line.copy(rgb, ((y + off) * size + off) * 3);
   }
-  return encodePNG(size, size, rgb);
+  return encodePNG(size, size, rgb, 2);
 }
 
-const src = readPNG("public/icons/logo-myclassroom.png");
-console.log(`Source: logo-myclassroom.png ${src.w}x${src.h}`);
+// ── Main ────────────────────────────────────────────────────
+const original = readPNG(SOURCE);
+const src = trim(original);
+console.log(`Source: ${SOURCE} ${original.w}x${original.h} → trimmed ${src.w}x${src.h}`);
 
-// Standard "any" icons — full logo on white
-fs.writeFileSync("public/icons/icon-192.png", encodePNG(192, 192, overWhite(resize(src, 192, 192))));
-fs.writeFileSync("public/icons/icon-512.png", encodePNG(512, 512, overWhite(resize(src, 512, 512))));
-// Maskable — safe zone
+// Standard "any" icons — TRANSPARENT, logo only (RGBA, no background)
+fs.writeFileSync("public/icons/icon-192.png", encodePNG(192, 192, resize(src, 192, 192).px, 6));
+fs.writeFileSync("public/icons/icon-512.png", encodePNG(512, 512, resize(src, 512, 512).px, 6));
+// Maskable — white full-bleed safe zone (Android requirement)
 fs.writeFileSync("public/icons/icon-maskable-192.png", maskable(src, 192));
 fs.writeFileSync("public/icons/icon-maskable-512.png", maskable(src, 512));
-// Apple touch icon
-fs.writeFileSync("public/apple-touch-icon.png", encodePNG(180, 180, overWhite(resize(src, 180, 180))));
-console.log("Generated: icon-192, icon-512, icon-maskable-192, icon-maskable-512, apple-touch-icon");
+// Apple touch — white opaque (iOS renders transparency as black)
+fs.writeFileSync("public/apple-touch-icon.png", encodePNG(180, 180, overWhite(resize(src, 180, 180)), 2));
+console.log("Generated: icon-192 (transparent), icon-512 (transparent), icon-maskable-192, icon-maskable-512, apple-touch-icon");
