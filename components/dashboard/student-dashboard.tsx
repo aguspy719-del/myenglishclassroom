@@ -13,9 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
-import { Flame } from "lucide-react";
 import type { User, Assignment, Submission, Announcement, Attendance } from "@/types";
-import { AttendanceHeatmap } from "@/components/attendance/attendance-heatmap";
+import { AttendanceStreakCard } from "@/components/dashboard/attendance-streak-card";
 
 interface StudentDashboardProps {
   user: User;
@@ -27,6 +26,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [attendanceRate, setAttendanceRate] = useState<number>(0);
   const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
+  const [todayAttendanceStatus, setTodayAttendanceStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(user);
   const [loginStreak, setLoginStreak] = useState<number>(user.login_streak || 0);
@@ -59,6 +59,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       setAnnouncements(announcementsRes.data || []);
       if (userRes.data) setUserData({ ...user, ...userRes.data });
       setAttendanceRecords((recordsRes.data as Attendance[]) || []);
+      const today = new Date().toISOString().split("T")[0];
+      const todayRec = recordsRes.data?.find((r: any) => r.date === today);
+      setTodayAttendanceStatus(todayRec?.status || null);
       const attendance = attendanceRes.data || [];
       if (attendance.length > 0) {
         const present = attendance.filter((a) => a.status === "present" || a.status === "late").length;
@@ -109,45 +112,22 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     <div className="space-y-6">
       {/* Greeting is rendered by WelcomeHeader in DashboardLayout */}
 
-      {/* Streak Card — replaced XP/Level/Badges, focused on diligence */}
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-500 to-amber-500 text-white overflow-hidden">
-        <CardContent className="pt-5 pb-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg">
-                <Flame className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="font-bold text-lg">🔥 {loginStreak} day{loginStreak === 1 ? "" : "s"} streak!</p>
-                <p className="text-orange-100 text-sm">+10 XP per day, up to 50 XP</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-semibold text-yellow-300">{loginStreak >= 7 ? "7+" : 7 - loginStreak}</p>
-              <p className="text-xs text-orange-100">days to badge</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 mt-4">
-            {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-              <div
-                key={day}
-                className={`h-2 flex-1 rounded-full ${day <= Math.min(loginStreak, 7) ? "bg-white" : "bg-white/25"}`}
-              />
-            ))}
-          </div>
-          <p className="text-xs text-orange-100 mt-2">
-            Log in every day — keep the streak alive!
-          </p>
-        </CardContent>
-      </Card>
+      {/* Status Kehadiran — combined card: live clock, heatmap, streak & stats */}
+      <AttendanceStreakCard
+        records={attendanceRecords}
+        loading={loading}
+        streakDays={loginStreak}
+        attendanceRate={attendanceRate}
+        todayStatus={todayAttendanceStatus}
+      />
 
-      {/* Stats — streak first, then the essentials */}
+      {/* Stats — the essentials */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Login Streak", value: `${loginStreak}d`, icon: Flame, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950", href: "/profile" },
           { label: "Active Tasks", value: loading ? "..." : upcomingAssignments.length, icon: ClipboardList, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", href: "/classes" },
           { label: "Latest Grade", value: loading ? "..." : recentGrades.length > 0 ? `${recentGrades[0].score}` : "-", icon: Star, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950", href: "/grades" },
-          { label: "Attendance", value: loading ? "..." : `${attendanceRate}%`, icon: UserCheck, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/attendance" },
+          { label: "Announcements", value: loading ? "..." : announcements.length, icon: Bell, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/dashboard" },
+          { label: "My Classes", value: "View", icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950", href: "/classes" },
         ].map((stat) => {
           const Icon = stat.icon;
           return (
@@ -165,24 +145,6 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
           );
         })}
       </div>
-
-      {/* Attendance heatmap — GitHub style */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="pt-4 pb-4">
-          <div className="flex items-center justify-between mb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-emerald-600" />
-              Riwayat Kehadiran
-            </CardTitle>
-            <Link href="/attendance"><Button variant="ghost" size="sm" className="gap-1 text-xs">Detail <ArrowRight className="w-3 h-3" /></Button></Link>
-          </div>
-          {loading ? (
-            <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
-          ) : (
-            <AttendanceHeatmap records={attendanceRecords} />
-          )}
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-0 shadow-sm">

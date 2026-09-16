@@ -9,72 +9,61 @@ interface AttendanceHeatmapProps {
   records: Attendance[];
   /** Reference date for "today" (defaults to now) */
   today?: Date;
+  /** Week count (rows will follow Sen..Min) */
+  weeks?: number;
 }
 
-const WEEKS = 20;
-
-// Row order is Mon..Sun (GitHub style) — label a few rows for orientation
-const DAY_LABELS: Record<number, string> = { 0: "Sen", 2: "Rab", 4: "Jum" };
+const DAY_LABELS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 
 /**
- * GitHub-style contribution heatmap for attendance history.
- * One small square per day for the last ~20 weeks, with month labels
- * above the columns and weekday labels on the left:
- *   green   = hadir (emerald = present, lighter = late)
- *   white   = no record / absent (left empty as requested)
+ * Attendance heatmap like the reference design: rows = weekdays (Sen..Min),
+ * columns = weeks. Green = hadir, yellow = terlambat, white = alpha/empty.
  */
-export function AttendanceHeatmap({ records, today }: AttendanceHeatmapProps) {
-  const { columns, presentCount } = useMemo(() => {
+export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeatmapProps) {
+  const { rows, presentCount } = useMemo(() => {
     const ref = today ? new Date(today) : new Date();
     const byDate = new Map<string, string>();
     for (const r of records) {
       if (r?.date) byDate.set(r.date, r.status);
     }
 
-    // Build columns: each column is one week of 7 days (Mon..Sun),
-    // ending on the current week so "today" is the last cell.
-    const end = new Date(ref);
-    end.setDate(end.getDate() + (6 - end.getDay())); // align to Sunday
+    // Columns = weeks, oldest first; each column runs Mon..Sun.
+    // Anchor: the Monday of the current week.
+    const monday = new Date(ref);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
 
     const cols: {
-      days: { date: string; status?: string; isFuture: boolean; isToday: boolean }[];
-      monthLabel?: string;
+      days: { date: string; status?: string; isFuture: boolean; isToday: boolean; weekday: number }[];
     }[] = [];
     let present = 0;
-    let prevMonthKey = "";
 
-    for (let w = WEEKS - 1; w >= 0; w--) {
-      const days: { date: string; status?: string; isFuture: boolean; isToday: boolean }[] = [];
-      for (let d = 6; d >= 0; d--) {
-        const day = new Date(end);
-        day.setDate(end.getDate() - (w * 7 + d));
+    for (let w = weeks - 1; w >= 0; w--) {
+      const days: { date: string; status?: string; isFuture: boolean; isToday: boolean; weekday: number }[] = [];
+      for (let d = 0; d < 7; d++) {
+        const day = new Date(monday);
+        day.setDate(monday.getDate() - w * 7 + d);
         const iso = day.toISOString().split("T")[0];
         const status = byDate.get(iso);
         const isFuture = day > ref;
         const isToday = iso === new Date(ref).toISOString().split("T")[0];
         if (status === "present" || status === "late") present++;
-        days.push({ date: iso, status, isFuture, isToday });
+        days.push({ date: iso, status, isFuture, isToday, weekday: d });
       }
-
-      // Month label: show on the column where the month (of its Monday) changes
-      const monday = new Date(days[0].date);
-      const monthKey = `${monday.getFullYear()}-${monday.getMonth()}`;
-      const monthLabel =
-        monthKey !== prevMonthKey
-          ? monday.toLocaleDateString("id-ID", { month: "short" })
-          : undefined;
-      prevMonthKey = monthKey;
-
-      cols.push({ days, monthLabel });
+      cols.push({ days });
     }
 
-    return { columns: cols, presentCount: present };
-  }, [records, today]);
+    // Transpose into rows (Sen..Min)
+    const rowsData = DAY_LABELS.map((_, weekday) =>
+      cols.map((c) => c.days[weekday])
+    );
+
+    return { rows: rowsData, presentCount: present };
+  }, [records, today, weeks]);
 
   const cellColor = (status?: string) => {
     if (status === "present") return "bg-emerald-500";
-    if (status === "late") return "bg-emerald-300";
-    return "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"; // empty
+    if (status === "late") return "bg-amber-400";
+    return "bg-white/90"; // alpha / no record
   };
 
   const statusLabel = (status?: string) =>
@@ -83,10 +72,10 @@ export function AttendanceHeatmap({ records, today }: AttendanceHeatmapProps) {
       : status === "late"
       ? "Terlambat"
       : status === "absent"
-      ? "Absen"
+      ? "Alpha"
       : status === "excused"
       ? "Izin"
-      : "tidak ada absensi";
+      : "Alpha";
 
   const dayTooltip = (iso: string, status?: string) => {
     const d = new Date(iso);
@@ -101,57 +90,57 @@ export function AttendanceHeatmap({ records, today }: AttendanceHeatmapProps) {
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-2">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          <span className="font-bold text-emerald-600 dark:text-emerald-400">{presentCount}</span> hari hadir
-          dalam {WEEKS} minggu terakhir
-        </p>
-        <div className="flex items-center gap-1 text-[10px] text-gray-400 flex-shrink-0">
-          <span>Kurang</span>
-          <span className="w-2.5 h-2.5 rounded-[3px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" />
-          <span className="w-2.5 h-2.5 rounded-[3px] bg-emerald-300" />
-          <span className="w-2.5 h-2.5 rounded-[3px] bg-emerald-500" />
-          <span>Hadir</span>
-        </div>
-      </div>
+      <p className="text-xs text-white/80 mb-2.5">
+        <span className="font-bold text-white">{presentCount}</span> hari hadir dalam {weeks} minggu terakhir
+      </p>
 
       <div className="overflow-x-auto pb-1 -mx-1 px-1">
-        <div className="flex gap-[3px] w-max">
-          {/* Weekday labels column */}
-          <div className="flex flex-col gap-[3px] flex-shrink-0 pr-0.5">
-            <div className="h-3" /> {/* spacer aligned with month-label slot */}
-            {Array.from({ length: 7 }).map((_, row) => (
-              <div
-                key={row}
-                className="w-6 h-[11px] flex items-center text-[9px] leading-none text-gray-400 dark:text-gray-500"
-              >
-                {DAY_LABELS[row] ?? ""}
+        <div className="flex gap-2 w-max">
+          {/* Weekday labels */}
+          <div className="flex flex-col justify-between flex-shrink-0">
+            {DAY_LABELS.map((d) => (
+              <div key={d} className="h-[14px] flex items-center text-[9px] leading-none text-white/70 font-medium">
+                {d}
               </div>
             ))}
           </div>
 
-          {/* Day columns */}
-          {columns.map((week, wi) => (
-            <div key={wi} className="flex flex-col gap-[3px]">
-              {/* Month label slot — text can overflow right like GitHub */}
-              <div className="h-3 w-[11px] text-[9px] leading-3 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap overflow-visible">
-                {week.monthLabel ?? ""}
+          {/* Week columns — each column has 7 stacked cells (Sen..Min) */}
+          <div className="flex gap-[4px]">
+            {rows[0].map((_, wi) => (
+              <div key={wi} className="flex flex-col gap-[4px]">
+                {rows.map((row, ri) => {
+                  const day = row[wi];
+                  return (
+                    <div
+                      key={ri}
+                      title={day.isFuture ? undefined : dayTooltip(day.date, day.status)}
+                      className={cn(
+                        "w-[14px] h-[14px] rounded-[4px] transition-colors",
+                        cellColor(day.status),
+                        day.isToday && "ring-2 ring-white ring-offset-1 ring-offset-emerald-600",
+                        day.isFuture && "opacity-30"
+                      )}
+                    />
+                  );
+                })}
               </div>
-              {week.days.map((day) => (
-                <div
-                  key={day.date}
-                  title={day.isFuture ? undefined : dayTooltip(day.date, day.status)}
-                  className={cn(
-                    "w-[11px] h-[11px] rounded-[3px] transition-colors",
-                    cellColor(day.status),
-                    day.isToday && "ring-2 ring-emerald-600 ring-offset-1 ring-offset-white dark:ring-offset-gray-900",
-                    day.isFuture && "opacity-30"
-                  )}
-                />
-              ))}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 mt-3 text-[10px] text-white/80">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Hadir
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Telat
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-white/90" /> Alpha
+        </span>
       </div>
     </div>
   );
