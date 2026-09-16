@@ -449,7 +449,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                 </button>
               )}
             </div>
-            <div className="mt-4 rounded-2xl bg-white dark:bg-white/10 p-4">
+            <div className="mt-4 rounded-2xl bg-white dark:bg-white/10 p-4 text-gray-900 dark:text-gray-100">
               {todayAttendance ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-white/10 border border-gray-100 dark:border-white/10">
@@ -465,7 +465,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                       <p className="text-xs text-gray-500 dark:text-gray-300">{formatDateTime(todayAttendance.timestamp)}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-emerald-100 text-center">
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 text-center">
                     Salah status? Klik <strong>Reset</strong> di atas untuk absen ulang.
                   </p>
                 </div>
@@ -504,7 +504,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                       const Icon = config.icon;
                       return (
                         <Button key={status} variant="outline" disabled={marking}
-                          className={`h-16 flex-col gap-1.5 rounded-xl border-2 transition-all ${
+                          className={`h-16 flex-col gap-1.5 rounded-xl border-2 text-gray-700 dark:text-gray-100 transition-all ${
                             status === "present" ? "hover:bg-emerald-50 hover:border-emerald-400 dark:hover:bg-emerald-950" :
                             status === "absent" ? "hover:bg-red-50 hover:border-red-400 dark:hover:bg-red-950" :
                             status === "late" ? "hover:bg-amber-50 hover:border-amber-400 dark:hover:bg-amber-950" :
