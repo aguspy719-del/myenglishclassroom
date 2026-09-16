@@ -265,35 +265,36 @@ export default async function LandingPage() {
           <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
 
           <div className="marquee-track">
-            {/* Render 2x untuk seamless loop */}
+            {/* Color is keyed to the class itself so both loop copies match */}
             {[...allClasses, ...allClasses].map((cls, idx) => {
               const colors = [
-                "from-emerald-500 to-teal-500",
-                "from-teal-500 to-cyan-500",
-                "from-cyan-500 to-blue-500",
-                "from-green-500 to-emerald-500",
-                "from-lime-500 to-green-500",
-                "from-blue-500 to-indigo-500",
-                "from-emerald-400 to-green-500",
-                "from-teal-400 to-emerald-500",
+                "from-emerald-500 to-teal-600",
+                "from-teal-500 to-cyan-700",
+                "from-cyan-600 to-teal-700",
+                "from-green-500 to-emerald-700",
+                "from-teal-600 to-emerald-800",
+                "from-emerald-600 to-green-700",
+                "from-green-600 to-teal-700",
+                "from-cyan-500 to-emerald-600",
               ];
+              const color = colors[(idx % allClasses.length) % colors.length];
               return (
                 <div
                   key={`cls-${idx}`}
-                  className={`marquee-card bg-gradient-to-br ${colors[idx % colors.length]} rounded-2xl p-6 text-white shadow-lg`}
+                  className={`marquee-card bg-gradient-to-br ${color} rounded-2xl p-6 text-white shadow-lg`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="font-black text-xl leading-tight mb-1">{cls.class_name}</p>
                       <p className="text-white/80 text-sm">{cls.major}</p>
                     </div>
-                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                       <Users className="w-5 h-5" />
                     </div>
                   </div>
                   <div className="flex items-center gap-2 pt-3 border-t border-white/20">
                     <span className="text-xs bg-white/20 px-2 py-1 rounded-md font-semibold">Grade {cls.grade}</span>
-                    <span className="text-xs text-white/80">Tata Busana</span>
+                    <span className="text-xs text-white/80">English · {cls.major}</span>
                   </div>
                 </div>
               );
@@ -313,22 +314,22 @@ export default async function LandingPage() {
               </div>
               <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">Teaching Schedule</h2>
             </div>
-            <div className="max-w-2xl mx-auto space-y-2">
+            <div className="max-w-3xl mx-auto grid sm:grid-cols-2 gap-3">
               {schedules.map((item, idx) => (
                 <div
                   key={item.id || idx}
-                  className="flex items-center justify-between bg-white border border-gray-200 hover:border-emerald-300 hover:shadow-md rounded-2xl p-4 transition-all group"
+                  className="flex items-center justify-between gap-3 bg-white border border-gray-200 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 rounded-2xl p-4 transition-all"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                      <span className="text-[11px] font-black text-white">{item.day.substring(0, 3).toUpperCase()}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                      <span className="text-[11px] font-black text-white leading-none">{item.day.substring(0, 3).toUpperCase()}</span>
                     </div>
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">{item.day}</p>
-                      <p className="text-xs text-gray-500">{item.time}</p>
+                    <div className="min-w-0">
+                      <p className="font-bold text-gray-900 text-sm truncate">{item.day}</p>
+                      <p className="text-xs text-gray-500 tabular-nums">{item.time}</p>
                     </div>
                   </div>
-                  <Badge className="text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">{item.class_name}</Badge>
+                  <Badge className="text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200 truncate max-w-[45%]">{item.class_name}</Badge>
                 </div>
               ))}
             </div>
