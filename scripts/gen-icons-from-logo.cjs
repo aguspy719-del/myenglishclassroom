@@ -2,10 +2,10 @@
  * Generate all PWA icons from public/icons/logonew.png (the source logo).
  *
  * - icon-192.png / icon-512.png  → transparent RGBA (logo only, NO background)
- * - icon-maskable-*.png          → white full-bleed + logo at 80% safe zone
+ * - icon-maskable-*.png          → near-black full-bleed + logo at 80% safe zone
  *                                  (Android home-screen icons cannot be transparent:
- *                                  launchers render transparency as black)
- * - apple-touch-icon.png         → white opaque (iOS renders transparency black)
+ *                                  launchers render transparency as black garbage)
+ * - apple-touch-icon.png         → near-black opaque (iOS renders transparency black)
  *
  * Usage: node scripts/gen-icons-from-logo.cjs
  */
@@ -137,25 +137,30 @@ function resize(src, tw, th) {
   return { w: tw, h: th, px: out };
 }
 
-// ── RGBA → opaque RGB over white ────────────────────────────
-function overWhite(img) {
+// ── RGBA → opaque RGB over a dark brand background ──────────
+// Near-black with a subtle green tint (Grab/Gemini-style home icons)
+const DARK_BG = [7, 13, 10]; // #070d0a
+function overDark(img) {
   const out = Buffer.alloc(img.w * img.h * 3);
   for (let i = 0, j = 0; i < img.px.length; i += 4, j += 3) {
     const a = img.px[i + 3] / 255;
-    out[j] = Math.round(img.px[i] * a + 255 * (1 - a));
-    out[j + 1] = Math.round(img.px[i + 1] * a + 255 * (1 - a));
-    out[j + 2] = Math.round(img.px[i + 2] * a + 255 * (1 - a));
+    out[j] = Math.round(img.px[i] * a + DARK_BG[0] * (1 - a));
+    out[j + 1] = Math.round(img.px[i + 1] * a + DARK_BG[1] * (1 - a));
+    out[j + 2] = Math.round(img.px[i + 2] * a + DARK_BG[2] * (1 - a));
   }
   return out;
 }
 
-// ── Maskable: logo at 80% centered on white full-bleed ──────
+// ── Maskable: logo at 80% centered on dark full-bleed ───────
 function maskable(src, size) {
   const inner = resize(src, Math.round(size * 0.8), Math.round(size * 0.8));
-  const rgb = Buffer.alloc(size * size * 3, 255); // white canvas
+  const rgb = Buffer.alloc(size * size * 3);
+  for (let j = 0; j < rgb.length; j += 3) {
+    rgb[j] = DARK_BG[0]; rgb[j + 1] = DARK_BG[1]; rgb[j + 2] = DARK_BG[2];
+  }
   const off = Math.floor((size - inner.w) / 2);
   for (let y = 0; y < inner.h; y++) {
-    const line = overWhite({ w: inner.w, h: 1, px: inner.px.slice(y * inner.w * 4, (y + 1) * inner.w * 4) });
+    const line = overDark({ w: inner.w, h: 1, px: inner.px.slice(y * inner.w * 4, (y + 1) * inner.w * 4) });
     line.copy(rgb, ((y + off) * size + off) * 3);
   }
   return encodePNG(size, size, rgb, 2);
@@ -169,10 +174,22 @@ console.log(`Source: ${SOURCE} ${original.w}x${original.h} → trimmed ${src.w}x
 // Standard "any" icons — TRANSPARENT, logo only (RGBA, no background)
 fs.writeFileSync("public/icons/icon-192.png", encodePNG(192, 192, resize(src, 192, 192).px, 6));
 fs.writeFileSync("public/icons/icon-512.png", encodePNG(512, 512, resize(src, 512, 512).px, 6));
-// Maskable — white full-bleed safe zone (Android requires opaque:
-// transparency renders as black on home screen)
+// Maskable — dark full-bleed safe zone (Android requires opaque:
+// transparency renders as black garbage on the home screen)
 fs.writeFileSync("public/icons/icon-maskable-192.png", maskable(src, 192));
 fs.writeFileSync("public/icons/icon-maskable-512.png", maskable(src, 512));
-// Apple touch — white opaque (iOS renders transparency as black)
-fs.writeFileSync("public/apple-touch-icon.png", encodePNG(180, 180, overWhite(resize(src, 180, 180)), 2));
-console.log("Generated: icon-192 (transparent), icon-512 (transparent), icon-maskable-192, icon-maskable-512, apple-touch-icon");
+// Apple touch — dark opaque (iOS renders transparency as black)
+const appleInner = resize(src, Math.round(180 * 0.9), Math.round(180 * 0.9));
+const appleCanvas = Buffer.alloc(180 * 180 * 3);
+for (let j = 0; j < appleCanvas.length; j += 3) {
+  appleCanvas[j] = DARK_BG[0]; appleCanvas[j + 1] = DARK_BG[1]; appleCanvas[j + 2] = DARK_BG[2];
+}
+const appleLine = overDark(appleInner);
+const aOff = Math.floor((180 - appleInner.w) / 2);
+for (let y = 0; y < appleInner.h; y++) {
+  appleLine.slice(y * appleInner.w * 3, (y + 1) * appleInner.w * 3).copy(
+    appleCanvas, ((y + aOff) * 180 + aOff) * 3
+  );
+}
+fs.writeFileSync("public/apple-touch-icon.png", encodePNG(180, 180, appleCanvas, 2));
+console.log("Generated: icon-192 (transparent), icon-512 (transparent), icon-maskable-192 (dark), icon-maskable-512 (dark), apple-touch-icon (dark)");
