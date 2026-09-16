@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import {
   GraduationCap, Home, FileSpreadsheet,
   LayoutDashboard, LogOut, Star, Users, UserCheck, FileText, X, BookMarked,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { UserRole } from "@/types";
 
@@ -60,6 +61,22 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   const router = useRouter();
   const navItems = role === "teacher" ? teacherNavItems : studentNavItems;
   const bottomNavItems = role === "teacher" ? teacherBottomNav : studentBottomNav;
+
+  // Warm the client-side router cache for every destination in the
+  // background, shortly after mount — first clicks then feel instant.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const targets = new Set<string>([
+        ...navItems.map((i) => i.href),
+        ...bottomNavItems.map((i) => i.href),
+        "/profile",
+      ]);
+      targets.delete(pathname);
+      targets.forEach((href) => router.prefetch(href));
+    }, 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
