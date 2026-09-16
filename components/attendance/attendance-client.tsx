@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   UserCheck, CheckCircle, XCircle, Clock, AlertCircle,
   Calendar, Trash2, RefreshCw, ChevronDown, ChevronUp, BarChart2,
-  FileSpreadsheet, Search, Loader2, TableProperties, MapPin, Plus,
+  FileSpreadsheet, Search, Loader2, TableProperties, MapPin, Plus, History,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AttendanceCalendar } from "@/components/attendance/attendance-calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -44,10 +45,10 @@ interface StudentRecapRow {
 }
 
 const statusConfig: Record<AttendanceStatus, { label: string; color: string; icon: React.ElementType; bg: string; text: string }> = {
-  present: { label: "Present", color: "success", icon: CheckCircle, bg: "bg-green-100 dark:bg-green-900", text: "text-green-600 dark:text-green-400" },
-  absent: { label: "Absent", color: "destructive", icon: XCircle, bg: "bg-red-100 dark:bg-red-900", text: "text-red-600 dark:text-red-400" },
-  late: { label: "Late", color: "warning", icon: Clock, bg: "bg-yellow-100 dark:bg-yellow-900", text: "text-yellow-600 dark:text-yellow-400" },
-  excused: { label: "Excused", color: "info", icon: AlertCircle, bg: "bg-blue-100 dark:bg-blue-900", text: "text-blue-600 dark:text-blue-400" },
+  present: { label: "Hadir", color: "success", icon: CheckCircle, bg: "bg-emerald-100 dark:bg-emerald-900", text: "text-emerald-600 dark:text-emerald-400" },
+  absent: { label: "Alpha", color: "destructive", icon: XCircle, bg: "bg-red-100 dark:bg-red-900", text: "text-red-600 dark:text-red-400" },
+  late: { label: "Telat", color: "warning", icon: Clock, bg: "bg-amber-100 dark:bg-amber-900", text: "text-amber-600 dark:text-amber-400" },
+  excused: { label: "Izin", color: "info", icon: AlertCircle, bg: "bg-sky-100 dark:bg-sky-900", text: "text-sky-600 dark:text-sky-400" },
 };
 
 // ── Konfigurasi lokasi sekolah ─────────────────────────────
@@ -373,7 +374,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       // Sukses
       setLocationStatus("ok");
       setStudentDistance(data.distance);
-      toast.success(`Attendance marked: ${statusConfig[status].label} ✅`);
+      toast.success(`Absensi tercatat: ${statusConfig[status].label} ✅`);
       fetchData();
     } catch {
       setLocationStatus("idle");
@@ -419,10 +420,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {user.role === "teacher" ? "Attendance Records" : "My Attendance"}
+          {user.role === "teacher" ? "Attendance Records" : "Riwayat Attendance"}
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          {user.role === "teacher" ? "Monitor and manage student attendance" : "Track your daily attendance"}
+          {user.role === "teacher" ? "Monitor dan kelola kehadiran siswa" : "Lihat history kehadiran kamu"}
         </p>
       </div>
 
@@ -430,25 +431,28 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       {user.role === "student" && (
         <>
           {/* Mark Attendance */}
-          <Card className="border-2 border-blue-200 dark:border-blue-800">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <UserCheck className="w-5 h-5 text-blue-600" />
-                  Today&apos;s Attendance
-                </CardTitle>
-                {todayAttendance && (
-                  <Button variant="ghost" size="sm" onClick={handleResetToday}
-                    className="text-gray-500 hover:text-red-600 gap-1 text-xs">
-                    <RefreshCw className="w-3 h-3" />Reset
-                  </Button>
-                )}
+          <div className="rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-500/20 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold leading-tight">Absensi Hari Ini</p>
+                  <p className="text-xs text-emerald-100">Presensi wajib setiap hari sekolah</p>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
+              {todayAttendance && (
+                <button type="button" onClick={handleResetToday}
+                  className="text-xs font-semibold bg-white/15 hover:bg-white/25 transition-colors rounded-full px-3 py-1.5 flex items-center gap-1 flex-shrink-0">
+                  <RefreshCw className="w-3 h-3" />Reset
+                </button>
+              )}
+            </div>
+            <div className="mt-4 rounded-2xl bg-white dark:bg-white/10 p-4">
               {todayAttendance ? (
                 <div className="space-y-3">
-                  <div className={`flex items-center gap-3 p-4 rounded-xl ${statusConfig[todayAttendance.status as AttendanceStatus]?.bg}`}>
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-white/10 border border-gray-100 dark:border-white/10">
                     {(() => {
                       const config = statusConfig[todayAttendance.status as AttendanceStatus];
                       const Icon = config?.icon || CheckCircle;
@@ -456,19 +460,19 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                     })()}
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white">
-                        Marked as: <span className="font-bold">{statusConfig[todayAttendance.status as AttendanceStatus]?.label}</span>
+                        Tercatat: <span className="font-bold">{statusConfig[todayAttendance.status as AttendanceStatus]?.label}</span>
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{formatDateTime(todayAttendance.timestamp)}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-300">{formatDateTime(todayAttendance.timestamp)}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                    Wrong status? Click <strong>Reset</strong> above to re-mark.
+                  <p className="text-xs text-emerald-100 text-center">
+                    Salah status? Klik <strong>Reset</strong> di atas untuk absen ulang.
                   </p>
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 font-medium">
-                    Select your attendance status for today:
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 font-medium">
+                    Pilih status kehadiran kamu untuk hari ini:
                   </p>
 
                   {/* Location status indicator */}
@@ -478,7 +482,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                       : locationStatus === "tooFar" || locationStatus === "denied"
                       ? "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300"
                       : locationStatus === "checking"
-                      ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                      ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
                       : "bg-gray-50 dark:bg-gray-800 text-gray-500"
                   }`}>
                     {locationStatus === "checking" ? (
@@ -501,10 +505,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                       return (
                         <Button key={status} variant="outline" disabled={marking}
                           className={`h-16 flex-col gap-1.5 rounded-xl border-2 transition-all ${
-                            status === "present" ? "hover:bg-green-50 hover:border-green-400 dark:hover:bg-green-950" :
+                            status === "present" ? "hover:bg-emerald-50 hover:border-emerald-400 dark:hover:bg-emerald-950" :
                             status === "absent" ? "hover:bg-red-50 hover:border-red-400 dark:hover:bg-red-950" :
-                            status === "late" ? "hover:bg-yellow-50 hover:border-yellow-400 dark:hover:bg-yellow-950" :
-                            "hover:bg-blue-50 hover:border-blue-400 dark:hover:bg-blue-950"
+                            status === "late" ? "hover:bg-amber-50 hover:border-amber-400 dark:hover:bg-amber-950" :
+                            "hover:bg-sky-50 hover:border-sky-400 dark:hover:bg-sky-950"
                           }`}
                           onClick={() => handleMarkAttendance(status)}>
                           <Icon className="w-5 h-5" />
@@ -515,17 +519,17 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Student Stats */}
           {total > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "Present", value: presentCount, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950" },
-                { label: "Late", value: lateCount, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950" },
-                { label: "Absent", value: absentCount, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950" },
-                { label: "Rate", value: `${attendanceRate}%`, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+                { label: "Hadir", value: presentCount, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950" },
+                { label: "Telat", value: lateCount, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950" },
+                { label: "Alpha", value: absentCount, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950" },
+                { label: "Kehadiran", value: `${attendanceRate}%`, color: "text-teal-600 dark:text-teal-400", bg: "bg-teal-50 dark:bg-teal-950" },
               ].map((stat) => (
                 <Card key={stat.label} className="border-0 shadow-sm">
                   <CardContent className={`p-3 text-center rounded-xl ${stat.bg}`}>
@@ -537,18 +541,32 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
             </div>
           )}
 
+          {/* Kalender riwayat presensi bulanan */}
+          <AttendanceCalendar records={attendance} loading={loading} />
+
           {/* Student History */}
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Attendance History</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center flex-shrink-0">
+                  <History className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </span>
+                Riwayat Kehadiran
+              </CardTitle>
+              <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1 ml-10">
+                {total} hari tercatat · {attendanceRate}% tingkat kehadiran
+              </p>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}</div>
               ) : attendance.length === 0 ? (
                 <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                  <UserCheck className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p>No attendance records yet</p>
+                  <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center">
+                    <UserCheck className="w-7 h-7 text-emerald-300 dark:text-emerald-700" />
+                  </div>
+                  <p className="font-medium">Belum ada riwayat kehadiran</p>
+                  <p className="text-xs mt-1">Absen hari ini lewat kartu di atas, ya!</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -556,7 +574,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                     const config = statusConfig[record.status as AttendanceStatus];
                     const Icon = config?.icon || CheckCircle;
                     return (
-                      <div key={record.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                      <div key={record.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/70 rounded-xl hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30 transition-colors">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${config?.bg}`}>
                           <Icon className={`w-4 h-4 ${config?.text}`} />
                         </div>
@@ -631,7 +649,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <BarChart2 className="w-4 h-4 text-blue-600" />
+                      <BarChart2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       Summary — {selectedDate}
                     </CardTitle>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setSummaryOpen((v) => !v)}>
@@ -675,8 +693,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                   <div className="space-y-3">{[1,2,3,4].map((i) => <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}</div>
                 ) : attendance.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                    <UserCheck className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                    <p>No attendance records found</p>
+                    <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center">
+                      <UserCheck className="w-7 h-7 text-emerald-300 dark:text-emerald-700" />
+                    </div>
+                    <p>Tidak ada record kehadiran</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -777,8 +797,8 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                   return (
                     <div className="grid grid-cols-3 gap-3">
                       <Card className="border-0 shadow-sm">
-                        <CardContent className="p-3 text-center bg-blue-50 dark:bg-blue-950 rounded-xl">
-                          <p className="text-xl font-bold text-blue-600">{avgRate}%</p>
+                        <CardContent className="p-3 text-center bg-emerald-50 dark:bg-emerald-950 rounded-xl">
+                          <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{avgRate}%</p>
                           <p className="text-xs text-gray-500 mt-0.5">Rata-rata</p>
                         </CardContent>
                       </Card>
@@ -808,7 +828,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                         <th className="px-3 py-3 text-center text-xs font-semibold text-green-600">Hadir</th>
                         <th className="px-3 py-3 text-center text-xs font-semibold text-yellow-600">Terlambat</th>
                         <th className="px-3 py-3 text-center text-xs font-semibold text-red-600">Absen</th>
-                        <th className="px-3 py-3 text-center text-xs font-semibold text-blue-600">Izin</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-sky-600">Izin</th>
                         <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">Total</th>
                         <th className="px-3 py-3 text-center text-xs font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 whitespace-nowrap">Kehadiran</th>
                         <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 bg-gray-100 dark:bg-gray-700">Ket.</th>
@@ -818,11 +838,11 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                       {rekapRows
                         .filter((r) => r.studentName.toLowerCase().includes(rekapSearch.toLowerCase()))
                         .map((row, idx) => (
-                          <tr key={row.studentId} className="bg-white dark:bg-gray-900 hover:bg-blue-50/40 dark:hover:bg-blue-950/30 transition-colors">
+                          <tr key={row.studentId} className="bg-white dark:bg-gray-900 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/30 transition-colors">
                             <td className="px-3 py-3 text-xs text-gray-400">{idx + 1}</td>
                             <td className="px-3 py-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
                                   <span className="text-white text-[10px] font-bold">{getInitials(row.studentName)}</span>
                                 </div>
                                 <span className="font-medium text-xs text-gray-900 dark:text-white truncate">{row.studentName}</span>
@@ -831,7 +851,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                             <td className="px-3 py-3 text-center"><span className="text-sm font-semibold text-green-600">{row.present}</span></td>
                             <td className="px-3 py-3 text-center"><span className="text-sm font-semibold text-yellow-600">{row.late}</span></td>
                             <td className="px-3 py-3 text-center"><span className="text-sm font-semibold text-red-600">{row.absent}</span></td>
-                            <td className="px-3 py-3 text-center"><span className="text-sm font-semibold text-blue-600">{row.excused}</span></td>
+                            <td className="px-3 py-3 text-center"><span className="text-sm font-semibold text-sky-600">{row.excused}</span></td>
                             <td className="px-3 py-3 text-center"><span className="text-xs text-gray-500">{row.total}</span></td>
                             <td className="px-3 py-3 text-center bg-gray-50/50 dark:bg-gray-800/50">
                               <div className="flex flex-col items-center gap-1">
@@ -882,7 +902,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
-              <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-xl text-xs text-blue-700 dark:text-blue-300">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl text-xs text-emerald-700 dark:text-emerald-300">
                 📌 Gunakan untuk input izin, sakit, atau koreksi absensi siswa yang tidak bisa absen sendiri.
               </div>
 
@@ -951,8 +971,8 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                         onClick={() => setManualForm((prev) => ({ ...prev, status: s }))}
                         className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${
                           isSelected
-                            ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                            : "border-gray-200 dark:border-gray-700 hover:border-blue-300"
+                            ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+                            : "border-gray-200 dark:border-gray-700 hover:border-emerald-300"
                         }`}
                       >
                         <Icon className="w-4 h-4 flex-shrink-0" />
