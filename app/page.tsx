@@ -15,7 +15,7 @@ const features = [
   { icon: Star,         title: "Transparent Grades",  desc: "View grades and feedback instantly",              color: "bg-green-500" },
   { icon: Users,        title: "Digital Attendance",  desc: "GPS-verified modern attendance system",           color: "bg-cyan-500" },
   { icon: Award,        title: "Assessments",         desc: "Quizzes & tests with instant results",            color: "bg-lime-500" },
-  { icon: FileSpreadsheet, title: "Grade Recap",      desc: "Export full report cards to Excel instantly",     color: "bg-blue-500" },
+  { icon: FileSpreadsheet, title: "Grade Recap",      desc: "Export full report cards to Excel instantly",     color: "bg-teal-600" },
 ];
 
 const announcements = [
@@ -94,56 +94,97 @@ export default async function LandingPage() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative py-20 px-4 overflow-hidden">
+      <section className="relative py-16 sm:py-20 px-4 overflow-hidden">
         {/* Decorative circles */}
         <div className="absolute top-20 -right-32 w-64 h-64 bg-emerald-200/40 rounded-full blur-3xl" />
         <div className="absolute bottom-20 -left-32 w-64 h-64 bg-teal-200/40 rounded-full blur-3xl" />
 
-        <div className="relative max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-full px-4 py-2 mb-6 text-sm">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-gray-700 font-medium">SMK Negeri 1 Buduran · English Subject</span>
+        <div className="relative max-w-6xl mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-14 items-center">
+          {/* Left: headline + CTA + stats */}
+          <div className="text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-full px-4 py-2 mb-6 text-sm">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-gray-700 font-medium">SMK Negeri 1 Buduran · English Subject</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black mb-5 leading-[1.08] tracking-tight text-gray-900">
+              Belajar Bahasa Inggris,
+              <br />
+              <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 bg-clip-text text-transparent">
+                lebih terstruktur.
+              </span>
+              <br />
+              <span className="text-gray-500 text-2xl sm:text-3xl font-bold">with Mr. Agus</span>
+            </h1>
+
+            <p className="text-lg text-gray-600 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+              Kelas digital bahasa Inggris: materi, tugas, absensi, dan nilai — semuanya dalam satu aplikasi.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-10">
+              <Link href="/register">
+                <Button size="lg" className="w-full sm:w-auto h-13 px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-500/25 text-white font-bold text-base gap-2">
+                  Get Started <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto h-13 px-8 border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-base">
+                  Sign In
+                </Button>
+              </Link>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto lg:mx-0">
+              {[
+                { value: String(allClasses.length || 8), label: "Classes" },
+                { value: String(totalStudents || "—"), label: "Students" },
+                { value: "100%", label: "Digital" },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                  <p className="text-2xl font-black text-gray-900">{stat.value}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-black mb-6 leading-[1.05] tracking-tight text-gray-900">
-            Welcome to
-            <br />
-            <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 bg-clip-text text-transparent">
-              My Classroom
-            </span>
-            <br />
-            <span className="text-gray-500 text-4xl sm:text-5xl font-bold">with Mr. Agus</span>
-          </h1>
+          {/* Right: branding panel — matches the auth pages */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white rounded-3xl p-8 shadow-2xl shadow-emerald-500/20">
+            <div className="absolute -top-20 -right-20 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-12 w-72 h-72 bg-teal-400/20 rounded-full blur-3xl pointer-events-none" />
 
-          <p className="text-lg text-gray-600 mb-10 max-w-xl mx-auto leading-relaxed">
-            Your digital English classroom. Access materials, submit assignments, and track your progress — all in one place.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-16">
-            <Link href="/register">
-              <Button size="lg" className="w-full sm:w-auto h-13 px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-500/25 text-white font-bold text-base gap-2">
-                Get Started <ArrowRight className="w-5 h-5" />
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto h-13 px-8 border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-base">
-                Sign In
-              </Button>
-            </Link>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
-            {[
-              { value: String(allClasses.length || 8), label: "Classes" },
-              { value: String(totalStudents || "—"), label: "Students" },
-              { value: "100%", label: "Digital" },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-                <p className="text-2xl font-black text-gray-900">{stat.value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-7">
+                <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-xl bg-white/95 p-1 flex-shrink-0">
+                  <Image src="/icons/icon-192.png" alt="My Classroom" width={48} height={48} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <p className="font-black leading-tight">My Classroom</p>
+                  <p className="text-xs text-emerald-100">English Learning Management System</p>
+                </div>
               </div>
-            ))}
+
+              <ul className="space-y-3.5">
+                {[
+                  "Asesmen & tugas online dengan anti-cheat",
+                  "Absensi cepat dengan verifikasi lokasi sekolah",
+                  "Nilai & rekap kehadiran transparan",
+                ].map((text) => (
+                  <li key={text} className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-200 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-emerald-50">{text}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-8 pt-6 border-t border-white/15">
+                <Link href="/register" className="flex items-center justify-between gap-3 bg-white/10 hover:bg-white/20 transition-colors rounded-2xl px-4 py-3">
+                  <span className="text-sm font-semibold">Daftar dengan kode kelas dari gurumu</span>
+                  <ArrowRight className="w-4 h-4 flex-shrink-0" />
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
