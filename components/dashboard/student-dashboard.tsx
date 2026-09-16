@@ -14,7 +14,8 @@ import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
 import { Flame } from "lucide-react";
-import type { User, Assignment, Submission, Announcement } from "@/types";
+import type { User, Assignment, Submission, Announcement, Attendance } from "@/types";
+import { AttendanceHeatmap } from "@/components/attendance/attendance-heatmap";
 
 interface StudentDashboardProps {
   user: User;
@@ -25,6 +26,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const [recentGrades, setRecentGrades] = useState<Submission[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [attendanceRate, setAttendanceRate] = useState<number>(0);
+  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(user);
   const [loginStreak, setLoginStreak] = useState<number>(user.login_streak || 0);
@@ -44,17 +46,19 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       .catch(() => {});
 
     const fetchData = async () => {
-      const [assignmentsRes, gradesRes, announcementsRes, attendanceRes, userRes] = await Promise.all([
+      const [assignmentsRes, gradesRes, announcementsRes, attendanceRes, recordsRes, userRes] = await Promise.all([
         supabase.from("assignments").select("*, class:classes(class_name)").eq("class_id", user.class_id || "").gte("deadline", new Date().toISOString()).order("deadline", { ascending: true }).limit(4),
         supabase.from("submissions").select("*, assignment:assignments(title)").eq("student_id", user.id).not("score", "is", null).order("submitted_at", { ascending: false }).limit(4),
         supabase.from("announcements").select("*").order("created_at", { ascending: false }).limit(3),
         supabase.from("attendance").select("status").eq("student_id", user.id),
+        supabase.from("attendance").select("date, status").eq("student_id", user.id).gte("date", new Date(Date.now() - 140 * 86400000).toISOString().split("T")[0]).order("date", { ascending: false }),
         supabase.from("users").select("points, level, badges").eq("id", user.id).single(),
       ]);
       setUpcomingAssignments(assignmentsRes.data || []);
       setRecentGrades(gradesRes.data || []);
       setAnnouncements(announcementsRes.data || []);
       if (userRes.data) setUserData({ ...user, ...userRes.data });
+      setAttendanceRecords((recordsRes.data as Attendance[]) || []);
       const attendance = attendanceRes.data || [];
       if (attendance.length > 0) {
         const present = attendance.filter((a) => a.status === "present" || a.status === "late").length;
@@ -103,12 +107,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Hello, {user.name.split(" ")[0]}! 👋</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-        </p>
-      </div>
+      {/* Greeting is rendered by WelcomeHeader in DashboardLayout */}
 
       {/* Streak Card — replaced XP/Level/Badges, focused on diligence */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-500 to-amber-500 text-white overflow-hidden">
@@ -166,6 +165,24 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
           );
         })}
       </div>
+
+      {/* Attendance heatmap — GitHub style */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-center justify-between mb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-emerald-600" />
+              Riwayat Kehadiran
+            </CardTitle>
+            <Link href="/attendance"><Button variant="ghost" size="sm" className="gap-1 text-xs">Detail <ArrowRight className="w-3 h-3" /></Button></Link>
+          </div>
+          {loading ? (
+            <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+          ) : (
+            <AttendanceHeatmap records={attendanceRecords} />
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-0 shadow-sm">

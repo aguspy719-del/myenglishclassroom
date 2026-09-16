@@ -26,7 +26,7 @@ const teacherNavItems = [
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
   { href: "/rapor", label: "Rapor Export", icon: FileSpreadsheet },
-  { href: "/quiz", label: "Assessment", icon: FileText },
+  { href: "/assessment", label: "Assessment", icon: FileText },
   { href: "/teaching-aids", label: "Teaching Aids", icon: BookMarked },
 ];
 
@@ -35,7 +35,7 @@ const studentNavItems = [
   { href: "/classes", label: "My Classes", icon: GraduationCap },
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "My Grades", icon: Star },
-  { href: "/quiz", label: "Assessment", icon: FileText },
+  { href: "/assessment", label: "Assessment", icon: FileText },
 ];
 
 // Bottom nav items (most used, max 5)
@@ -44,14 +44,14 @@ const teacherBottomNav = [
   { href: "/classes", label: "Classes", icon: Users },
   { href: "/attendance", label: "Attend", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
-  { href: "/quiz", label: "Quiz", icon: FileText },
+  { href: "/assessment", label: "Assessment", icon: FileText },
 ];
 
 const studentBottomNav = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/classes", label: "Classes", icon: GraduationCap },
   { href: "/grades", label: "Grades", icon: Star },
-  { href: "/quiz", label: "Quiz", icon: FileText },
+  { href: "/assessment", label: "Assessment", icon: FileText },
   { href: "/attendance", label: "Attend", icon: UserCheck },
 ];
 

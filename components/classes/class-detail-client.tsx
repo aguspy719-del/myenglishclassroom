@@ -411,28 +411,28 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
       {/* Tabs — horizontal scroll on mobile so labels never wrap/overlap */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
-        <TabsList className="w-full flex h-auto p-1 overflow-x-auto scrollbar-hide sm:overflow-visible">
-          <TabsTrigger value="overview" className="text-xs flex-shrink-0 px-3 sm:px-3">Overview</TabsTrigger>
-          <TabsTrigger value="materials" className="text-xs flex-shrink-0">
+        <TabsList className="w-full flex h-auto p-1">
+          <TabsTrigger value="overview" className="text-xs px-3">Overview</TabsTrigger>
+          <TabsTrigger value="materials" className="text-xs">
             Materials
             {activeMaterials.length > 0 && <span className="ml-1 text-[10px] opacity-70">({activeMaterials.length})</span>}
           </TabsTrigger>
-          <TabsTrigger value="assignments" className="text-xs flex-shrink-0">
+          <TabsTrigger value="assignments" className="text-xs">
             Assignments
             {(activeAssignments.length + overdueAssignments.length) > 0 && (
               <span className="ml-1 text-[10px] opacity-70">({activeAssignments.length + overdueAssignments.length})</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="assessments" className="text-xs flex-shrink-0">
+          <TabsTrigger value="assessments" className="text-xs">
             Assessment
             {activeQuizzes.length > 0 && <span className="ml-1 text-[10px] opacity-70">({activeQuizzes.length})</span>}
           </TabsTrigger>
           {user.role === "teacher" && (
-            <TabsTrigger value="grades" className="text-xs flex-shrink-0">
+            <TabsTrigger value="grades" className="text-xs">
               Grades
             </TabsTrigger>
           )}
-          <TabsTrigger value="students" className="text-xs flex-shrink-0">
+          <TabsTrigger value="students" className="text-xs">
             Students
             {students.length > 0 && <span className="ml-1 text-[10px] opacity-70">({students.length})</span>}
           </TabsTrigger>
