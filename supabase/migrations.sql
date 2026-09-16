@@ -194,3 +194,10 @@ ALTER TABLE public.quizzes
 CREATE INDEX IF NOT EXISTS idx_materials_archived ON public.materials(class_id, is_archived);
 CREATE INDEX IF NOT EXISTS idx_assignments_archived ON public.assignments(class_id, is_archived);
 CREATE INDEX IF NOT EXISTS idx_quizzes_archived ON public.quizzes(class_id, is_archived);
+
+-- ============================================================
+-- Profile avatar (photo stored in Cloudinary, URL saved here)
+-- Run this in Supabase SQL Editor if the column doesn't exist yet
+-- ============================================================
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS avatar_url TEXT;

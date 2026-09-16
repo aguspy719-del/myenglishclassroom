@@ -14,12 +14,12 @@ interface WelcomeHeaderProps {
   onMenuClick?: () => void;
 }
 
-function getGreeting(): { text: string; emoji: string } {
+function getGreeting(): string {
   const h = new Date().getHours();
-  if (h >= 4 && h < 11) return { text: "Selamat pagi", emoji: "🌅" };
-  if (h >= 11 && h < 15) return { text: "Selamat siang", emoji: "☀️" };
-  if (h >= 15 && h < 18) return { text: "Selamat sore", emoji: "🌤️" };
-  return { text: "Selamat malam", emoji: "🌙" };
+  if (h >= 4 && h < 11) return "Selamat pagi";
+  if (h >= 11 && h < 15) return "Selamat siang";
+  if (h >= 15 && h < 18) return "Selamat sore";
+  return "Selamat malam";
 }
 
 /**
@@ -29,7 +29,7 @@ function getGreeting(): { text: string; emoji: string } {
  */
 export function WelcomeHeader({ user, onMenuClick }: WelcomeHeaderProps) {
   const { theme, setTheme } = useTheme();
-  const greeting = getGreeting();
+  const greetingText = getGreeting();
   const firstName = user.name.split(" ")[0];
 
   return (
@@ -55,10 +55,10 @@ export function WelcomeHeader({ user, onMenuClick }: WelcomeHeaderProps) {
           </Avatar>
           <div className="min-w-0">
             <p className="text-sm text-gray-500 dark:text-gray-400 leading-tight">
-              {greeting.emoji} {greeting.text},
+              {greetingText},
             </p>
             <p className="text-lg font-bold text-gray-900 dark:text-white leading-tight truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-              {firstName} 👋
+              {firstName}
             </p>
           </div>
         </Link>

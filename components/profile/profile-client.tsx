@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User as UserIcon, Mail, Shield, Loader2, Save, Bell, BellOff, Globe, Flame } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { User as UserIcon, Mail, Shield, Loader2, Save, Bell, BellOff, Globe, Flame, Camera, Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +29,9 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [subscribing, setSubscribing] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialUser.avatar_url || null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const router = useRouter();
 
   // Teacher landing profile
   const [teacherProfile, setTeacherProfile] = useState({
@@ -93,6 +98,51 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
     if (error) toast.error("Failed to save name");
     else { toast.success("Name updated!"); setUser({ ...user, name }); }
     setSaving(false);
+  };
+
+  // ── Avatar: upload ke Cloudinary via API (file fisik TIDAK di Supabase) ──
+  const handleAvatarSelect = async (file: File | undefined) => {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Format harus JPG, PNG, atau WebP");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ukuran maksimal 5MB");
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/profile/avatar", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal mengupload foto");
+      setAvatarUrl(data.avatar_url);
+      setUser((u) => ({ ...u, avatar_url: data.avatar_url }));
+      toast.success("Foto profil diperbarui!");
+      router.refresh(); // refresh layout agar avatar di header ikut berubah
+    } catch (e: any) {
+      toast.error(e.message || "Gagal mengupload foto");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setUploadingAvatar(true);
+    try {
+      const res = await fetch("/api/profile/avatar", { method: "DELETE" });
+      if (!res.ok) throw new Error("Gagal menghapus foto");
+      setAvatarUrl(null);
+      setUser((u) => ({ ...u, avatar_url: undefined }));
+      toast.success("Foto profil dihapus");
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e.message || "Gagal menghapus foto");
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const handleSaveTeacherProfile = async () => {
@@ -170,24 +220,59 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
 
       {/* Profile Hero Card */}
       <Card className="border-0 shadow-sm overflow-hidden">
-        {/* Banner polos */}
-        <div className="h-24 bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600" />
+        {/* Banner */}
+        <div className="h-28 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700" />
         {/* Content */}
-        <CardContent className="pt-0 pb-5 px-5">
-          {/* Avatar overlap banner */}
-          <div className="-mt-10 mb-3">
-            <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-xl">
-              <span className="text-white text-2xl font-bold">{getInitials(user.name)}</span>
+        <CardContent className="pt-0 pb-6 px-5">
+          {/* Avatar with upload & remove */}
+          <div className="-mt-12 mb-3 flex flex-col items-center">
+            <div className="relative">
+              <Avatar className="w-24 h-24 border-4 border-white dark:border-gray-900 shadow-xl">
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name} className="object-cover" />}
+                <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-2xl font-bold">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+              {/* Upload / replace photo */}
+              <label
+                className={`absolute bottom-0 right-0 w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-900 cursor-pointer transition-colors ${uploadingAvatar ? "opacity-60 pointer-events-none" : ""}`}
+                title={avatarUrl ? "Ganti foto" : "Tambah foto"}
+              >
+                {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={uploadingAvatar}
+                  onChange={(e) => {
+                    handleAvatarSelect(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {/* Remove photo (only when one exists) */}
+              {avatarUrl && !uploadingAvatar && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  title="Hapus foto"
+                  className="absolute bottom-0 left-0 w-8 h-8 rounded-full bg-white dark:bg-gray-800 text-red-500 hover:text-red-600 flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-900 cursor-pointer transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
-          {/* Nama, email, badge */}
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{user.email}</p>
-          <Badge className={`mt-2 ${user.role === "teacher"
-            ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"}`}>
-            {user.role === "teacher" ? "👨‍🏫 Teacher" : "👨‍🎓 Student"}
-          </Badge>
+          {/* Nama, email, badge — centered, professional */}
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{user.email}</p>
+            <Badge className={`mt-2 ${user.role === "teacher"
+              ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"}`}>
+              {user.role === "teacher" ? "Teacher" : "Student"}
+            </Badge>
+          </div>
 
           {/* Login streak — students only (replaces XP/Level/Badges) */}
           {user.role === "student" && (
@@ -197,8 +282,8 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
                   <Flame className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold">🔥 Streak login {loginStreak} hari</p>
-                  <p className="text-xs text-orange-100">+10 XP per day, up to 50 XP. Keep it alive!</p>
+                  <p className="font-bold">Streak login {loginStreak} hari</p>
+                  <p className="text-xs text-orange-100">Masuk tiap hari agar streak tetap hidup</p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 mt-3">
@@ -210,7 +295,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
                 ))}
               </div>
               <p className="text-[11px] text-orange-100 mt-2">
-                {loginStreak >= 7 ? "Streak 7 hari tercapai — lanjut ke 30! 🔥" : `${7 - loginStreak} hari lagi ke streak 7 hari`}
+                {loginStreak >= 7 ? "Streak 7 hari tercapai — lanjut ke 30!" : `${7 - loginStreak} hari lagi ke streak 7 hari`}
               </p>
             </div>
           )}
