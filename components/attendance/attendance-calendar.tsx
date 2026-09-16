@@ -54,6 +54,8 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
     return m;
   }, [records]);
 
+  // Use the same UTC-date convention as the API & dashboard so the
+  // "today" ring always matches where attendance records actually land.
   const todayIso = now.toISOString().split("T")[0];
 
   const cells = useMemo(() => {
@@ -116,6 +118,13 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
     return "bg-gray-100/80 dark:bg-gray-800/60 text-gray-400 dark:text-gray-500";
   };
 
+  const legendCounts = [
+    { label: "Presensi", dot: "bg-emerald-500", count: mPresent },
+    { label: "Telat", dot: "bg-amber-400", count: mLate },
+    { label: "Izin", dot: "bg-sky-400", count: mExcused },
+    { label: "Alpha", dot: "bg-red-400", count: mAbsent },
+  ];
+
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
@@ -172,20 +181,14 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
           </button>
         </div>
 
-        {/* Legend */}
+        {/* Legend with per-status counts for the visible month */}
         <div className="rounded-2xl bg-gray-50 dark:bg-gray-800/60 px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-600 dark:text-gray-300">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" /> Presensi
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" /> Telat
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 flex-shrink-0" /> Izin
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-300 flex-shrink-0" /> Alpha
-          </span>
+          {legendCounts.map((l) => (
+            <span key={l.label} className="flex items-center gap-1.5">
+              <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", l.dot)} /> {l.label}
+              {l.count > 0 && <span className="font-bold text-gray-800 dark:text-gray-100">{l.count}</span>}
+            </span>
+          ))}
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" /> Tidak presensi
           </span>
@@ -214,7 +217,7 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2 select-none">
             {cells.map((cell, i) =>
               cell === null ? (
                 <div key={`empty-${i}`} />
@@ -231,7 +234,7 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
                       : cell.isFuture ? "" : " — Tidak presensi"
                   }`}
                   className={cn(
-                    "h-14 sm:h-16 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors",
+                    "h-14 sm:h-16 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all active:scale-90",
                     cellStyle(cell.record, cell.isFuture, cell.isToday),
                     cell.isToday && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
                   )}
@@ -263,7 +266,7 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
               <p className="text-base sm:text-lg font-bold text-red-500">{mAbsent}</p>
               <p className="text-[10px] text-gray-500 dark:text-gray-400">Alpha</p>
             </div>
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-2 text-center">
+            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 p-2 text-center">
               <p className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400">{mRate}%</p>
               <p className="text-[10px] text-gray-500 dark:text-gray-400">Kehadiran</p>
             </div>
