@@ -169,16 +169,6 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       </aside>
 
       {/* Mobile Bottom Navigation */}
-      {/* Mini logo — floats just above the nav bar so the brand stays visible on mobile */}
-      <Link
-        href="/dashboard"
-        prefetch={true}
-        aria-label="My Classroom"
-        className="fixed z-50 lg:hidden right-3 w-9 h-9 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden"
-        style={{ bottom: "calc(72px + env(safe-area-inset-bottom))" }}
-      >
-        <Logo size={36} className="w-full h-full" />
-      </Link>
       <nav className="bottom-nav safe-area-bottom">
         {bottomNavItems.map((item) => {
           const Icon = item.icon;

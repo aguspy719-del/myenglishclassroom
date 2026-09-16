@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
-import { BADGES, POINTS_PER_LEVEL } from "@/lib/gamification";
 import { Flame } from "lucide-react";
 import type { User, Assignment, Submission, Announcement } from "@/types";
 
@@ -101,9 +100,6 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
   const points = userData?.points || 0;
   const level = userData?.level || 1;
-  const badges: string[] = userData?.badges || [];
-  const pointsInLevel = points % POINTS_PER_LEVEL;
-  const progressPercent = Math.round((pointsInLevel / POINTS_PER_LEVEL) * 100);
 
   return (
     <div className="space-y-6">
@@ -114,63 +110,45 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         </p>
       </div>
 
-      {/* XP Card */}
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white overflow-hidden">
+      {/* Streak Card — replaced XP/Level/Badges, focused on diligence */}
+      <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-500 to-amber-500 text-white overflow-hidden">
         <CardContent className="pt-5 pb-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg">
-                <span className="text-2xl font-bold">{level}</span>
+                <Flame className="w-6 h-6" />
               </div>
               <div>
-                <p className="font-bold text-lg">Level {level}</p>
-                <p className="text-emerald-100 text-sm">{points} XP total</p>
+                <p className="font-bold text-lg">🔥 {loginStreak} day{loginStreak === 1 ? "" : "s"} streak!</p>
+                <p className="text-orange-100 text-sm">+10 XP per day, up to 50 XP</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-semibold text-yellow-300">{POINTS_PER_LEVEL - pointsInLevel} XP</p>
-              <p className="text-xs text-emerald-100">to Level {level + 1}</p>
+              <p className="text-sm font-semibold text-yellow-300">{loginStreak >= 7 ? "7+" : 7 - loginStreak}</p>
+              <p className="text-xs text-orange-100">days to badge</p>
             </div>
           </div>
-          <Progress value={progressPercent} className="h-2.5 bg-white/20 [&>div]:bg-yellow-400" />
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-emerald-100">{pointsInLevel} / {POINTS_PER_LEVEL} XP</p>
-            <div className="flex gap-1">
-              {BADGES.slice(0, 4).map((badge) => (
-                <span key={badge.id} className={`text-lg ${badges.includes(badge.id) ? "" : "opacity-30 grayscale"}`} title={badge.name}>{badge.icon}</span>
-              ))}
-            </div>
+          <div className="flex items-center gap-1.5 mt-4">
+            {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+              <div
+                key={day}
+                className={`h-2 flex-1 rounded-full ${day <= Math.min(loginStreak, 7) ? "bg-white" : "bg-white/25"}`}
+              />
+            ))}
           </div>
+          <p className="text-xs text-orange-100 mt-2">
+            Log in every day — keep the streak alive!
+          </p>
         </CardContent>
       </Card>
 
-      {/* Streak card — diligence reward */}
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-500 to-amber-500 text-white overflow-hidden">
-        <CardContent className="pt-4 pb-4 flex items-center gap-4">
-          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-            <Flame className="w-6 h-6" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold">🔥 {loginStreak} day{loginStreak === 1 ? "" : "s"} streak!</p>
-            <p className="text-orange-100 text-xs mt-0.5">
-              Come back every day to earn up to 50 XP. Diligence pays off!
-            </p>
-          </div>
-          <Link href="/quiz" className="flex-shrink-0">
-            <Button size="sm" className="bg-white text-orange-600 hover:bg-orange-50 rounded-xl font-bold">
-              Practice
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
-
-      {/* Stats */}
+      {/* Stats — streak first, then the essentials */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
+          { label: "Login Streak", value: `${loginStreak}d`, icon: Flame, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950", href: "/profile" },
           { label: "Active Tasks", value: loading ? "..." : upcomingAssignments.length, icon: ClipboardList, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", href: "/classes" },
           { label: "Latest Grade", value: loading ? "..." : recentGrades.length > 0 ? `${recentGrades[0].score}` : "-", icon: Star, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950", href: "/grades" },
-          { label: "Attendance", value: loading ? "..." : `${attendanceRate}%`, icon: UserCheck, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", href: "/attendance" },
-          { label: "My Classes", value: "View", icon: BookOpen, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/classes" },
+          { label: "Attendance", value: loading ? "..." : `${attendanceRate}%`, icon: UserCheck, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/attendance" },
         ].map((stat) => {
           const Icon = stat.icon;
           return (

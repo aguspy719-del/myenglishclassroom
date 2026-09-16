@@ -398,20 +398,20 @@ export function ClassesClient({ user }: ClassesClientProps) {
       {/* Tabs — Active / Archived (teacher only) */}
       {user.role === "teacher" ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="active" className="gap-2">
-              Active
+          <TabsList className="w-full sm:w-auto flex h-auto p-1">
+            <TabsTrigger value="active" className="gap-1.5 flex-1 sm:flex-none min-w-0">
+              <span className="truncate">Active</span>
               {activeClasses.length > 0 && (
-                <span className="bg-emerald-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                <span className="bg-emerald-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold flex-shrink-0">
                   {activeClasses.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="archived" className="gap-2">
-              <Archive className="w-3.5 h-3.5" />
-              Archived
+            <TabsTrigger value="archived" className="gap-1.5 flex-1 sm:flex-none min-w-0">
+              <Archive className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">Archived</span>
               {archivedClasses.length > 0 && (
-                <span className="bg-gray-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                <span className="bg-gray-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold flex-shrink-0">
                   {archivedClasses.length}
                 </span>
               )}

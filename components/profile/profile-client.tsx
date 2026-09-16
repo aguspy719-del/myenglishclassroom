@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User as UserIcon, Mail, Shield, Loader2, Save, Star, Trophy, Bell, BellOff, Globe } from "lucide-react";
+import { User as UserIcon, Mail, Shield, Loader2, Save, Bell, BellOff, Globe, Flame } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { getInitials, formatDate } from "@/lib/utils";
-import { BADGES, POINTS_PER_LEVEL } from "@/lib/gamification";
 import { subscribeToPush, unsubscribeFromPush } from "@/lib/push-notifications";
 import type { User } from "@/types";
 
@@ -84,13 +83,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
     }
   };
 
-  const points = (user as any).points || 0;
-  const level = (user as any).level || 1;
-  const badges: string[] = (user as any).badges || [];
   const loginStreak = (user as any).login_streak || 0;
-  const pointsInCurrentLevel = points % POINTS_PER_LEVEL;
-  const progressPercent = Math.round((pointsInCurrentLevel / POINTS_PER_LEVEL) * 100);
-  const pointsToNextLevel = POINTS_PER_LEVEL - pointsInCurrentLevel;
 
   const handleSaveName = async () => {
     if (!name.trim()) { toast.error("Name cannot be empty"); return; }
@@ -196,99 +189,33 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
             {user.role === "teacher" ? "👨‍🏫 Teacher" : "👨‍🎓 Student"}
           </Badge>
 
-          {/* Gamification stats — students only */}
+          {/* Login streak — students only (replaces XP/Level/Badges) */}
           {user.role === "student" && (
-            <div className="space-y-4 mt-4">
-              {/* Level & XP */}
-              <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 rounded-2xl">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
-                      <span className="text-white font-bold text-sm">{level}</span>
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 dark:text-white">Level {level}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{points} XP total</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{pointsToNextLevel} XP</p>
-                    <p className="text-xs text-gray-500">to Level {level + 1}</p>
-                  </div>
+            <div className="mt-4 p-4 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <Flame className="w-5 h-5" />
                 </div>
-                <Progress value={progressPercent} className="h-3 rounded-full" />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 text-center">
-                  {pointsInCurrentLevel} / {POINTS_PER_LEVEL} XP
-                </p>
-                <div className="mt-3 flex items-center gap-2 p-3 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl text-white">
-                  <span className="text-xl">🔥</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold">{loginStreak} day{loginStreak === 1 ? "" : "s"} login streak</p>
-                    <p className="text-[11px] text-orange-100">Log in daily for up to 50 XP!</p>
-                  </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold">🔥 {loginStreak} day{loginStreak === 1 ? "" : "s"} login streak</p>
+                  <p className="text-xs text-orange-100">+10 XP per day, up to 50 XP. Keep it alive!</p>
                 </div>
               </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: "Level", value: level, icon: "⚡", color: "bg-yellow-50 dark:bg-yellow-950" },
-                  { label: "Total XP", value: points, icon: "🎯", color: "bg-emerald-50 dark:bg-emerald-950" },
-                  { label: "Badges", value: badges.length, icon: "🏅", color: "bg-teal-50 dark:bg-teal-950" },
-                ].map((stat) => (
-                  <div key={stat.label} className={`${stat.color} rounded-2xl p-4 text-center`}>
-                    <p className="text-2xl">{stat.icon}</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</p>
-                  </div>
+              <div className="flex items-center gap-1.5 mt-3">
+                {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+                  <div
+                    key={day}
+                    className={`h-2 flex-1 rounded-full ${day <= Math.min(loginStreak, 7) ? "bg-white" : "bg-white/25"}`}
+                  />
                 ))}
               </div>
+              <p className="text-[11px] text-orange-100 mt-2">
+                {loginStreak >= 7 ? "7-day badge earned — now aim for 30! 🔥" : `${7 - loginStreak} more day${7 - loginStreak === 1 ? "" : "s"} to the 7-day badge`}
+              </p>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Badges — students only */}
-      {user.role === "student" && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              Badges & Achievements
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {BADGES.map((badge) => {
-                const earned = badges.includes(badge.id);
-                return (
-                  <div
-                    key={badge.id}
-                    className={`relative p-3 rounded-2xl text-center transition-all ${
-                      earned
-                        ? `bg-gradient-to-br ${badge.color} shadow-md`
-                        : "bg-gray-100 dark:bg-gray-800 opacity-40 grayscale"
-                    }`}
-                  >
-                    <p className="text-3xl mb-1">{badge.icon}</p>
-                    <p className={`text-xs font-bold ${earned ? "text-white" : "text-gray-500"}`}>
-                      {badge.name}
-                    </p>
-                    <p className={`text-xs mt-0.5 ${earned ? "text-white/80" : "text-gray-400"} line-clamp-2`}>
-                      {badge.description}
-                    </p>
-                    {earned && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs">✓</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Edit Name */}
       <Card className="border-0 shadow-sm">

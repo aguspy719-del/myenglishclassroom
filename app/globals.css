@@ -249,11 +249,27 @@ html {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background-color: rgb(255 255 255); /* solid — dark mode handled via .dark override */
+  background-color: rgb(255 255 255); /* always white — matches the native splash, never dark */
 }
 
 .dark .pwa-splash {
-  background-color: rgb(17 24 39);
+  background-color: rgb(255 255 255);
+}
+
+.pwa-splash .pwa-splash-wordmark p {
+  color: rgb(17 24 39); /* dark text on the always-white splash */
+}
+
+.dark .pwa-splash .pwa-splash-wordmark p {
+  color: rgb(17 24 39);
+}
+
+.pwa-splash .pwa-splash-wordmark p + p {
+  color: rgb(156 163 175); /* gray-400 subtitle */
+}
+
+.dark .pwa-splash .pwa-splash-wordmark p + p {
+  color: rgb(156 163 175);
 }
 
 .pwa-splash[data-leaving="true"] {
