@@ -87,6 +87,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
   const points = (user as any).points || 0;
   const level = (user as any).level || 1;
   const badges: string[] = (user as any).badges || [];
+  const loginStreak = (user as any).login_streak || 0;
   const pointsInCurrentLevel = points % POINTS_PER_LEVEL;
   const progressPercent = Math.round((pointsInCurrentLevel / POINTS_PER_LEVEL) * 100);
   const pointsToNextLevel = POINTS_PER_LEVEL - pointsInCurrentLevel;
@@ -177,12 +178,12 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
       {/* Profile Hero Card */}
       <Card className="border-0 shadow-sm overflow-hidden">
         {/* Banner polos */}
-        <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+        <div className="h-24 bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600" />
         {/* Content */}
         <CardContent className="pt-0 pb-5 px-5">
           {/* Avatar overlap banner */}
           <div className="-mt-10 mb-3">
-            <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl">
+            <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-xl">
               <span className="text-white text-2xl font-bold">{getInitials(user.name)}</span>
             </div>
           </div>
@@ -191,7 +192,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{user.email}</p>
           <Badge className={`mt-2 ${user.role === "teacher"
             ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-            : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"}`}>
+            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"}`}>
             {user.role === "teacher" ? "👨‍🏫 Teacher" : "👨‍🎓 Student"}
           </Badge>
 
@@ -199,7 +200,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
           {user.role === "student" && (
             <div className="space-y-4 mt-4">
               {/* Level & XP */}
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-2xl">
+              <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
@@ -211,7 +212,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{pointsToNextLevel} XP</p>
+                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{pointsToNextLevel} XP</p>
                     <p className="text-xs text-gray-500">to Level {level + 1}</p>
                   </div>
                 </div>
@@ -219,14 +220,21 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 text-center">
                   {pointsInCurrentLevel} / {POINTS_PER_LEVEL} XP
                 </p>
+                <div className="mt-3 flex items-center gap-2 p-3 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl text-white">
+                  <span className="text-xl">🔥</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold">{loginStreak} day{loginStreak === 1 ? "" : "s"} login streak</p>
+                    <p className="text-[11px] text-orange-100">Log in daily for up to 50 XP!</p>
+                  </div>
+                </div>
               </div>
 
               {/* Stats row */}
               <div className="grid grid-cols-3 gap-3">
                 {[
                   { label: "Level", value: level, icon: "⚡", color: "bg-yellow-50 dark:bg-yellow-950" },
-                  { label: "Total XP", value: points, icon: "🎯", color: "bg-blue-50 dark:bg-blue-950" },
-                  { label: "Badges", value: badges.length, icon: "🏅", color: "bg-purple-50 dark:bg-purple-950" },
+                  { label: "Total XP", value: points, icon: "🎯", color: "bg-emerald-50 dark:bg-emerald-950" },
+                  { label: "Badges", value: badges.length, icon: "🏅", color: "bg-teal-50 dark:bg-teal-950" },
                 ].map((stat) => (
                   <div key={stat.label} className={`${stat.color} rounded-2xl p-4 text-center`}>
                     <p className="text-2xl">{stat.icon}</p>

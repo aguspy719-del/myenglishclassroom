@@ -582,12 +582,12 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       {/* ══ TEACHER VIEW ══ */}
       {user.role === "teacher" && (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-2 h-auto">
-            <TabsTrigger value="records" className="gap-2 text-sm">
-              <UserCheck className="w-4 h-4" />Records
+          <TabsList className="w-full flex h-auto">
+            <TabsTrigger value="records" className="gap-2 text-xs sm:text-sm flex-1 min-w-0">
+              <UserCheck className="w-4 h-4 flex-shrink-0" />Records
             </TabsTrigger>
-            <TabsTrigger value="rekap" className="gap-2 text-sm">
-              <TableProperties className="w-4 h-4" />Rekap Kehadiran
+            <TabsTrigger value="rekap" className="gap-2 text-xs sm:text-sm flex-1 min-w-0">
+              <TableProperties className="w-4 h-4 flex-shrink-0" /><span className="truncate">Rekap Kehadiran</span>
             </TabsTrigger>
           </TabsList>
 

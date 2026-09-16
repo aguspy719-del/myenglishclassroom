@@ -158,6 +158,15 @@ CREATE POLICY "Users can manage own push subscriptions" ON public.push_subscript
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON public.push_subscriptions(user_id);
 
 -- ============================================================
+-- Login streak gamification (reward rajin masuk harian)
+-- ============================================================
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS login_streak INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS last_login_date DATE;
+
+CREATE INDEX IF NOT EXISTS idx_users_class_role ON public.users(class_id, role);
+
+-- ============================================================
 -- Class Code for student join via code
 -- ============================================================
 ALTER TABLE public.classes

@@ -281,9 +281,9 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
   const bannerColor = BANNER_COLORS[classData.class_name.charCodeAt(0) % BANNER_COLORS.length];
 
   const typeColors: Record<string, string> = {
-    formatif: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+    formatif: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
     sumatif_tengah: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-    sumatif_akhir: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+    sumatif_akhir: "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300",
   };
   const typeLabels: Record<string, string> = {
     formatif: "Formatif",
@@ -409,30 +409,30 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs — horizontal scroll on mobile so labels never wrap/overlap */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
-        <TabsList className={`w-full grid h-auto ${user.role === "teacher" ? "grid-cols-6" : "grid-cols-5"}`}>
-          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-          <TabsTrigger value="materials" className="text-xs">
+        <TabsList className="w-full flex h-auto p-1 overflow-x-auto scrollbar-hide sm:overflow-visible">
+          <TabsTrigger value="overview" className="text-xs flex-shrink-0 px-3 sm:px-3">Overview</TabsTrigger>
+          <TabsTrigger value="materials" className="text-xs flex-shrink-0">
             Materials
             {activeMaterials.length > 0 && <span className="ml-1 text-[10px] opacity-70">({activeMaterials.length})</span>}
           </TabsTrigger>
-          <TabsTrigger value="assignments" className="text-xs">
+          <TabsTrigger value="assignments" className="text-xs flex-shrink-0">
             Assignments
             {(activeAssignments.length + overdueAssignments.length) > 0 && (
               <span className="ml-1 text-[10px] opacity-70">({activeAssignments.length + overdueAssignments.length})</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="assessments" className="text-xs">
+          <TabsTrigger value="assessments" className="text-xs flex-shrink-0">
             Assessment
             {activeQuizzes.length > 0 && <span className="ml-1 text-[10px] opacity-70">({activeQuizzes.length})</span>}
           </TabsTrigger>
           {user.role === "teacher" && (
-            <TabsTrigger value="grades" className="text-xs">
+            <TabsTrigger value="grades" className="text-xs flex-shrink-0">
               Grades
             </TabsTrigger>
           )}
-          <TabsTrigger value="students" className="text-xs">
+          <TabsTrigger value="students" className="text-xs flex-shrink-0">
             Students
             {students.length > 0 && <span className="ml-1 text-[10px] opacity-70">({students.length})</span>}
           </TabsTrigger>
@@ -445,7 +445,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4 text-blue-600" />
+                  <ClipboardList className="w-4 h-4 text-emerald-600" />
                   Active Assignments ({activeAssignments.length})
                 </CardTitle>
                 {user.role === "teacher" && (
@@ -474,8 +474,8 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                     return (
                       <Link key={a.id} href={`/assignments/${a.id}`}>
                         <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
-                          <div className="w-9 h-9 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <ClipboardList className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-900 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <ClipboardList className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{a.title}</p>
@@ -549,7 +549,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                   {activeMaterials.length > 5 && (
                     <button
                       onClick={() => setActiveTab("materials")}
-                      className="w-full text-center text-xs text-blue-600 dark:text-blue-400 py-2 hover:underline"
+                      className="w-full text-center text-xs text-emerald-600 dark:text-emerald-400 py-2 hover:underline"
                     >
                       View all {activeMaterials.length} materials →
                     </button>
@@ -564,12 +564,12 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <FileQuestion className="w-4 h-4 text-purple-600" />
+                  <FileQuestion className="w-4 h-4 text-teal-600" />
                   Assessments ({activeQuizzes.length})
                 </CardTitle>
                 <button
                   onClick={() => setActiveTab("assessments")}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
                 >
                   View all →
                 </button>
@@ -599,8 +599,8 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                     return (
                       <Link key={q.id} href={`/quiz/${q.id}`}>
                         <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                          <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <FileQuestion className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          <div className="w-8 h-8 bg-teal-100 dark:bg-teal-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FileQuestion className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{q.title}</p>
@@ -672,12 +672,12 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                 onClick={() => setMaterialView("active")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                   materialView === "active"
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
                     : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
               >
                 Active
-                <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                <span className="bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-full px-1.5 py-0.5 text-[10px]">
                   {activeMaterials.filter((m) => m.title.toLowerCase().includes(search.toLowerCase())).length}
                 </span>
               </button>
@@ -808,12 +808,12 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                 onClick={() => setAssignmentView("active")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                   assignmentView === "active"
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
                     : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
               >
                 Active
-                <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                <span className="bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-full px-1.5 py-0.5 text-[10px]">
                   {activeAssignments.filter((a) => a.title.toLowerCase().includes(search.toLowerCase())).length}
                 </span>
               </button>
@@ -893,8 +893,8 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                       key={a.id}
                       className={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group ${a.is_archived ? "opacity-70" : ""}`}
                     >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isClosed ? "bg-red-100 dark:bg-red-900" : "bg-blue-100 dark:bg-blue-900"}`}>
-                        <ClipboardList className={`w-5 h-5 ${isClosed ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"}`} />
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isClosed ? "bg-red-100 dark:bg-red-900" : "bg-emerald-100 dark:bg-emerald-900"}`}>
+                        <ClipboardList className={`w-5 h-5 ${isClosed ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -979,12 +979,12 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                 onClick={() => setQuizView("active")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                   quizView === "active"
-                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
+                    ? "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300"
                     : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
               >
                 Active
-                <span className="bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                <span className="bg-teal-200 dark:bg-teal-800 text-teal-800 dark:text-teal-200 rounded-full px-1.5 py-0.5 text-[10px]">
                   {activeQuizzes.filter((q) => q.title.toLowerCase().includes(search.toLowerCase())).length}
                 </span>
               </button>
@@ -1041,8 +1041,8 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                       key={q.id}
                       className={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group ${q.is_archived ? "opacity-70" : ""}`}
                     >
-                      <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <FileQuestion className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      <div className="w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <FileQuestion className="w-5 h-5 text-teal-600 dark:text-teal-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -1157,7 +1157,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                   key={student.id}
                   className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
                     {student.avatar_url ? (
                       <img src={student.avatar_url} alt={student.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
@@ -1225,7 +1225,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
       {/* Add Student Dialog */}
       <Dialog open={showAddStudent} onOpenChange={setShowAddStudent}>
-        <DialogContent className="rounded-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="rounded-2xl max-h-[80vh] overflow-y-auto w-[calc(100%-2rem)] max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Student to {classData.class_name}</DialogTitle>
           </DialogHeader>
@@ -1243,7 +1243,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             ) : (
               availableStudents.map((s) => (
                 <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
                     <span className="text-white text-xs font-bold">{getInitials(s.name)}</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -1275,7 +1275,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
             <DialogTitle>Create Student Account</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-xl text-xs text-blue-700 dark:text-blue-300">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl text-xs text-emerald-700 dark:text-emerald-300">
               📌 Account will be created for <strong>{classData.class_name}</strong>. Share the email & password with the student.
             </div>
             <div className="space-y-2">

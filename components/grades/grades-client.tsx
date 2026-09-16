@@ -273,7 +273,7 @@ export function GradesClient({ user }: GradesClientProps) {
           <Button
             onClick={handleExportExcel}
             disabled={exporting}
-            className="gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+            className="gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto rounded-xl"
           >
             <FileSpreadsheet className="w-4 h-4" />
             {exporting ? "Exporting..." : "Export Rapor Excel"}

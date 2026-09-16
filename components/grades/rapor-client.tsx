@@ -210,9 +210,9 @@ export function RaporClient() {
             Export nilai rapor per kelas ke Excel
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
           <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-            <SelectTrigger className="w-36 rounded-xl">
+            <SelectTrigger className="w-full sm:w-36 rounded-xl">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -223,7 +223,7 @@ export function RaporClient() {
           <Button
             onClick={() => exportRapor("all")}
             disabled={exportingAll || loading}
-            className="gap-2 bg-green-600 hover:bg-green-700 text-white rounded-xl"
+            className="gap-2 bg-green-600 hover:bg-green-700 text-white rounded-xl w-full sm:w-auto"
           >
             {exportingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             Export Semua
@@ -257,7 +257,7 @@ export function RaporClient() {
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center flex-shrink-0">
                       <span className="text-white font-bold text-sm">{cls.grade}</span>
                     </div>
                     <div className="min-w-0 flex-1">

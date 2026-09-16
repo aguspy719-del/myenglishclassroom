@@ -85,7 +85,7 @@
   }
 }
 
-/* Smooth transitions */
+/* Smooth transitions (transform/opacity excluded so React re-renders feel instant) */
 * {
   transition-property: color, background-color, border-color, box-shadow;
   transition-duration: 150ms;
@@ -117,13 +117,35 @@
   animation: pulse-soft 2s ease-in-out infinite;
 }
 
-/* Bottom nav for mobile */
+/* Bottom nav for mobile — solid background & fixed height so labels never collide with page content */
 .bottom-nav {
   @apply fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-around px-1 lg:hidden;
   padding-bottom: max(env(safe-area-inset-bottom), 8px);
   padding-top: 8px;
-  height: 60px;
+  height: calc(64px + env(safe-area-inset-bottom));
+  background-color: rgb(255 255 255); /* fully opaque — no blur/alpha, no bleed-through */
   box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+}
+
+.dark .bottom-nav {
+  background-color: rgb(17 24 39); /* gray-900 solid in dark mode */
+}
+
+/* Bottom-nav item — smaller tap target inside a fixed-height bar (44px targets still respected via padding) */
+.bottom-nav a {
+  min-height: unset;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Bottom-nav labels: shrink cleanly instead of overlapping neighbors */
+.bottom-nav a span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Dark mode: bottom nav shadow */
@@ -180,6 +202,77 @@ p, h1, h2, h3, h4, h5, h6, span, a {
 html {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+}
+
+/* ── Page transition on route change (subtle fade+rise, GPU-accelerated) ── */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.page-enter {
+  animation: page-in 0.22s ease-out both;
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+}
+
+/* ── PWA entrance animation (when opening the installed app) ── */
+@keyframes pwa-splash-bg {
+  from { opacity: 1; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+@keyframes pwa-splash-logo {
+  0% { opacity: 0; transform: scale(0.82); }
+  45% { opacity: 1; transform: scale(1.04); }
+  70% { transform: scale(1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pwa-splash-fade {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.pwa-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: rgb(255 255 255); /* solid — dark mode handled via .dark override */
+}
+
+.dark .pwa-splash {
+  background-color: rgb(17 24 39);
+}
+
+.pwa-splash[data-leaving="true"] {
+  animation: pwa-splash-bg 0.35s ease-in forwards;
+}
+
+.pwa-splash-logo {
+  animation: pwa-splash-logo 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pwa-splash-wordmark {
+  animation: pwa-splash-fade 0.45s ease-out 0.15s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-splash-logo,
+  .pwa-splash-wordmark {
+    animation-duration: 0.01s;
+  }
 }
 
 /* Marquee animation for classes - seamless infinite loop */

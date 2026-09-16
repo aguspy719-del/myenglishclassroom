@@ -135,9 +135,9 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
   };
 
   const statCards = [
-    { title: "Total Students", value: stats.totalStudents, icon: Users, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950", href: "/classes" },
+    { title: "Total Students", value: stats.totalStudents, icon: Users, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", href: "/classes" },
     { title: "Total Classes", value: stats.totalClasses, icon: BookOpen, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950", href: "/classes" },
-    { title: "Total Assignments", value: stats.totalAssignments, icon: ClipboardList, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950", href: "/assignments" },
+    { title: "Total Assignments", value: stats.totalAssignments, icon: ClipboardList, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/assignments" },
     { title: "Needs Grading", value: stats.pendingSubmissions, icon: FileText, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950", href: "/assignments" },
   ];
 
@@ -290,8 +290,8 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { href: "/classes", label: "My Classes", icon: Users, color: "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400" },
-              { href: "/assignments/create", label: "New Assignment", icon: ClipboardList, color: "bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400" },
+              { href: "/classes", label: "My Classes", icon: Users, color: "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400" },
+              { href: "/assignments/create", label: "New Assignment", icon: ClipboardList, color: "bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400" },
               { href: "/attendance", label: "Attendance", icon: CheckCircle, color: "bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-400" },
               { href: "/teaching-aids", label: "Teaching Aids", icon: BookOpen, color: "bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400" },
             ].map((action) => {
@@ -313,7 +313,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Megaphone className="w-4 h-4 text-blue-600" />
+            <Megaphone className="w-4 h-4 text-emerald-600" />
             Announcements
           </CardTitle>
           <Button
@@ -332,7 +332,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
         <CardContent className="space-y-3">
           {/* Inline create form */}
           {showCreateForm && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-xl space-y-2 border border-blue-100 dark:border-blue-900">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl space-y-2 border border-emerald-100 dark:border-emerald-900">
               <Input
                 placeholder="Title"
                 value={newTitle}

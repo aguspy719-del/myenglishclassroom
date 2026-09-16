@@ -1,4 +1,4 @@
-const CACHE_NAME = "english-lms-v2";
+const CACHE_NAME = "english-lms-v3";
 const STATIC_ASSETS = [
   "/",
   "/dashboard",
@@ -113,8 +113,8 @@ self.addEventListener("push", (event) => {
 
   const options = {
     body: data.body || "",
-    icon: "/icons/icon-192x192.png",
-    badge: "/icons/icon-72x72.png",
+    icon: "/icons/icon-192x192.png.png",
+    badge: "/icons/icon-192x192.png.png",
     data: { url: data.url || "/dashboard" },
     vibrate: [100, 50, 100],
   };

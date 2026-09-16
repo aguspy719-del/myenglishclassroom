@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
 import { BADGES, POINTS_PER_LEVEL } from "@/lib/gamification";
+import { Flame } from "lucide-react";
 import type { User, Assignment, Submission, Announcement } from "@/types";
 
 interface StudentDashboardProps {
@@ -27,9 +28,21 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const [attendanceRate, setAttendanceRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(user);
+  const [loginStreak, setLoginStreak] = useState<number>(user.login_streak || 0);
 
   useEffect(() => {
     const supabase = createClient();
+
+    // Daily login streak — "rajin masuk" XP (server-side idempotent, 1x per day)
+    fetch("/api/auth/login-streak", { method: "POST" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.ok && !d.alreadyClaimed) {
+          setUserData((u: any) => ({ ...u, points: d.points, level: d.level }));
+        }
+        if (d?.ok) setLoginStreak(d.streak || 0);
+      })
+      .catch(() => {});
 
     const fetchData = async () => {
       const [assignmentsRes, gradesRes, announcementsRes, attendanceRes, userRes] = await Promise.all([
@@ -102,7 +115,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       </div>
 
       {/* XP Card */}
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white overflow-hidden">
+      <Card className="border-0 shadow-sm bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white overflow-hidden">
         <CardContent className="pt-5 pb-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -111,17 +124,17 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
               </div>
               <div>
                 <p className="font-bold text-lg">Level {level}</p>
-                <p className="text-blue-200 text-sm">{points} XP total</p>
+                <p className="text-emerald-100 text-sm">{points} XP total</p>
               </div>
             </div>
             <div className="text-right">
               <p className="text-sm font-semibold text-yellow-300">{POINTS_PER_LEVEL - pointsInLevel} XP</p>
-              <p className="text-xs text-blue-200">to Level {level + 1}</p>
+              <p className="text-xs text-emerald-100">to Level {level + 1}</p>
             </div>
           </div>
           <Progress value={progressPercent} className="h-2.5 bg-white/20 [&>div]:bg-yellow-400" />
           <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-blue-200">{pointsInLevel} / {POINTS_PER_LEVEL} XP</p>
+            <p className="text-xs text-emerald-100">{pointsInLevel} / {POINTS_PER_LEVEL} XP</p>
             <div className="flex gap-1">
               {BADGES.slice(0, 4).map((badge) => (
                 <span key={badge.id} className={`text-lg ${badges.includes(badge.id) ? "" : "opacity-30 grayscale"}`} title={badge.name}>{badge.icon}</span>
@@ -131,13 +144,33 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         </CardContent>
       </Card>
 
+      {/* Streak card — diligence reward */}
+      <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-500 to-amber-500 text-white overflow-hidden">
+        <CardContent className="pt-4 pb-4 flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+            <Flame className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold">🔥 {loginStreak} day{loginStreak === 1 ? "" : "s"} streak!</p>
+            <p className="text-orange-100 text-xs mt-0.5">
+              Come back every day to earn up to 50 XP. Diligence pays off!
+            </p>
+          </div>
+          <Link href="/quiz" className="flex-shrink-0">
+            <Button size="sm" className="bg-white text-orange-600 hover:bg-orange-50 rounded-xl font-bold">
+              Practice
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Active Tasks", value: loading ? "..." : upcomingAssignments.length, icon: ClipboardList, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950", href: "/classes" },
+          { label: "Active Tasks", value: loading ? "..." : upcomingAssignments.length, icon: ClipboardList, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", href: "/classes" },
           { label: "Latest Grade", value: loading ? "..." : recentGrades.length > 0 ? `${recentGrades[0].score}` : "-", icon: Star, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950", href: "/grades" },
-          { label: "Attendance", value: loading ? "..." : `${attendanceRate}%`, icon: UserCheck, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950", href: "/attendance" },
-          { label: "My Classes", value: "View", icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950", href: "/classes" },
+          { label: "Attendance", value: loading ? "..." : `${attendanceRate}%`, icon: UserCheck, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", href: "/attendance" },
+          { label: "My Classes", value: "View", icon: BookOpen, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/classes" },
         ].map((stat) => {
           const Icon = stat.icon;
           return (
@@ -178,7 +211,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                   return (
                     <div key={a.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                       <div className="flex items-start gap-3 flex-1 min-w-0">
-                        {isUrgent ? <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" /> : <Clock className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />}
+                        {isUrgent ? <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" /> : <Clock className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />}
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{a.title}</p>
                           <p className="text-xs text-gray-500">Due: {formatDate(a.deadline)}</p>
@@ -240,16 +273,15 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
               <Bell className="w-10 h-10 mx-auto mb-2 opacity-30" />
               <p className="text-sm">No announcements</p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {announcements.map((ann) => (
-                <div key={ann.id} className="p-3 bg-blue-50 dark:bg-blue-950 rounded-xl border border-blue-100 dark:border-blue-900">
-                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">{ann.title}</p>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">{ann.content}</p>
-                  <p className="text-xs text-blue-500 mt-1">{formatDate(ann.created_at)}</p>
-                </div>
-              ))}
-            </div>
+          ) : (              <div className="space-y-3">
+                {announcements.map((ann) => (
+                  <div key={ann.id} className="p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl border border-emerald-100 dark:border-emerald-900">
+                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">{ann.title}</p>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">{ann.content}</p>
+                    <p className="text-xs text-emerald-500 mt-1">{formatDate(ann.created_at)}</p>
+                  </div>
+                ))}
+              </div>
           )}
         </CardContent>
       </Card>

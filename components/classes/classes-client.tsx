@@ -374,7 +374,7 @@ export function ClassesClient({ user }: ClassesClientProps) {
         {user.role === "teacher" && (
           <Button
             onClick={() => setShowCreateDialog(true)}
-            className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md rounded-xl w-full sm:w-auto"
+            className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md rounded-xl w-full sm:w-auto"
           >
             <Plus className="w-4 h-4 flex-shrink-0" />Create Class
           </Button>
@@ -402,7 +402,7 @@ export function ClassesClient({ user }: ClassesClientProps) {
             <TabsTrigger value="active" className="gap-2">
               Active
               {activeClasses.length > 0 && (
-                <span className="bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                <span className="bg-emerald-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
                   {activeClasses.length}
                 </span>
               )}

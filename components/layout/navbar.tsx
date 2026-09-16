@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu, Moon, Sun } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -34,15 +35,24 @@ export function Navbar({ user, onMenuClick }: NavbarProps) {
 
   return (
     <header className="sticky top-0 z-30 h-14 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 flex items-center px-4 gap-4">
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="lg:hidden h-9 w-9"
-        onClick={onMenuClick}
-      >
-        <Menu className="w-5 h-5" />
-      </Button>
+      {/* Mobile menu button + brand */}
+      <div className="flex items-center gap-2 lg:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          onClick={onMenuClick}
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
+        <Link href="/dashboard" prefetch={true} className="flex items-center gap-1.5">
+          <div className="w-6 h-6 rounded-md overflow-hidden flex-shrink-0">
+            <Logo size={24} className="w-full h-full" />
+          </div>
+          <span className="font-bold text-sm text-gray-900 dark:text-white">My Classroom</span>
+        </Link>
+      </div>
 
       <div className="flex-1" />
 
@@ -69,7 +79,7 @@ export function Navbar({ user, onMenuClick }: NavbarProps) {
             <Button variant="ghost" className="relative h-9 w-9 rounded-full ml-1">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user.avatar_url} alt={user.name} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold">
+                <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs font-bold">
                   {getInitials(user.name)}
                 </AvatarFallback>
               </Avatar>

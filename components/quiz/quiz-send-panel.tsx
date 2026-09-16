@@ -117,6 +117,16 @@ export function QuizSendPanel({ quiz, questionCount, attemptCount }: QuizSendPan
       if (!q) return;
       const { data: students } = await supabase.from("users").select("id").eq("class_id", q.class_id).eq("role", "student");
       if (!students?.length) return;
+      // In-app notifications — appear in the student's bell instantly (realtime)
+      await supabase.from("notifications").insert(
+        students.map((s) => ({
+          user_id: s.id,
+          title: "📝 Assessment Open",
+          message: q.title,
+          type: "assignment" as const,
+          link: "/quiz",
+        }))
+      );
       await fetch("/api/push/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -144,30 +154,49 @@ export function QuizSendPanel({ quiz, questionCount, attemptCount }: QuizSendPan
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="pt-5 pb-5 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-start sm:items-center justify-between flex-wrap gap-2">
           <p className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Send className="w-4 h-4 text-blue-600" /> Send & Access Control
+            <Send className="w-4 h-4 text-emerald-600 flex-shrink-0" /> <span>Send & Access Control</span>
           </p>
           {isSent && !isClosed && (
-            <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 gap-1">
+            <Badge className="hidden sm:inline-flex bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 gap-1">
               <CheckCircle2 className="w-3 h-3" /> Sent — students can access
             </Badge>
           )}
           {isScheduled && (
-            <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 gap-1">
+            <Badge className="hidden sm:inline-flex bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 gap-1">
               <CalendarClock className="w-3 h-3" /> Scheduled {publishedAt?.toLocaleString()}
             </Badge>
           )}
           {isDraft && (
-            <Badge variant="secondary" className="gap-1">
+            <Badge variant="secondary" className="hidden sm:inline-flex gap-1">
               <EyeOff className="w-3 h-3" /> Draft — not visible to students
             </Badge>
           )}
           {isClosed && (
-            <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 gap-1">
+            <Badge className="hidden sm:inline-flex bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 gap-1">
               <XCircle className="w-3 h-3" /> Closed
             </Badge>
           )}
+          <Badge className="sm:hidden bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 gap-1">
+            {isClosed ? (
+              <>
+                <XCircle className="w-3 h-3" /> Closed
+              </>
+            ) : isScheduled ? (
+              <>
+                <CalendarClock className="w-3 h-3" /> Scheduled
+              </>
+            ) : isDraft ? (
+              <>
+                <EyeOff className="w-3 h-3" /> Draft
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-3 h-3" /> Sent
+              </>
+            )}
+          </Badge>
         </div>
 
         {questionCount === 0 && (
@@ -231,7 +260,8 @@ export function QuizSendPanel({ quiz, questionCount, attemptCount }: QuizSendPan
                 variant="ghost"
                 size="icon"
                 title="Remove deadline"
-                className="rounded-xl text-red-500"
+                aria-label="Remove deadline"
+                className="rounded-xl text-red-500 hidden sm:inline-flex"
                 onClick={() => handleSetDeadline("")}
               >
                 <XCircle className="w-4 h-4" />
@@ -239,9 +269,19 @@ export function QuizSendPanel({ quiz, questionCount, attemptCount }: QuizSendPan
             )}
           </div>
           {state.available_until && safeDate(state.available_until) && (
-            <p className="text-xs text-orange-600 dark:text-orange-400">
-              🔒 Closes automatically on {new Date(state.available_until).toLocaleString()}
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <p className="text-xs text-orange-600 dark:text-orange-400">
+                🔒 Closes automatically on {new Date(state.available_until).toLocaleString()}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-500 rounded-xl self-start sm:hidden h-8"
+                onClick={() => handleSetDeadline("")}
+              >
+                Remove deadline
+              </Button>
+            </div>
           )}
         </div>
       </CardContent>

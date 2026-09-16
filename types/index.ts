@@ -12,6 +12,9 @@ export interface User {
   points?: number;
   level?: number;
   badges?: string[];
+  // Daily login streak (diligence reward)
+  login_streak?: number;
+  last_login_date?: string;
 }
 
 export interface Class {

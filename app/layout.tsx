@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { PWARegister } from "@/components/providers/pwa-register";
+import { PwaEntrance } from "@/components/providers/pwa-entrance";
+import { ProgressBar } from "@/components/providers/progress-bar";
 import { OfflineIndicator } from "@/components/providers/offline-indicator";
 import { Toaster } from "sonner";
 
@@ -17,8 +19,12 @@ export const metadata: Metadata = {
   description: "My Classroom - English Learning for SMK Negeri 1 Buduran",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icons/icon-512x512.png.png",
+    icon: [
+      { url: "/icons/icon-192x192.png.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png.png", sizes: "512x512", type: "image/png" },
+    ],
     apple: "/icons/icon-192x192.png.png",
+    shortcut: "/icons/icon-192x192.png.png",
   },
   appleWebApp: {
     capable: true,
@@ -31,6 +37,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
   themeColor: "#2563eb",
 };
 
@@ -48,8 +55,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <PwaEntrance />
           <PWARegister />
           <OfflineIndicator />
+          <ProgressBar />
           {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>

@@ -142,10 +142,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Gamification (best-effort, never blocks the result)
+    // Reward diligence: finishing the assessment earns base XP regardless of score;
+    // a strong score (>= 75) earns the full bonus on top.
     try {
+      const { awardPoints } = await import("@/lib/gamification");
+      await awardPoints(user.id, 25, `completing ${quiz.title}`);
       if (score >= 75) {
-        const { awardPoints } = await import("@/lib/gamification");
-        await awardPoints(user.id, 100, `completing ${quiz.title}`);
+        await awardPoints(user.id, 100, `great score on ${quiz.title}`);
       }
       if (score === 100 && mcQuestions.length > 0) {
         const { awardBadge } = await import("@/lib/gamification");

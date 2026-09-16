@@ -22,9 +22,9 @@ interface QuizClientProps {
 }
 
 const QUIZ_TYPES = [
-  { value: "formatif", label: "Asesmen Formatif", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300", short: "Formatif" },
+  { value: "formatif", label: "Asesmen Formatif", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300", short: "Formatif" },
   { value: "sumatif_tengah", label: "Asesmen Sumatif Tengah Semester", color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300", short: "STS" },
-  { value: "sumatif_akhir", label: "Asesmen Sumatif Akhir Semester", color: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300", short: "SAS" },
+  { value: "sumatif_akhir", label: "Asesmen Sumatif Akhir Semester", color: "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300", short: "SAS" },
 ];
 
 export function QuizClient({ user }: QuizClientProps) {
@@ -124,6 +124,18 @@ export function QuizClient({ user }: QuizClientProps) {
             .in("class_id", selectedClasses)
             .eq("role", "student");
           if (students && students.length > 0) {
+            // In-app notifications — appear in the student's bell instantly (realtime)
+            await supabase.from("notifications").insert(
+              students.map((s) => ({
+                user_id: s.id,
+                title: "📝 New Assessment",
+                message: form.title,
+                type: "assignment" as const,
+                link: "/quiz",
+              }))
+            );
+
+            // Web push for students with notifications enabled
             await fetch("/api/push/send", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -202,7 +214,7 @@ export function QuizClient({ user }: QuizClientProps) {
           <p className="text-gray-500 dark:text-gray-400 mt-1">{filtered.length} available</p>
         </div>
         {user.role === "teacher" && (
-          <Button onClick={() => setShowCreate(true)} className="gap-2">
+          <Button onClick={() => setShowCreate(true)} className="gap-2 w-full sm:w-auto rounded-xl bg-emerald-600 hover:bg-emerald-700">
             <Plus className="w-4 h-4" />
             Create Assessment
           </Button>
@@ -222,7 +234,7 @@ export function QuizClient({ user }: QuizClientProps) {
 
       {/* Tabs by type */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1 p-1 overflow-x-auto">
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1 p-1 overflow-x-auto scrollbar-hide sm:overflow-visible">
           <TabsTrigger value="all" className="text-xs flex-shrink-0">All</TabsTrigger>
           <TabsTrigger value="formatif" className="text-xs flex-shrink-0">Formatif</TabsTrigger>
           <TabsTrigger value="sumatif_tengah" className="text-xs flex-shrink-0">STS</TabsTrigger>
@@ -325,7 +337,7 @@ export function QuizClient({ user }: QuizClientProps) {
           setForm({ title: "", description: "", time_limit: "", quiz_type: "formatif", send_mode: "now", published_at: "", available_until: "" });
         }
       }}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle>Create New Assessment</DialogTitle>
           </DialogHeader>
@@ -343,13 +355,13 @@ export function QuizClient({ user }: QuizClientProps) {
                     className={cn(
                       "flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
                       form.quiz_type === type.value
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                        : "border-gray-200 dark:border-gray-700 hover:border-blue-300"
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950"
+                        : "border-gray-200 dark:border-gray-700 hover:border-emerald-300"
                     )}
                   >
                     <div className={cn(
                       "w-4 h-4 rounded-full border-2 flex-shrink-0",
-                      form.quiz_type === type.value ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                      form.quiz_type === type.value ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
                     )} />
                     <div>
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">{type.label}</p>
@@ -366,13 +378,13 @@ export function QuizClient({ user }: QuizClientProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Select Classes *</Label>
-                <button type="button" onClick={toggleAll} className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center gap-1">
+                <button type="button" onClick={toggleAll} className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center gap-1">
                   {selectedClasses.length === classes.length ? <><CheckSquare className="w-3.5 h-3.5" />Deselect All</> : <><Square className="w-3.5 h-3.5" />Select All</>}
                 </button>
               </div>
               {selectedClasses.length > 0 && (
-                <div className="p-2.5 bg-blue-50 dark:bg-blue-950 rounded-xl">
-                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                     ✓ {selectedClasses.length} class{selectedClasses.length > 1 ? "es" : ""} selected
                   </span>
                 </div>
@@ -386,8 +398,8 @@ export function QuizClient({ user }: QuizClientProps) {
                       return (
                         <button key={cls.id} type="button" onClick={() => toggleClass(cls.id)}
                           className={cn("flex items-center gap-2 p-2.5 rounded-xl border-2 text-left transition-all text-sm",
-                            isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300" : "border-gray-200 dark:border-gray-700 hover:border-blue-300")}>
-                          <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0", isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300")}>
+                            isSelected ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300" : "border-gray-200 dark:border-gray-700 hover:border-emerald-300")}>
+                          <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0", isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300")}>
                             {isSelected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                           </div>
                           <span className="font-medium truncate">{cls.class_name}</span>
@@ -406,8 +418,8 @@ export function QuizClient({ user }: QuizClientProps) {
                       return (
                         <button key={cls.id} type="button" onClick={() => toggleClass(cls.id)}
                           className={cn("flex items-center gap-2 p-2.5 rounded-xl border-2 text-left transition-all text-sm",
-                            isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300" : "border-gray-200 dark:border-gray-700 hover:border-blue-300")}>
-                          <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0", isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300")}>
+                            isSelected ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300" : "border-gray-200 dark:border-gray-700 hover:border-emerald-300")}>
+                          <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0", isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300")}>
                             {isSelected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                           </div>
                           <span className="font-medium truncate">{cls.class_name}</span>
@@ -448,13 +460,13 @@ export function QuizClient({ user }: QuizClientProps) {
                     className={cn(
                       "flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
                       form.send_mode === mode.value
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                        : "border-gray-200 dark:border-gray-700 hover:border-blue-300"
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950"
+                        : "border-gray-200 dark:border-gray-700 hover:border-emerald-300"
                     )}
                   >
                     <div className={cn(
                       "w-4 h-4 rounded-full border-2 flex-shrink-0",
-                      form.send_mode === mode.value ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                      form.send_mode === mode.value ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
                     )} />
                     <span className="text-lg">{mode.icon}</span>
                     <div>

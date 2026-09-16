@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Bell, X, CheckCheck, Zap, Trophy, Info } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Bell, X, CheckCheck, Zap, Trophy, Info, ClipboardList, FileText, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { formatRelativeTime } from "@/lib/utils";
 import Link from "next/link";
@@ -21,7 +20,7 @@ export function Notifications({ userId }: NotificationsProps) {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     const supabase = createClient();
     const { data } = await supabase
       .from("notifications")
@@ -30,14 +29,16 @@ export function Notifications({ userId }: NotificationsProps) {
       .order("created_at", { ascending: false })
       .limit(20);
     setNotifications(data || []);
-  };
+  }, [userId]);
 
   useEffect(() => {
     fetchNotifications();
-    // Real-time subscription
+    setLoading(false);
+    // Real-time subscription — badge updates WITHOUT refresh when the
+    // teacher sends an assignment or assessment
     const supabase = createClient();
     const channel = supabase
-      .channel("notifications")
+      .channel(`notifications-${userId}`)
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
@@ -46,8 +47,15 @@ export function Notifications({ userId }: NotificationsProps) {
       }, () => fetchNotifications())
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [userId]);
+    // Also refetch when the tab/window regains focus (covers missed events)
+    const onFocus = () => fetchNotifications();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [userId, fetchNotifications]);
 
   const markAllRead = async () => {
     const supabase = createClient();
@@ -61,9 +69,12 @@ export function Notifications({ userId }: NotificationsProps) {
     fetchNotifications();
   };
 
-  const getIcon = (type: string) => {
-    if (type === "achievement") return <Trophy className="w-4 h-4 text-yellow-500" />;
-    if (type === "points") return <Zap className="w-4 h-4 text-blue-500" />;
+  const getIcon = (type: string, title?: string) => {
+    if (type === "achievement") return <Trophy className="w-4 h-4 text-amber-500" />;
+    if (type === "points") return <Zap className="w-4 h-4 text-emerald-500" />;
+    if (title?.includes("Streak")) return <Flame className="w-4 h-4 text-orange-500" />;
+    if (title?.includes("Assessment") || title?.includes("Soal")) return <FileText className="w-4 h-4 text-blue-500" />;
+    if (type === "assignment" || type === "grade") return <ClipboardList className="w-4 h-4 text-blue-500" />;
     return <Info className="w-4 h-4 text-gray-500" />;
   };
 
@@ -74,11 +85,11 @@ export function Notifications({ userId }: NotificationsProps) {
         size="icon"
         className="h-9 w-9 relative"
         onClick={() => setOpen(!open)}
-        aria-label="Notifications"
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-emerald-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse-soft">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -93,7 +104,7 @@ export function Notifications({ userId }: NotificationsProps) {
               <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>
               <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
-                  <button onClick={markAllRead} className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                  <button onClick={markAllRead} className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
                     <CheckCheck className="w-3 h-3" />
                     Mark all read
                   </button>
@@ -106,34 +117,37 @@ export function Notifications({ userId }: NotificationsProps) {
 
             {/* List */}
             <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="text-center py-10 text-gray-500 dark:text-gray-400">
-                  <Bell className="w-10 h-10 mx-auto mb-2 opacity-20" />
-                  <p className="text-sm">No notifications yet</p>
-                </div>
-              ) : (
-                notifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    onClick={() => markRead(notif.id)}
-                    className={`flex items-start gap-3 p-4 border-b border-gray-50 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                      !notif.read ? "bg-blue-50/50 dark:bg-blue-950/30" : ""
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      {getIcon(notif.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{notif.title}</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{notif.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">{formatRelativeTime(notif.created_at)}</p>
-                    </div>
-                    {!notif.read && (
-                      <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2" />
-                    )}
+              {loading || (notifications.length === 0 && !loading) ? (
+                notifications.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+                    <Bell className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                    <p className="text-sm">No notifications yet</p>
                   </div>
-                ))
-              )}
+                ) : (
+                  notifications.map((notif) => (
+                    <Link
+                      key={notif.id}
+                      href={notif.link || "#"}
+                      onClick={() => markRead(notif.id)}
+                      className={`flex items-start gap-3 p-4 border-b border-gray-50 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                        !notif.read ? "bg-emerald-50/50 dark:bg-emerald-950/30" : ""
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        {getIcon(notif.type, notif.title)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{notif.title}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{notif.message}</p>
+                        <p className="text-xs text-gray-400 mt-1">{formatRelativeTime(notif.created_at)}</p>
+                      </div>
+                      {!notif.read && (
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 mt-2" />
+                      )}
+                    </Link>
+                  ))
+                )
+              ) : null}
             </div>
           </div>
         </>

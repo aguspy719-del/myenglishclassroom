@@ -125,8 +125,8 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
           <p className="text-gray-500 dark:text-gray-400 mt-1">{filtered.length} tugas</p>
         </div>
         {user.role === "teacher" && (
-          <Link href="/assignments/create">
-            <Button className="gap-2">
+          <Link href="/assignments/create" className="w-full sm:w-auto">
+            <Button className="gap-2 w-full sm:w-auto rounded-xl">
               <Plus className="w-4 h-4" />
               Buat Tugas
             </Button>
@@ -212,14 +212,14 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
                     ? "bg-gray-100 dark:bg-gray-700"
                     : isToday
                     ? "bg-orange-100 dark:bg-orange-900"
-                    : "bg-blue-100 dark:bg-blue-900"
+                    : "bg-emerald-100 dark:bg-emerald-900"
                 }`}>
                   {isPast ? (
                     <CheckCircle className="w-5 h-5 text-gray-500" />
                   ) : isToday ? (
                     <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   ) : (
-                    <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   )}
                 </div>
 

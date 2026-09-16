@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { GraduationCap, Home } from "lucide-react";
+import { Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
       <div className="text-center">
-        <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-6">
-          <GraduationCap className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+        <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-6 shadow-md">
+          <Logo size={80} className="w-full h-full" />
         </div>
         <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-4">404</h1>
         <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-2">

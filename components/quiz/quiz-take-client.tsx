@@ -246,11 +246,11 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
                 </>
               )}
               {result.essaySaved > 0 && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-xl">
-                  <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
                     ✍️ {result.essaySaved} essay answer{result.essaySaved > 1 ? "s" : ""} submitted
                   </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Essay will be graded by your teacher</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Essay will be graded by your teacher</p>
                 </div>
               )}
             </CardContent>
@@ -275,17 +275,17 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
           </div>
           <Card className="border-0 shadow-sm">
             <CardContent className="pt-6 pb-6 text-center space-y-4">
-              <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">{quiz.title}</h2>
                 {quiz.description && <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{quiz.description}</p>}
               </div>
               <div className="flex justify-center">
-                {quizType === "formatif" && <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">Asesmen Formatif · 1 attempt</Badge>}
+                {quizType === "formatif" && <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">Asesmen Formatif · 1 attempt</Badge>}
                 {quizType === "sumatif_tengah" && <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">Sumatif Tengah Semester · 1 attempt only</Badge>}
-                {quizType === "sumatif_akhir" && <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">Sumatif Akhir Semester · 1 attempt only</Badge>}
+                {quizType === "sumatif_akhir" && <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">Sumatif Akhir Semester · 1 attempt only</Badge>}
               </div>
               <div className="flex justify-center gap-6 text-sm text-gray-600 dark:text-gray-400">
                 {mcCount > 0 && <div className="text-center"><p className="text-2xl font-bold text-gray-900 dark:text-white">{mcCount}</p><p>Multiple Choice</p></div>}
@@ -330,11 +330,11 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
             <div className="flex items-center gap-2 mb-4">
               {isEssay
                 ? <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"><PenLine className="w-3 h-3 mr-1" />Essay</Badge>
-                : <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"><FileText className="w-3 h-3 mr-1" />Multiple Choice</Badge>
+                : <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"><FileText className="w-3 h-3 mr-1" />Multiple Choice</Badge>
               }
             </div>
             <p className="text-lg font-medium text-gray-900 dark:text-white mb-6 whitespace-pre-wrap leading-relaxed">
-              <span className="text-blue-600 dark:text-blue-400 mr-2 font-bold">{currentQ + 1}.</span>
+              <span className="text-emerald-600 dark:text-emerald-400 mr-2 font-bold">{currentQ + 1}.</span>
               {currentQuestion.question}
             </p>
             {isEssay ? (
@@ -351,8 +351,8 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
                   return (
                     <button key={actualOpt} onClick={() => setAnswers({ ...answers, [currentQuestion.id]: actualOpt })}
                       className={cn("w-full text-left p-4 rounded-xl border-2 transition-all",
-                        isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200 dark:border-gray-700 hover:border-blue-300")}>
-                      <span className={cn("font-bold mr-3 flex-shrink-0", isSelected ? "text-blue-600" : "text-gray-500")}>{LETTERS[idx]}.</span>
+                        isSelected ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-gray-200 dark:border-gray-700 hover:border-emerald-300")}>
+                      <span className={cn("font-bold mr-3 flex-shrink-0", isSelected ? "text-emerald-600" : "text-gray-500")}>{LETTERS[idx]}.</span>
                       <span className="whitespace-pre-wrap">{currentQuestion[`option_${actualOpt}` as keyof QuizQuestion] as string}</span>
                     </button>
                   );
@@ -380,7 +380,7 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
             return (
               <button key={q.id} onClick={() => setCurrentQ(idx)}
                 className={cn("w-8 h-8 rounded-full text-xs font-bold",
-                  idx === currentQ ? "bg-blue-600 text-white" :
+                  idx === currentQ ? "bg-emerald-600 text-white" :
                   answered ? "bg-green-100 dark:bg-green-900 text-green-700" :
                   "bg-gray-100 dark:bg-gray-800 text-gray-600")}>
                 {idx + 1}
@@ -605,16 +605,16 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
       />
 
       <Tabs defaultValue="questions">
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="questions" className="gap-1"><BarChart2 className="w-4 h-4" />Questions ({questions.length})</TabsTrigger>
-          <TabsTrigger value="results" className="gap-1"><Users className="w-4 h-4" />Results ({attempts.length})</TabsTrigger>
-          {essayCount > 0 && <TabsTrigger value="essays" className="gap-1"><PenLine className="w-4 h-4" />Essays ({essayAnswers.length})</TabsTrigger>}
+        <TabsList className="w-full sm:w-auto flex h-auto overflow-x-auto scrollbar-hide sm:overflow-visible">
+          <TabsTrigger value="questions" className="gap-1 flex-shrink-0"><BarChart2 className="w-4 h-4" />Questions ({questions.length})</TabsTrigger>
+          <TabsTrigger value="results" className="gap-1 flex-shrink-0"><Users className="w-4 h-4" />Results ({attempts.length})</TabsTrigger>
+          {essayCount > 0 && <TabsTrigger value="essays" className="gap-1 flex-shrink-0"><PenLine className="w-4 h-4" />Essays ({essayAnswers.length})</TabsTrigger>}
         </TabsList>
 
         {/* Questions Tab */}
         <TabsContent value="questions" className="mt-4 space-y-4">
           {/* Step-by-step builder — clear flow for making MC questions */}
-          <Card className="border-2 border-dashed border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/30">
+          <Card className="border-2 border-dashed border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30">
             <CardContent className="pt-4 pb-4">
               <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">How to add questions:</p>
               <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
@@ -682,10 +682,10 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
           {/* Draft questions — numbered, guided flow */}
           <div id="draft-editor" className="space-y-4">
             {drafts.map((draft, idx) => (
-              <Card key={draft.id} className="border-2 border-blue-400 dark:border-blue-600 shadow-md">
+              <Card key={draft.id} className="border-2 border-emerald-400 dark:border-emerald-600 shadow-md">
                 <CardContent className="pt-4 pb-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <Badge className={draft.question_type === "essay" ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"}>
+                    <Badge className={draft.question_type === "essay" ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"}>
                       {draft.question_type === "essay" ? "✍️ Essay" : "📝 Multiple Choice"} — New #{idx + 1}
                     </Badge>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeDraft(draft.id)}><Trash2 className="w-4 h-4" /></Button>
@@ -694,7 +694,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                   {/* STEP 1 — question text */}
                   <div className="space-y-1.5">
                     <Label className="text-sm flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
                       Write the question *
                     </Label>
                     <Textarea placeholder="e.g. Choose the correct sentence..." value={draft.question} onChange={(e) => updateDraft(draft.id, "question", e.target.value)} rows={2} className="rounded-xl text-sm" />
@@ -705,7 +705,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                     <>
                       <div className="space-y-1.5">
                         <Label className="text-sm flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                          <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
                           Fill options A–D *
                         </Label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -776,8 +776,8 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="text-blue-600 font-bold text-sm">{idx + 1}.</span>
-                            <Badge className={isEssayQ ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 text-xs" : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs"}>
+                            <span className="text-emerald-600 font-bold text-sm">{idx + 1}.</span>
+                            <Badge className={isEssayQ ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 text-xs" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 text-xs"}>
                               {isEssayQ ? "Essay" : "MC"}
                             </Badge>
                             {isEssayQ && (q as any).max_score && <span className="text-xs text-gray-500">Max: {(q as any).max_score} pts</span>}
@@ -821,7 +821,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
           {attempts.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "Submissions", value: attempts.length, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+                { label: "Submissions", value: attempts.length, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950" },
                 { label: "Average", value: avgScore, color: getGradeColor(avgScore), bg: "bg-gray-50 dark:bg-gray-800" },
                 { label: "Highest", value: Math.max(...attempts.map((a) => a.score || 0)), color: "text-green-600", bg: "bg-green-50 dark:bg-green-950" },
                 { label: "Lowest", value: Math.min(...attempts.map((a) => a.score || 0)), color: "text-red-600", bg: "bg-red-50 dark:bg-red-950" },
@@ -846,7 +846,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
               {attempts.map((a, idx) => (
                 <div key={a.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 flex-shrink-0">{idx + 1}</div>
+                    <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center text-xs font-bold text-emerald-600 flex-shrink-0">{idx + 1}</div>
                     <div className="min-w-0">
                       <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
                         {a.student?.name || "Student"}
@@ -929,7 +929,7 @@ function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
               </p>
               {isLongQuestion && (
                 <button onClick={() => setShowQuestion(!showQuestion)}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-0.5">
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline mt-0.5">
                   {showQuestion ? "Show less ↑" : "Show full question ↓"}
                 </button>
               )}

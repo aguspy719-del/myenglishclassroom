@@ -37,7 +37,7 @@ export function AlreadyAttempted({ quiz, attempt }: AlreadyAttemptedProps) {
               </Badge>
             )}
             {quizType === "sumatif_akhir" && (
-              <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+              <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
                 Sumatif Akhir Semester
               </Badge>
             )}

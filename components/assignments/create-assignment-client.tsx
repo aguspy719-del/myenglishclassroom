@@ -104,6 +104,18 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
           .eq("role", "student");
 
         if (students && students.length > 0) {
+          // In-app notifications — appear in the student's bell instantly (realtime)
+          await supabase.from("notifications").insert(
+            students.map((s) => ({
+              user_id: s.id,
+              title: "📋 New Assignment",
+              message: form.title,
+              type: "assignment" as const,
+              link: "/classes",
+            }))
+          );
+
+          // Web push for students with notifications enabled
           await fetch("/api/push/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -176,7 +188,7 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
                 <button
                   type="button"
                   onClick={toggleAll}
-                  className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center gap-1"
+                  className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center gap-1"
                 >
                   {allSelected ? (
                     <><CheckSquare className="w-3.5 h-3.5" /> Deselect All</>
@@ -188,11 +200,11 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
 
               {/* Selected count badge */}
               {selectedClasses.length > 0 && (
-                <div className="flex items-center gap-2 p-2.5 bg-blue-50 dark:bg-blue-950 rounded-xl">
-                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                <div className="flex items-center gap-2 p-2.5 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                     ✓ {selectedClasses.length} class{selectedClasses.length > 1 ? "es" : ""} selected
                   </span>
-                  <span className="text-xs text-blue-500 dark:text-blue-400">
+                  <span className="text-xs text-emerald-500 dark:text-emerald-400">
                     — assignment will be sent to all selected classes
                   </span>
                 </div>
@@ -213,13 +225,13 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
                           className={cn(
                             "flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all",
                             isSelected
-                              ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                              : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+                              : "border-gray-200 dark:border-gray-700 hover:border-emerald-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                           )}
                         >
                           <div className={cn(
                             "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                            isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300 dark:border-gray-600"
+                            isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300 dark:border-gray-600"
                           )}>
                             {isSelected && (
                               <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -250,13 +262,13 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
                           className={cn(
                             "flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all",
                             isSelected
-                              ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                              : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+                              : "border-gray-200 dark:border-gray-700 hover:border-emerald-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                           )}
                         >
                           <div className={cn(
                             "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                            isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300 dark:border-gray-600"
+                            isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300 dark:border-gray-600"
                           )}>
                             {isSelected && (
                               <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -339,11 +351,11 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
             {/* File attachment */}
             <div className="space-y-2">
               <Label>Attachment File (optional)</Label>
-              <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-5 text-center hover:border-blue-400 transition-colors">
+              <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-5 text-center hover:border-emerald-400 transition-colors">
                 {file ? (
-                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-xl">
+                  <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
                     <div className="flex items-center gap-3">
-                      <File className="w-5 h-5 text-blue-600" />
+                      <File className="w-5 h-5 text-emerald-600" />
                       <div className="text-left">
                         <p className="text-sm font-medium">{file.name}</p>
                         <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>

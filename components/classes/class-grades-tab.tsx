@@ -223,9 +223,9 @@ export function ClassGradesTab({ classData }: ClassGradesTabProps) {
             <span className="font-bold text-gray-900 dark:text-white">{rows.length}</span> siswa
           </p>
           {avgFinal !== null && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 rounded-xl">
-              <Star className="w-3.5 h-3.5 text-blue-600" />
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
+              <Star className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                 Rata-rata kelas: <span className={getGradeColor(avgFinal)}>{avgFinal}</span>
               </span>
             </div>
@@ -274,7 +274,7 @@ export function ClassGradesTab({ classData }: ClassGradesTabProps) {
                   Avg Tugas <SortIcon k="avgTugas" />
                 </button>
               </th>
-              <th className="px-3 py-3 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+              <th className="px-3 py-3 text-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                 <button className="flex items-center gap-1 mx-auto" onClick={() => toggleSort("avgFormatif")}>
                   Formatif <SortIcon k="avgFormatif" />
                 </button>
@@ -284,7 +284,7 @@ export function ClassGradesTab({ classData }: ClassGradesTabProps) {
                   STS <SortIcon k="avgSTS" />
                 </button>
               </th>
-              <th className="px-3 py-3 text-center text-xs font-semibold text-purple-600 dark:text-purple-400 whitespace-nowrap">
+              <th className="px-3 py-3 text-center text-xs font-semibold text-teal-600 dark:text-teal-400 whitespace-nowrap">
                 <button className="flex items-center gap-1 mx-auto" onClick={() => toggleSort("avgSAS")}>
                   SAS <SortIcon k="avgSAS" />
                 </button>
@@ -303,12 +303,12 @@ export function ClassGradesTab({ classData }: ClassGradesTabProps) {
             {sorted.map((row, idx) => (
               <tr
                 key={row.id}
-                className="bg-white dark:bg-gray-900 hover:bg-blue-50/40 dark:hover:bg-blue-950/30 transition-colors"
+                className="bg-white dark:bg-gray-900 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/30 transition-colors"
               >
                 <td className="px-3 py-3 text-xs text-gray-400">{idx + 1}</td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
                       <span className="text-white text-[10px] font-bold">{getInitials(row.name)}</span>
                     </div>
                     <div className="min-w-0">
@@ -340,7 +340,7 @@ export function ClassGradesTab({ classData }: ClassGradesTabProps) {
                   ) : (
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                       (row.nilaiAkhir as number) >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" :
-                      (row.nilaiAkhir as number) >= 80 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" :
+                      (row.nilaiAkhir as number) >= 80 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" :
                       (row.nilaiAkhir as number) >= 70 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" :
                       (row.nilaiAkhir as number) >= 60 ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" :
                       "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"

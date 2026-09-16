@@ -4,8 +4,10 @@ export const BADGES = [
   { id: "first_quiz", name: "First Step", description: "Complete your first assessment", icon: "🎯", color: "from-blue-400 to-blue-600" },
   { id: "perfect_score", name: "Perfect Score", description: "Get 100 on any assessment", icon: "💯", color: "from-yellow-400 to-orange-500" },
   { id: "grammar_master", name: "Grammar Master", description: "Score 90+ on 3 assessments", icon: "📚", color: "from-green-400 to-green-600" },
-  { id: "interview_ready", name: "Interview Ready", description: "Complete speaking practice", icon: "🎤", color: "from-purple-400 to-purple-600" },
+  { id: "assignment_hero", name: "Assignment Hero", description: "Submit an assignment on time", icon: "📤", color: "from-blue-400 to-indigo-600" },
   { id: "streak_5", name: "On Fire", description: "Submit 5 assignments in a row", icon: "🔥", color: "from-red-400 to-orange-500" },
+  { id: "streak_7", name: "Diligent Week", description: "Log in 7 days in a row", icon: "📅", color: "from-emerald-400 to-teal-600" },
+  { id: "streak_30", name: "Iron Will", description: "Log in 30 days in a row", icon: "⚡", color: "from-amber-400 to-orange-600" },
   { id: "level_5", name: "Rising Star", description: "Reach Level 5", icon: "⭐", color: "from-yellow-300 to-yellow-500" },
   { id: "level_10", name: "English Pro", description: "Reach Level 10", icon: "🏆", color: "from-amber-400 to-amber-600" },
   { id: "attendance_100", name: "Perfect Attendance", description: "100% attendance in a month", icon: "✅", color: "from-teal-400 to-teal-600" },
@@ -13,6 +15,11 @@ export const BADGES = [
 
 export const POINTS_PER_QUIZ = 100;
 export const POINTS_PER_LEVEL = 500;
+
+// Daily login streak XP — grows with the streak, capped per day (server enforces)
+export const STREAK_BASE_XP = 10;
+export const STREAK_BONUS_XP = 5;
+export const MAX_STREAK_XP = 50;
 
 export async function awardPoints(studentId: string, points: number, reason: string) {
   const supabase = createClient();

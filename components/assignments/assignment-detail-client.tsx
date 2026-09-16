@@ -63,8 +63,8 @@ function SubmitForm({
           onClick={() => setSubmitMode("text")}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
             submitMode === "text"
-              ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-              : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-blue-300"
+              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+              : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-emerald-300"
           }`}
         >
           <PenLine className="w-4 h-4" />
@@ -74,8 +74,8 @@ function SubmitForm({
           onClick={() => setSubmitMode("link")}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
             submitMode === "link"
-              ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-              : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-blue-300"
+              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+              : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-emerald-300"
           }`}
         >
           <Link2 className="w-4 h-4" />
@@ -139,7 +139,7 @@ function ExpandableAnswer({ answer }: { answer: string }) {
       {isLong && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-xs text-blue-600 dark:text-blue-400 mt-1.5 hover:underline font-medium"
+          className="text-xs text-emerald-600 dark:text-emerald-400 mt-1.5 hover:underline font-medium"
         >
           {expanded ? "Show less ↑" : "Show more ↓"}
         </button>
@@ -436,7 +436,7 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
 
                 {/* Grade */}
                 {mySubmission.score !== null && mySubmission.score !== undefined ? (
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-2xl">
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950 rounded-2xl">
                     <div className="flex items-center gap-3">
                       <Star className="w-6 h-6 text-yellow-500" />
                       <div>
@@ -588,7 +588,7 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CalendarClock className="w-5 h-5 text-blue-600" />
+              <CalendarClock className="w-5 h-5 text-emerald-600" />
               Ubah Deadline
             </DialogTitle>
           </DialogHeader>

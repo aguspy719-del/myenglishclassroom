@@ -27,7 +27,7 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const protectedPaths = ["/dashboard", "/classes", "/materials", "/assignments", "/attendance", "/grades", "/quiz", "/profile", "/rapor", "/speaking", "/teaching-aids"];
+  const protectedPaths = ["/dashboard", "/classes", "/materials", "/assignments", "/attendance", "/grades", "/quiz", "/profile", "/rapor", "/teaching-aids"];
   const isProtectedPath = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
@@ -38,7 +38,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && request.nextUrl.pathname === "/login") {
+  // Logged-in users skip auth pages — straight into the app
+  if (user && (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/register")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
