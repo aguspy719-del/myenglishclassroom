@@ -71,7 +71,7 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl overflow-hidden shadow-lg shadow-emerald-500/25">
-              <Image src="/icons/icon-192x192.png.png" alt="My Classroom" width={36} height={36} className="w-full h-full object-cover" />
+              <Image src="/icons/icon-192.png" alt="My Classroom" width={36} height={36} className="w-full h-full object-cover" />
             </div>
             <div className="leading-none">
               <p className="font-bold text-gray-900 text-sm">My Classroom</p>
@@ -187,7 +187,7 @@ export default async function LandingPage() {
                   {teacher.avatar_url ? (
                     <Image src={teacher.avatar_url} alt={teacher.name} width={96} height={96} className="w-full h-full object-cover" />
                   ) : (
-                    <Image src="/icons/icon-192x192.png.png" alt={teacher.name} width={96} height={96} className="w-full h-full object-cover" />
+                    <Image src="/icons/icon-192.png" alt={teacher.name} width={96} height={96} className="w-full h-full object-cover" />
                   )}
                 </div>
                 <div className="text-center sm:text-left flex-1">
@@ -386,7 +386,7 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2.5 mb-4">
             <div className="w-8 h-8 rounded-xl overflow-hidden shadow-md">
-              <Image src="/icons/icon-192x192.png.png" alt="My Classroom" width={32} height={32} className="w-full h-full object-cover" />
+              <Image src="/icons/icon-192.png" alt="My Classroom" width={32} height={32} className="w-full h-full object-cover" />
             </div>
             <span className="font-bold text-gray-900">My Classroom</span>
           </div>

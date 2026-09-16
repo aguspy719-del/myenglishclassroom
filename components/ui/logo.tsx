@@ -12,7 +12,7 @@ interface LogoProps {
 export function Logo({ size = 36, className = "" }: LogoProps) {
   return (
     <Image
-      src="/icons/icon-192x192.png.png"
+      src="/icons/icon-192.png"
       alt="My Classroom"
       width={size}
       height={size}

@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       title: payload.title,
       body: payload.body,
       url: payload.url || "/dashboard",
-      icon: "/icons/icon-192x192.png.png",
+      icon: "/icons/icon-192.png",
     });
 
     let sent = 0;

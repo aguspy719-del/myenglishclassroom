@@ -89,7 +89,7 @@ async function sendPushForQuiz(supabase: any, userId: string, quizTitle: string)
     title: "📝 Assessment Open",
     body: `${quizTitle} is now available. Good luck!`,
     url: "/quiz",
-    icon: "/icons/icon-192x192.png.png",
+    icon: "/icons/icon-192.png",
   });
 
   await Promise.allSettled(
