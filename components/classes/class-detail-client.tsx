@@ -271,12 +271,12 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
   };
 
   const BANNER_COLORS = [
-    "from-blue-500 to-blue-700",
-    "from-indigo-500 to-indigo-700",
-    "from-purple-500 to-purple-700",
-    "from-green-500 to-green-700",
-    "from-teal-500 to-teal-700",
-    "from-orange-500 to-orange-700",
+    "from-emerald-500 to-teal-700",
+    "from-teal-500 to-cyan-700",
+    "from-cyan-500 to-teal-700",
+    "from-green-500 to-emerald-700",
+    "from-teal-500 to-emerald-700",
+    "from-emerald-500 to-green-700",
   ];
   const bannerColor = BANNER_COLORS[classData.class_name.charCodeAt(0) % BANNER_COLORS.length];
 

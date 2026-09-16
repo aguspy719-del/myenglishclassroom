@@ -63,6 +63,7 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
   const cellColor = (status?: string) => {
     if (status === "present") return "bg-emerald-500";
     if (status === "late") return "bg-amber-400";
+    if (status === "excused") return "bg-sky-400"; // Izin
     return "bg-white/90"; // alpha / no record
   };
 
@@ -137,6 +138,9 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Telat
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-sky-400" /> Izin
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-white/90" /> Alpha

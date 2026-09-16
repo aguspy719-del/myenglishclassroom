@@ -126,8 +126,8 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         {[
           { label: "Active Tasks", value: loading ? "..." : upcomingAssignments.length, icon: ClipboardList, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", href: "/classes" },
           { label: "Latest Grade", value: loading ? "..." : recentGrades.length > 0 ? `${recentGrades[0].score}` : "-", icon: Star, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950", href: "/grades" },
-          { label: "Announcements", value: loading ? "..." : announcements.length, icon: Bell, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/dashboard" },
-          { label: "My Classes", value: "View", icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950", href: "/classes" },
+          { label: "Announcements", value: loading ? "..." : announcements.length, icon: Bell, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950", href: "/dashboard" },
+          { label: "My Classes", value: "View", icon: BookOpen, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/classes" },
         ].map((stat) => {
           const Icon = stat.icon;
           return (

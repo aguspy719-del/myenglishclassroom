@@ -206,11 +206,11 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
             {/* File Upload */}
             <div className="space-y-2">
               <Label>File Materi</Label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-emerald-400 transition-colors">
                 {file ? (
-                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950 rounded-lg">
                     <div className="flex items-center gap-3">
-                      <File className="w-5 h-5 text-blue-600" />
+                      <File className="w-5 h-5 text-emerald-600" />
                       <div className="text-left">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
                         <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>

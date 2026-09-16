@@ -273,7 +273,7 @@ export function GradesClient({ user }: GradesClientProps) {
           <Button
             onClick={handleExportExcel}
             disabled={exporting}
-            className="gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto rounded-xl"
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto rounded-xl"
           >
             <FileSpreadsheet className="w-4 h-4" />
             {exporting ? "Exporting..." : "Export Rapor Excel"}
@@ -285,7 +285,7 @@ export function GradesClient({ user }: GradesClientProps) {
       {filtered.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card className="border-0 shadow-sm">
-            <CardContent className="pt-4 pb-4 text-center bg-blue-50 dark:bg-blue-950 rounded-xl">
+            <CardContent className="pt-4 pb-4 text-center bg-emerald-50 dark:bg-emerald-950 rounded-xl">
               <p className={`text-2xl font-bold ${getGradeColor(avgScore)}`}>{avgScore}</p>
               <p className="text-xs text-gray-500">Average</p>
             </CardContent>
@@ -303,8 +303,8 @@ export function GradesClient({ user }: GradesClientProps) {
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
-            <CardContent className="pt-4 pb-4 text-center bg-purple-50 dark:bg-purple-950 rounded-xl">
-              <p className="text-2xl font-bold text-purple-600">{filtered.length}</p>
+            <CardContent className="pt-4 pb-4 text-center bg-teal-50 dark:bg-teal-950 rounded-xl">
+              <p className="text-2xl font-bold text-teal-600">{filtered.length}</p>
               <p className="text-xs text-gray-500">Total</p>
             </CardContent>
           </Card>
@@ -356,7 +356,7 @@ export function GradesClient({ user }: GradesClientProps) {
                 <div key={grade} className="flex items-center gap-2">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${
                     grade === "A" ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" :
-                    grade === "B" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" :
+                    grade === "B" ? "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300" :
                     grade === "C" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" :
                     grade === "D" ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" :
                     "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
@@ -418,9 +418,9 @@ export function GradesClient({ user }: GradesClientProps) {
               sumatif_akhir: "SAS",
             };
             const quizTypeColors: Record<string, string> = {
-              formatif: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+              formatif: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
               sumatif_tengah: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-              sumatif_akhir: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+              sumatif_akhir: "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300",
             };
             return (
               <div
@@ -429,7 +429,7 @@ export function GradesClient({ user }: GradesClientProps) {
               >
                 <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 font-bold text-base ${
                   (grade.score || 0) >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" :
-                  (grade.score || 0) >= 80 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" :
+                  (grade.score || 0) >= 80 ? "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300" :
                   (grade.score || 0) >= 70 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" :
                   (grade.score || 0) >= 60 ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" :
                   "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"

@@ -65,9 +65,9 @@ function JoinClassCard({ userId, onJoined }: { userId: string; onJoined: () => v
   };
 
   return (
-    <div className="flex gap-2 p-4 bg-blue-50 dark:bg-blue-950 rounded-2xl border border-blue-100 dark:border-blue-900">
+    <div className="flex gap-2 p-4 bg-emerald-50 dark:bg-emerald-950 rounded-2xl border border-emerald-100 dark:border-emerald-900">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">Join a Class</p>
+        <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100 mb-2">Join a Class</p>
         <div className="flex gap-2">
           <Input
             placeholder="Enter class code (e.g. AB12CD)"
@@ -86,7 +86,7 @@ function JoinClassCard({ userId, onJoined }: { userId: string; onJoined: () => v
             {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join"}
           </Button>
         </div>
-        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1.5">
+        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1.5">
           Ask your teacher for the class code
         </p>
       </div>
@@ -95,14 +95,14 @@ function JoinClassCard({ userId, onJoined }: { userId: string; onJoined: () => v
 }
 
 const BANNER_COLORS = [
-  "from-blue-500 to-blue-700",
-  "from-indigo-500 to-indigo-700",
-  "from-purple-500 to-purple-700",
-  "from-green-500 to-green-700",
-  "from-teal-500 to-teal-700",
-  "from-orange-500 to-orange-700",
-  "from-pink-500 to-pink-700",
-  "from-cyan-500 to-cyan-700",
+  "from-emerald-500 to-teal-700",
+  "from-teal-500 to-cyan-700",
+  "from-cyan-500 to-teal-700",
+  "from-green-500 to-emerald-700",
+  "from-teal-500 to-emerald-700",
+  "from-emerald-500 to-green-700",
+  "from-cyan-500 to-green-700",
+  "from-green-500 to-teal-700",
 ];
 
 const getBannerColor = (name: string) => BANNER_COLORS[name.charCodeAt(0) % BANNER_COLORS.length];
@@ -281,7 +281,7 @@ export function ClassesClient({ user }: ClassesClientProps) {
         <div className="flex gap-2 mt-auto">
           {!archived ? (
             <Link href={`/classes/${cls.id}`} className="flex-1">
-              <Button variant="outline" size="sm" className="w-full rounded-xl text-xs font-semibold hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 dark:hover:bg-blue-950">
+              <Button variant="outline" size="sm" className="w-full rounded-xl text-xs font-semibold hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 dark:hover:bg-emerald-950">
                 Open Class
               </Button>
             </Link>

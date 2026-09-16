@@ -47,7 +47,11 @@ export function AttendanceStreakCard({
     : "";
 
   const todayLabel =
-    todayStatus === "present" ? "Hadir ✅" : todayStatus === "late" ? "Telat 🟡" : "Belum absen";
+    todayStatus === "present" ? "Hadir ✅"
+    : todayStatus === "late" ? "Telat 🟡"
+    : todayStatus === "excused" ? "Izin 🔵"
+    : todayStatus === "absent" ? "Alpha ❌"
+    : "Belum absen";
 
   return (
     <div className="rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-500/20 p-5">
