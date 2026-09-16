@@ -398,7 +398,7 @@ export function ClassesClient({ user }: ClassesClientProps) {
       {/* Tabs — Active / Archived (teacher only) */}
       {user.role === "teacher" ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full sm:w-auto flex h-auto p-1">
+          <TabsList className="w-full sm:w-auto flex h-auto p-1 gap-1">
             <TabsTrigger value="active" className="gap-1.5 flex-1 sm:flex-none min-w-0">
               <span className="truncate">Active</span>
               {activeClasses.length > 0 && (

@@ -264,7 +264,7 @@ export function TeachingAidsClient() {
 
       {/* Tabs */}
       <Tabs defaultValue="curriculum">
-        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1 p-1 overflow-x-auto scrollbar-hide">
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1 p-1">
           {CATEGORIES.map((cat) => {
             const count = getFilesForCategory(cat.id).length;
             return (

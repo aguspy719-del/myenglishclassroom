@@ -234,7 +234,7 @@ export function QuizClient({ user }: QuizClientProps) {
 
       {/* Tabs by type */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1 p-1 overflow-x-auto scrollbar-hide sm:overflow-visible">
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="all" className="text-xs flex-shrink-0">All</TabsTrigger>
           <TabsTrigger value="formatif" className="text-xs flex-shrink-0">Formatif</TabsTrigger>
           <TabsTrigger value="sumatif_tengah" className="text-xs flex-shrink-0">STS</TabsTrigger>

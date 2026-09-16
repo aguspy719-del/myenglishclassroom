@@ -605,7 +605,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
       />
 
       <Tabs defaultValue="questions">
-        <TabsList className="w-full sm:w-auto flex h-auto overflow-x-auto scrollbar-hide sm:overflow-visible">
+        <TabsList className="w-full sm:w-auto flex h-auto">
           <TabsTrigger value="questions" className="gap-1 flex-shrink-0"><BarChart2 className="w-4 h-4" />Questions ({questions.length})</TabsTrigger>
           <TabsTrigger value="results" className="gap-1 flex-shrink-0"><Users className="w-4 h-4" />Results ({attempts.length})</TabsTrigger>
           {essayCount > 0 && <TabsTrigger value="essays" className="gap-1 flex-shrink-0"><PenLine className="w-4 h-4" />Essays ({essayAnswers.length})</TabsTrigger>}

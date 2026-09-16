@@ -165,7 +165,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your account and view achievements</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Kelola akun dan lihat streak login kamu</p>
       </div>
 
       {/* Profile Hero Card */}
@@ -197,7 +197,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
                   <Flame className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold">🔥 {loginStreak} day{loginStreak === 1 ? "" : "s"} login streak</p>
+                  <p className="font-bold">🔥 Streak login {loginStreak} hari</p>
                   <p className="text-xs text-orange-100">+10 XP per day, up to 50 XP. Keep it alive!</p>
                 </div>
               </div>
@@ -210,7 +210,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
                 ))}
               </div>
               <p className="text-[11px] text-orange-100 mt-2">
-                {loginStreak >= 7 ? "7-day badge earned — now aim for 30! 🔥" : `${7 - loginStreak} more day${7 - loginStreak === 1 ? "" : "s"} to the 7-day badge`}
+                {loginStreak >= 7 ? "Streak 7 hari tercapai — lanjut ke 30! 🔥" : `${7 - loginStreak} hari lagi ke streak 7 hari`}
               </p>
             </div>
           )}
