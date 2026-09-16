@@ -1,4 +1,4 @@
-const CACHE_NAME = "english-lms-v3";
+const CACHE_NAME = "english-lms-v4";
 const STATIC_ASSETS = [
   "/",
   "/dashboard",
@@ -7,8 +7,10 @@ const STATIC_ASSETS = [
   "/grades",
   "/attendance",
   "/offline",
-  "/manifest.json",
 ];
+// NEVER cache these — must always come fresh from network so PWA
+// installs pick up the latest manifest.json and icons
+const NEVER_CACHE = ["/manifest.json", "/icons/"];
 
 // Install — cache static assets
 self.addEventListener("install", (event) => {
@@ -46,6 +48,10 @@ self.addEventListener("fetch", (event) => {
 
   // Skip Supabase API calls — these need live data
   if (url.hostname.includes("supabase.co")) return;
+
+  // Manifest & icons — always network, never cached by SW.
+  // (Caching manifest made installed PWAs keep the old icon forever.)
+  if (NEVER_CACHE.some((p) => url.pathname.startsWith(p))) return;
 
   // Next.js static files — cache first
   if (url.pathname.startsWith("/_next/static/")) {
