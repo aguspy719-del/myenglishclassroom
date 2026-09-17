@@ -434,7 +434,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
               </div>
             ))}
             {schedules.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">Belum ada jadwal. Klik "+ Tambah"</p>
+              <p className="text-sm text-gray-400 text-center py-4">Belum ada jadwal. Klik &quot;+ Tambah&quot;</p>
             )}
             <Button
               onClick={handleSaveSchedules}

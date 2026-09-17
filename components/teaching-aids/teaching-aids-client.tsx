@@ -330,7 +330,7 @@ export function TeachingAidsClient() {
                 <div className="text-center py-12 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
                   <Upload className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p className="font-medium">No files uploaded yet</p>
-                  <p className="text-sm mt-1 text-gray-400">Click "Upload Files" above to add documents</p>
+                  <p className="text-sm mt-1 text-gray-400">Click &quot;Upload Files&quot; above to add documents</p>
                   <p className="text-xs mt-1 text-gray-400">Supports PDF, DOCX, XLSX, PPT</p>
                 </div>
               ) : (
