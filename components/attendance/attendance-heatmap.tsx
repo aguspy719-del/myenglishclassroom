@@ -60,11 +60,13 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
     return { rows: rowsData, presentCount: present };
   }, [records, today, weeks]);
 
-  const cellColor = (status?: string) => {
+  const cellColor = (status?: string, isFuture?: boolean) => {
     if (status === "present") return "bg-emerald-500";
     if (status === "late") return "bg-amber-400";
     if (status === "excused") return "bg-sky-400"; // Izin
-    return "bg-white/90"; // alpha / no record
+    if (status === "absent") return "bg-white/90"; // Alpha — solid white
+    // No record: past days = didn't check in (faint), future days = dim
+    return isFuture ? "bg-white/10" : "bg-white/25";
   };
 
   const statusLabel = (status?: string) =>
@@ -76,7 +78,7 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
       ? "Alpha"
       : status === "excused"
       ? "Izin"
-      : "Alpha";
+      : "Tidak presensi";
 
   const dayTooltip = (iso: string, status?: string) => {
     const d = new Date(iso);
@@ -118,7 +120,7 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
                       title={day.isFuture ? undefined : dayTooltip(day.date, day.status)}
                       className={cn(
                         "w-[14px] h-[14px] rounded-[4px] transition-colors",
-                        cellColor(day.status),
+                        cellColor(day.status, day.isFuture),
                         day.isToday && "ring-2 ring-white ring-offset-1 ring-offset-emerald-600",
                         day.isFuture && "opacity-30"
                       )}
@@ -131,8 +133,8 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 mt-3 text-[10px] text-white/80">
+      {/* Legend — 5 statuses, matching the Attendance page calendar */}
+      <div className="flex items-center gap-3 mt-3 text-[10px] text-white/80 flex-wrap">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Hadir
         </span>
@@ -144,6 +146,9 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-white/90" /> Alpha
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-white/25" /> Tidak presensi
         </span>
       </div>
     </div>

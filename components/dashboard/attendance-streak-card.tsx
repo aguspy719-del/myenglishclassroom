@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Clock, Flame, TrendingUp } from "lucide-react";
 import { AttendanceHeatmap } from "@/components/attendance/attendance-heatmap";
+import { AttendanceHistoryList } from "@/components/attendance/attendance-history-list";
 import type { Attendance } from "@/types";
 
 interface AttendanceStreakCardProps {
@@ -99,4 +100,9 @@ export function AttendanceStreakCard({
       </div>
     </div>
   );
+}
+
+/** Recent attendance history, matching the attendance page style. */
+export function AttendanceHistorySection({ records, loading }: { records: Attendance[]; loading: boolean }) {
+  return <AttendanceHistoryList records={records} loading={loading} limit={10} />;
 }

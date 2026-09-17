@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Logo } from "@/components/ui/logo";
+import Image from "next/image";
 
 /**
  * PWA entrance animation.
@@ -40,8 +40,9 @@ export function PwaEntrance() {
       data-leaving={leaving ? "true" : "false"}
       aria-hidden="true"
     >
-      <div className="pwa-splash-logo w-20 h-20 rounded-3xl overflow-hidden shadow-xl shadow-emerald-500/25">
-        <Logo size={80} className="w-full h-full" />
+      {/* Glyph only — no green square, clean on the white splash */}
+      <div className="pwa-splash-logo w-24 h-24">
+        <Image src="/icons/icon-splash-1024.png" alt="My Classroom" width={96} height={96} className="w-full h-full object-contain" priority />
       </div>
       <div className="pwa-splash-wordmark text-center mt-4">
         <p className="text-lg font-black text-gray-900 dark:text-white">My Classroom</p>

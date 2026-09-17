@@ -117,9 +117,7 @@ export default function LoginPage() {
 
             {/* Logo — mobile only (desktop already has the brand panel) */}
             <div className="lg:hidden text-center mb-8">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4 shadow-xl shadow-emerald-500/25">
-                <Image src="/icons/icon-192.png" alt="My Classroom" width={64} height={64} className="w-full h-full object-cover" />
-              </div>
+              <Image src="/icons/icon-splash-1024.png" alt="My Classroom" width={80} height={80} className="w-20 h-20 object-contain mx-auto mb-3" priority />
               <h1 className="text-2xl font-black text-gray-900">My Classroom</h1>
               <p className="text-gray-500 text-sm mt-1">SMK Negeri 1 Buduran</p>
             </div>

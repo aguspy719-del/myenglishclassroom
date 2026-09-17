@@ -14,7 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
 import type { User, Assignment, Submission, Announcement, Attendance } from "@/types";
-import { AttendanceStreakCard } from "@/components/dashboard/attendance-streak-card";
+import { AttendanceStreakCard, AttendanceHistorySection } from "@/components/dashboard/attendance-streak-card";
 
 interface StudentDashboardProps {
   user: User;
@@ -51,7 +51,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         supabase.from("submissions").select("*, assignment:assignments(title)").eq("student_id", user.id).not("score", "is", null).order("submitted_at", { ascending: false }).limit(4),
         supabase.from("announcements").select("*").order("created_at", { ascending: false }).limit(3),
         supabase.from("attendance").select("status").eq("student_id", user.id),
-        supabase.from("attendance").select("date, status").eq("student_id", user.id).gte("date", new Date(Date.now() - 140 * 86400000).toISOString().split("T")[0]).order("date", { ascending: false }),
+        supabase.from("attendance").select("id, date, status, timestamp, class_id").eq("student_id", user.id).gte("date", new Date(Date.now() - 140 * 86400000).toISOString().split("T")[0]).order("date", { ascending: false }),
         supabase.from("users").select("points, level, badges").eq("id", user.id).single(),
       ]);
       setUpcomingAssignments(assignmentsRes.data || []);
@@ -137,6 +137,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         attendanceRate={attendanceRate}
         todayStatus={todayAttendanceStatus}
       />
+
+      {/* Recent attendance history — same list style as the Attendance page */}
+      <AttendanceHistorySection records={attendanceRecords} loading={loading} />
 
       {/* Stats — the essentials */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
