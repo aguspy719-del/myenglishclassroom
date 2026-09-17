@@ -1,4 +1,4 @@
-const CACHE_NAME = "english-lms-v4";
+const CACHE_NAME = "english-lms-v5"; // v1.2.0 — bump to ship updates to installed PWAs
 const STATIC_ASSETS = [
   "/",
   "/dashboard",
@@ -36,6 +36,13 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+// Allow the page to activate a waiting worker immediately (update flow)
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 // Fetch strategy

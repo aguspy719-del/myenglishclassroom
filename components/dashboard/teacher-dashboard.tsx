@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Users, BookOpen, ClipboardList, FileText,
   Plus, ArrowRight, TrendingUp, Clock, CheckCircle, Megaphone, Trash2, ChevronDown, ChevronUp,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,20 +48,30 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const supabase = createClient();
+    const supabase = createClient();
 
-      const [classesRes, studentsRes, assignmentsRes, submissionsRes] = await Promise.all([
-        supabase.from("classes").select("id", { count: "exact" }),
-        supabase.from("users").select("id", { count: "exact" }).eq("role", "student"),
-        supabase.from("assignments").select("id", { count: "exact" }),
-        supabase
-          .from("submissions")
-          .select("*, student:users(name, email), assignment:assignments(title)")
-          .is("score", null)
-          .order("submitted_at", { ascending: false })
-          .limit(5),
-      ]);
+    // Single parallel fetch — stats, lists and announcements arrive together
+    // so the dashboard paints once instead of progressively.
+    const fetchData = async () => {
+      const [classesRes, studentsRes, assignmentsRes, submissionsRes, upcomingRes, announcementsRes] =
+        await Promise.all([
+          supabase.from("classes").select("id", { count: "exact" }),
+          supabase.from("users").select("id", { count: "exact" }).eq("role", "student"),
+          supabase.from("assignments").select("id", { count: "exact" }),
+          supabase
+            .from("submissions")
+            .select("*, student:users(name, email), assignment:assignments(title)")
+            .is("score", null)
+            .order("submitted_at", { ascending: false })
+            .limit(5),
+          supabase
+            .from("assignments")
+            .select("*, class:classes(class_name)")
+            .gte("deadline", new Date().toISOString())
+            .order("deadline", { ascending: true })
+            .limit(4),
+          supabase.from("announcements").select("*").order("created_at", { ascending: false }),
+        ]);
 
       setStats({
         totalClasses: classesRes.count || 0,
@@ -68,36 +79,24 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
         totalAssignments: assignmentsRes.count || 0,
         pendingSubmissions: submissionsRes.data?.length || 0,
       });
-
       setRecentSubmissions(submissionsRes.data || []);
-
-      const { data: upcoming } = await supabase
-        .from("assignments")
-        .select("*, class:classes(class_name)")
-        .gte("deadline", new Date().toISOString())
-        .order("deadline", { ascending: true })
-        .limit(4);
-
-      setUpcomingAssignments(upcoming || []);
+      setUpcomingAssignments(upcomingRes.data || []);
+      setAnnouncements(announcementsRes.data || []);
+      setAnnouncementsLoading(false);
       setLoading(false);
     };
 
     fetchData();
   }, []);
 
-  const fetchAnnouncements = async () => {
+  const refetchAnnouncements = async () => {
     const supabase = createClient();
     const { data } = await supabase
       .from("announcements")
       .select("*")
       .order("created_at", { ascending: false });
     setAnnouncements(data || []);
-    setAnnouncementsLoading(false);
   };
-
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
 
   const handleCreateAnnouncement = async () => {
     if (!newTitle.trim() || !newContent.trim()) {
@@ -117,7 +116,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
       setNewTitle("");
       setNewContent("");
       setShowCreateForm(false);
-      fetchAnnouncements();
+      refetchAnnouncements();
     }
     setSubmitting(false);
   };
@@ -130,20 +129,37 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
       toast.error("Failed to delete announcement");
     } else {
       toast.success("Announcement deleted");
-      fetchAnnouncements();
+      refetchAnnouncements();
     }
   };
 
+  const firstName = user.name.split(" ")[0];
+
   const statCards = [
-    { title: "Total Students", value: stats.totalStudents, icon: Users, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", href: "/classes" },
-    { title: "Total Classes", value: stats.totalClasses, icon: BookOpen, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950", href: "/classes" },
-    { title: "Total Assignments", value: stats.totalAssignments, icon: ClipboardList, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/assignments" },
+    { title: "Students", value: stats.totalStudents, icon: Users, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", href: "/classes" },
+    { title: "Classes", value: stats.totalClasses, icon: BookOpen, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950", href: "/classes" },
+    { title: "Assignments", value: stats.totalAssignments, icon: ClipboardList, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950", href: "/assignments" },
     { title: "Needs Grading", value: stats.pendingSubmissions, icon: FileText, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950", href: "/assignments" },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Greeting is rendered by WelcomeHeader in DashboardLayout */}
+      {/* Page heading */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
+          <Sparkles className="w-5 h-5 text-white" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white leading-tight truncate">
+            Teacher Dashboard
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-tight truncate">
+            {"Here's your class at a glance"}
+          </p>
+        </div>
+      </div>
+
+      {/* Quick actions */}
       <div className="flex gap-2 w-full">
         <Link href="/assignments/create" className="flex-1 sm:flex-none">
           <Button className="gap-2 w-full sm:w-auto rounded-xl bg-emerald-600 hover:bg-emerald-700">
@@ -165,7 +181,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
           const Icon = card.icon;
           return (
             <Link key={card.title} href={card.href}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer border-0 shadow-sm">
+              <Card className="hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer border-0 shadow-sm">
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className={`w-9 h-9 ${card.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>

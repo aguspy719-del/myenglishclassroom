@@ -6,6 +6,7 @@ import { PWARegister } from "@/components/providers/pwa-register";
 import { PwaEntrance } from "@/components/providers/pwa-entrance";
 import { ProgressBar } from "@/components/providers/progress-bar";
 import { OfflineIndicator } from "@/components/providers/offline-indicator";
+import { UpdateNotification } from "@/components/providers/update-notification";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -59,6 +60,7 @@ export default function RootLayout({
           <PWARegister />
           <OfflineIndicator />
           <ProgressBar />
+          <UpdateNotification />
           {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>

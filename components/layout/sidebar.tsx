@@ -27,7 +27,7 @@ const teacherNavItems = [
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
   { href: "/rapor", label: "Rapor Export", icon: FileSpreadsheet },
-  { href: "/assessment", label: "Assessment", icon: FileText },
+  { href: "/quiz", label: "Assessment", icon: FileText },
   { href: "/teaching-aids", label: "Teaching Aids", icon: BookMarked },
 ];
 
@@ -36,7 +36,7 @@ const studentNavItems = [
   { href: "/classes", label: "My Classes", icon: GraduationCap },
   { href: "/attendance", label: "Attendance", icon: UserCheck },
   { href: "/grades", label: "My Grades", icon: Star },
-  { href: "/assessment", label: "Assessment", icon: FileText },
+  { href: "/quiz", label: "Assessment", icon: FileText },
 ];
 
 // Bottom nav items (most used, max 5)
@@ -45,14 +45,14 @@ const teacherBottomNav = [
   { href: "/classes", label: "Classes", icon: Users },
   { href: "/attendance", label: "Attend", icon: UserCheck },
   { href: "/grades", label: "Grades", icon: Star },
-  { href: "/assessment", label: "Assessment", icon: FileText },
+  { href: "/quiz", label: "Assessment", icon: FileText },
 ];
 
 const studentBottomNav = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/classes", label: "Classes", icon: GraduationCap },
   { href: "/grades", label: "Grades", icon: Star },
-  { href: "/assessment", label: "Assessment", icon: FileText },
+  { href: "/quiz", label: "Assessment", icon: FileText },
   { href: "/attendance", label: "Attend", icon: UserCheck },
 ];
 
@@ -70,6 +70,10 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         ...navItems.map((i) => i.href),
         ...bottomNavItems.map((i) => i.href),
         "/profile",
+        "/assessment",
+        "/materials",
+        "/rapor",
+        "/teaching-aids",
       ]);
       targets.delete(pathname);
       targets.forEach((href) => router.prefetch(href));
@@ -89,14 +93,14 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={onClose} />
+        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden" onClick={onClose} />
       )}
 
-      {/* Desktop Sidebar */}
+      {/* Tablet+ Sidebar (hidden on phones — bottom nav covers navigation there) */}
       <aside
         className={cn(
           "fixed left-0 top-0 z-50 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-transform duration-300 ease-in-out shadow-xl",
-          "lg:translate-x-0 lg:static lg:z-auto lg:shadow-none",
+          "md:translate-x-0 md:static md:z-auto md:shadow-none",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -111,7 +115,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">SMK N 1 Buduran</p>
             </div>
           </Link>
-          <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         </div>
@@ -162,7 +166,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Bottom actions */}
-        <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-0.5 pb-20 lg:pb-3">
+        <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-0.5 pb-20 md:pb-3">
           <Link
             href="/"
             onClick={onClose}
