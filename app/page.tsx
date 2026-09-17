@@ -108,7 +108,7 @@ export default async function LandingPage() {
             </h1>
 
             <p className="text-lg text-gray-600 mb-8 max-w-xl mx-auto leading-relaxed hero-pop" style={{ animationDelay: "0.24s" }}>
-              Kelas digital bahasa Inggris: materi, tugas, absensi, dan nilai — semuanya dalam satu aplikasi.
+              Your digital English classroom. Access materials, submit assignments, and track your progress—all in one place.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10 hero-pop" style={{ animationDelay: "0.36s" }}>
