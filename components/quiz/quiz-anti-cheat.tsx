@@ -282,11 +282,12 @@ export function QuizAntiCheat({
     }
   }, [isActive, isFullscreen]);
 
-  // Warning overlay — blocks everything, no way to dismiss without acknowledging
+  // Warning overlay — blocks everything, no way to dismiss without acknowledging.
+  // overflow-y-auto + my-auto keeps the dialog fully visible on small screens.
   if (showWarning && isActive) {
     return (
-      <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+      <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 overflow-y-auto">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl my-auto">
           <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
           </div>
@@ -311,14 +312,16 @@ export function QuizAntiCheat({
     );
   }
 
-  // Fullscreen prompt — must enter fullscreen to start (no skip on Android/desktop)
+  // Fullscreen prompt — must enter fullscreen to start (no skip on Android/desktop).
+  // overflow-y-auto + my-auto: on short screens the dialog scrolls instead of
+  // being cut off above the viewport.
   if (showFullscreenPrompt && isActive) {
     const iosDevice = isIOS();
     const androidDevice = isAndroid();
 
     return (
-      <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-emerald-700 to-teal-800 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+      <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-emerald-700 to-teal-800 flex items-center justify-center p-4 overflow-y-auto">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl my-auto">
           <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>

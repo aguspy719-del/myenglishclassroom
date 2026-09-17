@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 
-// Cloudinary config — credentials live in .env.local (never exposed to client)
+// Cloudinary config — credentials live in .env.local / Vercel env vars
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -12,6 +12,18 @@ cloudinary.config({
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB — keeps uploads light & fast
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Fail fast with a CLEAR message when Cloudinary env vars are missing (e.g. not set in Vercel) */
+function checkCloudinaryConfig(): string | null {
+  const missing: string[] = [];
+  if (!process.env.CLOUDINARY_CLOUD_NAME) missing.push("CLOUDINARY_CLOUD_NAME");
+  if (!process.env.CLOUDINARY_API_KEY) missing.push("CLOUDINARY_API_KEY");
+  if (!process.env.CLOUDINARY_API_SECRET) missing.push("CLOUDINARY_API_SECRET");
+  if (missing.length > 0) {
+    return `Server upload is not configured. Missing environment variables: ${missing.join(", ")}. Add them in Vercel → Settings → Environment Variables, then redeploy.`;
+  }
+  return null;
+}
 
 /**
  * Extract the public_id from a Cloudinary delivery URL.
@@ -45,7 +57,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Validate the file
+    // 2. Config check BEFORE accepting the file — exact reason, no vague "gagal"
+    const configError = checkCloudinaryConfig();
+    if (configError) {
+      console.error("[Avatar Upload]", configError);
+      return NextResponse.json({ error: configError }, { status: 500 });
+    }
+
+    // 3. Validate the file
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     if (!file) {
@@ -64,7 +83,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Upload to Cloudinary (server-side, signed) — 400px square, face-focused
+    // 4. Upload to Cloudinary (server-side, signed) — 400px square, face-focused
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploadResult = await new Promise<{ secure_url: string; public_id: string }>(
       (resolve, reject) => {
@@ -87,7 +106,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // 4. Delete the previous Cloudinary asset so the quota is not eaten
+    // 5. Delete the previous Cloudinary asset so the quota is not eaten
     const { data: profile } = await supabase
       .from("users")
       .select("avatar_url")
@@ -98,7 +117,7 @@ export async function POST(request: NextRequest) {
       cloudinary.uploader.destroy(oldId).catch(() => {});
     }
 
-    // 5. Save the new URL on the user row
+    // 6. Save the new URL on the user row
     const { error: updateError } = await supabase
       .from("users")
       .update({ avatar_url: uploadResult.secure_url })
@@ -106,15 +125,20 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       return NextResponse.json(
-        { error: "Gagal menyimpan foto profil" },
+        { error: "Gagal menyimpan foto profil: " + updateError.message },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true, avatar_url: uploadResult.secure_url });
-  } catch (err) {
+  } catch (err: any) {
+    // Surface the REAL reason (invalid credentials, network, etc.) instead of a vague failure
+    const detail = err?.message ? ` (${String(err.message).slice(0, 140)})` : "";
     console.error("[Avatar Upload] Error:", err);
-    return NextResponse.json({ error: "Gagal mengupload foto" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Gagal mengupload foto" + detail },
+      { status: 500 }
+    );
   }
 }
 
@@ -125,6 +149,11 @@ export async function DELETE() {
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const configError = checkCloudinaryConfig();
+    if (configError) {
+      return NextResponse.json({ error: configError }, { status: 500 });
     }
 
     const { data: profile } = await supabase
@@ -147,8 +176,9 @@ export async function DELETE() {
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
+    const detail = err?.message ? ` (${String(err.message).slice(0, 140)})` : "";
     console.error("[Avatar Delete] Error:", err);
-    return NextResponse.json({ error: "Gagal menghapus foto" }, { status: 500 });
+    return NextResponse.json({ error: "Gagal menghapus foto" + detail }, { status: 500 });
   }
 }
