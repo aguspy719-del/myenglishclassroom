@@ -2,10 +2,12 @@
  * Generate all PWA icons from public/icons/logonew.png (the source logo).
  *
  * - icon-192.png / icon-512.png  → transparent RGBA (logo only, NO background)
- * - icon-maskable-*.png          → near-black full-bleed + logo at 80% safe zone
+ * - icon-maskable-*.png          → full-bleed GREEN matching the logo's own edge
+ *                                  color + logo enlarged to 90% (background is
+ *                                  invisible because it matches the logo edge)
  *                                  (Android home-screen icons cannot be transparent:
  *                                  launchers render transparency as black garbage)
- * - apple-touch-icon.png         → near-black opaque (iOS renders transparency black)
+ * - apple-touch-icon.png         → same green, logo at 94% (iOS renders transparency black)
  *
  * Usage: node scripts/gen-icons-from-logo.cjs
  */
@@ -137,9 +139,9 @@ function resize(src, tw, th) {
   return { w: tw, h: th, px: out };
 }
 
-// ── RGBA → opaque RGB over a dark brand background ──────────
-// Near-black with a subtle green tint (Grab/Gemini-style home icons)
-const DARK_BG = [7, 13, 10]; // #070d0a
+// ── RGBA → opaque RGB over the logo's own edge color ────────
+// Sampled from the logo's edge so the fill is seamless with the logo itself
+const DARK_BG = [21, 133, 44]; // #15852c (logo edge green)
 function overDark(img) {
   const out = Buffer.alloc(img.w * img.h * 3);
   for (let i = 0, j = 0; i < img.px.length; i += 4, j += 3) {
@@ -151,9 +153,9 @@ function overDark(img) {
   return out;
 }
 
-// ── Maskable: logo at 80% centered on dark full-bleed ───────
+// ── Maskable: logo enlarged to 90% on matching-green full-bleed ──
 function maskable(src, size) {
-  const inner = resize(src, Math.round(size * 0.8), Math.round(size * 0.8));
+  const inner = resize(src, Math.round(size * 0.9), Math.round(size * 0.9));
   const rgb = Buffer.alloc(size * size * 3);
   for (let j = 0; j < rgb.length; j += 3) {
     rgb[j] = DARK_BG[0]; rgb[j + 1] = DARK_BG[1]; rgb[j + 2] = DARK_BG[2];
@@ -178,8 +180,8 @@ fs.writeFileSync("public/icons/icon-512.png", encodePNG(512, 512, resize(src, 51
 // transparency renders as black garbage on the home screen)
 fs.writeFileSync("public/icons/icon-maskable-192.png", maskable(src, 192));
 fs.writeFileSync("public/icons/icon-maskable-512.png", maskable(src, 512));
-// Apple touch — dark opaque (iOS renders transparency as black)
-const appleInner = resize(src, Math.round(180 * 0.9), Math.round(180 * 0.9));
+// Apple touch — green opaque, logo as large as possible (iOS renders transparency as black)
+const appleInner = resize(src, Math.round(180 * 0.94), Math.round(180 * 0.94));
 const appleCanvas = Buffer.alloc(180 * 180 * 3);
 for (let j = 0; j < appleCanvas.length; j += 3) {
   appleCanvas[j] = DARK_BG[0]; appleCanvas[j + 1] = DARK_BG[1]; appleCanvas[j + 2] = DARK_BG[2];
@@ -192,4 +194,4 @@ for (let y = 0; y < appleInner.h; y++) {
   );
 }
 fs.writeFileSync("public/apple-touch-icon.png", encodePNG(180, 180, appleCanvas, 2));
-console.log("Generated: icon-192 (transparent), icon-512 (transparent), icon-maskable-192 (dark), icon-maskable-512 (dark), apple-touch-icon (dark)");
+console.log("Generated: icon-192 (transparent), icon-512 (transparent), icon-maskable-192 (green bg, logo 90%), icon-maskable-512 (green bg, logo 90%), apple-touch-icon (green bg, logo 94%)");

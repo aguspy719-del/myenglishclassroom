@@ -317,6 +317,94 @@ html {
   width: 280px;
 }
 
+/* ── Landing page motion ── */
+@keyframes float-slow {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -18px, 0) scale(1.05); }
+}
+
+.floating-blob {
+  animation: float-slow 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Scroll reveal: hidden until .reveal-in is added by the observer */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Hero elements pop in on load with a gentle cascade */
+@keyframes hero-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.hero-pop {
+  opacity: 0;
+  animation: hero-pop 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Shimmer sweep for the hero badge */
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(220%); }
+}
+
+.hero-badge-shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(105deg, transparent, rgba(16, 185, 129, 0.18), transparent);
+  animation: shimmer-sweep 3.5s ease-in-out 1.2s infinite;
+  pointer-events: none;
+}
+
+/* Marquee cards lift slightly while scrolling */
+.marquee-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.marquee-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 18px 40px -12px rgba(16, 185, 129, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-blob,
+  .marquee-track {
+    animation: none;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .hero-pop {
+    opacity: 1;
+    animation: none;
+  }
+  .hero-badge-shimmer::after {
+    display: none;
+  }
+}
+
 /* Background texture/noise */
 .bg-texture {
   background-image: 
