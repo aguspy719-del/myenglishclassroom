@@ -45,7 +45,7 @@ export function AttendanceStreakCard({
     : "";
 
   const todayLabel =
-    todayStatus === "present" ? "Present ✅"
+    todayStatus === "present" ? "Present"
     : todayStatus === "late" ? "Late 🟡"
     : todayStatus === "excused" ? "Excused 🔵"
     : todayStatus === "absent" ? "Absent ❌"

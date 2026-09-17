@@ -220,11 +220,6 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">Kelola akun dan lihat streak login kamu</p>
-      </div>
-
       {/* Profile Hero Card */}
       <Card className="border-0 shadow-sm overflow-hidden">
         {/* Banner */}

@@ -5,6 +5,7 @@ import { Bell, X, CheckCheck, Zap, Trophy, Info, ClipboardList, FileText, Flame,
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { formatRelativeTime } from "@/lib/utils";
+import { isUpdatePending, APP_VERSION } from "@/components/providers/update-notification";
 import Link from "next/link";
 
 import type { Notification } from "@/types";
@@ -27,6 +28,12 @@ export function Notifications({ userId }: NotificationsProps) {
   const [updateDismissed, setUpdateDismissed] = useState(false);
 
   useEffect(() => {
+    // Check on mount too — the provider only fires its event once per page
+    // load, so after client-side navigation this component would miss it.
+    if (isUpdatePending()) {
+      setUpdateNotice({ version: APP_VERSION });
+      setUpdateDismissed(false);
+    }
     const onUpdate = (e: Event) => {
       setUpdateNotice((e as CustomEvent<AppUpdateNotice>).detail);
       setUpdateDismissed(false);

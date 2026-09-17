@@ -13,9 +13,24 @@ import { useEffect } from "react";
  * never nags again for THAT version — it reappears only for the NEXT
  * shipped version.
  */
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.3.1";
 
 const SEEN_KEY = "app-update-version";
+
+/**
+ * Whether THIS client has not yet seen/dismissed the current app version.
+ * Used by the bell UI on mount — the "app-update-available" event alone is
+ * not enough because it only fires once per page load, so components that
+ * mount later (client-side navigation) would never hear it.
+ */
+export function isUpdatePending(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(SEEN_KEY) !== APP_VERSION;
+  } catch {
+    return true;
+  }
+}
 
 export function UpdateNotification() {
   useEffect(() => {
