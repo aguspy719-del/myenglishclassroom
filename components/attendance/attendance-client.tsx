@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   UserCheck, CheckCircle, XCircle, Clock, AlertCircle,
@@ -108,7 +108,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
   const [locationStatus, setLocationStatus] = useState<"idle" | "checking" | "ok" | "denied" | "tooFar">("idle");
   const [studentDistance, setStudentDistance] = useState<number | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const supabase = createClient();
     const { data: classesData } = await supabase.from("classes").select("*").order("class_name");
     setClasses(classesData || []);
@@ -163,14 +163,14 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       }
     }
     setLoading(false);
-  };
+  }, [user, selectedClass, selectedDate]);
 
   useEffect(() => {
     fetchData();
-  }, [selectedClass, selectedDate]);
+  }, [fetchData]);
 
   // ── Rekap fetch ────────────────────────────────────────────
-  const fetchRekap = async (classId: string) => {
+  const fetchRekap = useCallback(async (classId: string) => {
     setRekapLoading(true);
     const supabase = createClient();
 
@@ -205,13 +205,13 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
 
     setRekapRows(allRows);
     setRekapLoading(false);
-  };
+  }, [classes]);
 
   useEffect(() => {
     if (user.role === "teacher" && activeTab === "rekap" && classes.length > 0) {
       fetchRekap(rekapClass);
     }
-  }, [activeTab, rekapClass, classes]);
+  }, [user.role, activeTab, rekapClass, classes, fetchRekap]);
 
   // ── Load siswa saat kelas dipilih di dialog manual ─────────
   const loadManualStudents = async (classId: string) => {

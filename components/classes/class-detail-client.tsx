@@ -1,7 +1,8 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowLeft, Users, BookOpen, ClipboardList, FileText,
   Plus, Download, Trash2, Clock, Search, GraduationCap,
@@ -63,7 +64,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
   const [newStudentForm, setNewStudentForm] = useState({ name: "", email: "", password: "" });
   const [creatingStudent, setCreatingStudent] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const supabase = createClient();
     setLoading(true);
 
@@ -96,11 +97,11 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
     setAssignments(assignmentsRes.data || []);
     setQuizzes(quizzesRes.data || []);
     setLoading(false);
-  };
+  }, [classData.id]);
 
   useEffect(() => {
     fetchData();
-  }, [classData.id]);
+  }, [fetchData]);
 
   // ── Archive helpers ────────────────────────────────────────
 
@@ -1159,7 +1160,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                 >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
                     {student.avatar_url ? (
-                      <img src={student.avatar_url} alt={student.name} className="w-10 h-10 rounded-full object-cover" />
+                      <Image src={student.avatar_url} alt={student.name} width={40} height={40} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <span className="text-white text-sm font-bold">{getInitials(student.name)}</span>
                     )}

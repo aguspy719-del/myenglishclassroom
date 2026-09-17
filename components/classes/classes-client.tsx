@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Plus, Search, Users, BookOpen, ClipboardList,
@@ -128,7 +128,7 @@ export function ClassesClient({ user }: ClassesClientProps) {
   const [editingClass, setEditingClass] = useState<ClassWithStats | null>(null);
   const [editForm, setEditForm] = useState({ class_name: "", major: "", grade: "" });
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     const supabase = createClient();
     let query = supabase.from("classes").select("*").order("grade").order("class_name");
     if (user.role === "student" && user.class_id) {
@@ -155,9 +155,9 @@ export function ClassesClient({ user }: ClassesClientProps) {
     );
     setClasses(classesWithStats);
     setLoading(false);
-  };
+  }, [user]);
 
-  useEffect(() => { fetchClasses(); }, []);
+  useEffect(() => { fetchClasses(); }, [fetchClasses]);
 
   const handleCreateClass = async () => {
     if (!newClass.class_name || !newClass.major || !newClass.grade) {

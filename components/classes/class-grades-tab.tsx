@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Star, Download, Loader2, Search, ChevronDown, ChevronUp, FileSpreadsheet,
 } from "lucide-react";
@@ -43,11 +43,7 @@ export function ClassGradesTab({ classData }: ClassGradesTabProps) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "name", dir: "asc" });
 
-  useEffect(() => {
-    fetchGrades();
-  }, [classData.id]);
-
-  const fetchGrades = async () => {
+  const fetchGrades = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
 
@@ -122,7 +118,11 @@ export function ClassGradesTab({ classData }: ClassGradesTabProps) {
     setAssignmentCols(assignments.map((a) => ({ id: a.id, title: a.title })));
     setRows(studentRows);
     setLoading(false);
-  };
+  }, [classData.id]);
+
+  useEffect(() => {
+    fetchGrades();
+  }, [fetchGrades]);
 
   // ── Sorting ───────────────────────────────────────────────
   const toggleSort = (key: SortKey) => {

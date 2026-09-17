@@ -436,7 +436,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
       refreshData();
     };
     load();
-  }, [quiz.id, refreshData]);
+  }, [quiz, refreshData]);
 
   const addDraft = (type: "multiple_choice" | "essay") => {
     setDrafts((p) => [...p, type === "essay" ? emptyEssay() : emptyMC()]);

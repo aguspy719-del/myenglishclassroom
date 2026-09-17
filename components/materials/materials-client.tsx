@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -40,7 +40,7 @@ export function MaterialsClient({ user }: MaterialsClientProps) {
   const [selectedClass, setSelectedClass] = useState(classFilter);
   const [selectedTopic, setSelectedTopic] = useState("all");
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const supabase = createClient();
 
     // Use cache for student materials (most important for offline)
@@ -80,11 +80,11 @@ export function MaterialsClient({ user }: MaterialsClientProps) {
     if (fromCache) {
       toast.info("Showing cached data (offline mode)", { duration: 2000 });
     }
-  };
+  }, [user, selectedClass]);
 
   useEffect(() => {
     fetchData();
-  }, [selectedClass]);
+  }, [fetchData]);
 
   const handleDelete = async (id: string, title: string) => {
     if (!confirm(`Hapus materi "${title}"?`)) return;

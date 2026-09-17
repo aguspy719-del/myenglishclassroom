@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Plus, Search, Clock, CheckCircle, AlertCircle, ClipboardList, Trash2 } from "lucide-react";
@@ -30,7 +30,7 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
   const [selectedClass, setSelectedClass] = useState(classFilter);
   const [filter, setFilter] = useState<"all" | "active" | "past">("all");
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const supabase = createClient();
 
     let query = supabase
@@ -68,11 +68,11 @@ export function AssignmentsClient({ user }: AssignmentsClientProps) {
     }
 
     setLoading(false);
-  };
+  }, [user, selectedClass]);
 
   useEffect(() => {
     fetchData();
-  }, [selectedClass]);
+  }, [fetchData]);
 
   const handleDelete = async (id: string, title: string) => {
     if (!confirm(`Hapus tugas "${title}"?`)) return;

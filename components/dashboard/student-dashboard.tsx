@@ -120,7 +120,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       Object.values(refetchTimers).forEach(clearTimeout);
       supabase.removeChannel(channel);
     };
-  }, [user.id, user.class_id]);
+  }, [user]);
 
   const points = userData?.points || 0;
   const level = userData?.level || 1;

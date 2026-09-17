@@ -271,7 +271,7 @@ export function QuizAntiCheat({
         document.exitFullscreen().catch(() => {});
       }
     }
-  }, [isActive]);
+  }, [isActive, isFullscreen]);
 
   // Warning overlay — blocks everything, no way to dismiss without acknowledging
   if (showWarning && isActive) {

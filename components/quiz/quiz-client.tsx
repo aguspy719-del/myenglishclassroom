@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, FileText, Clock, Trash2, Search, CheckSquare, Square, Calendar, EyeOff, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,7 +46,7 @@ export function QuizClient({ user }: QuizClientProps) {
     available_until: "",
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const supabase = createClient();
     let query = supabase
       .from("quizzes")
@@ -69,9 +69,9 @@ export function QuizClient({ user }: QuizClientProps) {
     setQuizzes(quizzesRes.data || []);
     setClasses(classesRes.data || []);
     setLoading(false);
-  };
+  }, [user]);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const toggleClass = (classId: string) => {
     setSelectedClasses((prev) =>
