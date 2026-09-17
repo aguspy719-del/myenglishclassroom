@@ -168,6 +168,25 @@ function maskable(src, size) {
   return encodePNG(size, size, rgb, 2);
 }
 
+// ── Splash glyph: white artwork only, recolored brand green, transparent bg ──
+// Chrome's PWA splash screen uses the largest "any" manifest icon. A glyph-only
+// icon keeps the splash clean (no green square around the artwork).
+function splashGlyph(src, size) {
+  const img = resize(src, size, size);
+  const out = Buffer.alloc(size * size * 4);
+  for (let i = 0; i < img.px.length; i += 4) {
+    const r = img.px[i], g = img.px[i + 1], b = img.px[i + 2], a = img.px[i + 3];
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    if (a > 8 && lum > 170) {
+      // Feather the edge so the glyph isn't jagged
+      const t = Math.min(1, (lum - 170) / 40);
+      out[i] = DARK_BG[0]; out[i + 1] = DARK_BG[1]; out[i + 2] = DARK_BG[2];
+      out[i + 3] = Math.round(255 * t);
+    }
+  }
+  return encodePNG(size, size, out, 6);
+}
+
 // ── Main ────────────────────────────────────────────────────
 const original = readPNG(SOURCE);
 const src = trim(original);
@@ -194,4 +213,5 @@ for (let y = 0; y < appleInner.h; y++) {
   );
 }
 fs.writeFileSync("public/apple-touch-icon.png", encodePNG(180, 180, appleCanvas, 2));
-console.log("Generated: icon-192 (transparent), icon-512 (transparent), icon-maskable-192 (green bg, logo 90%), icon-maskable-512 (green bg, logo 90%), apple-touch-icon (green bg, logo 94%)");
+fs.writeFileSync("public/icons/icon-splash-1024.png", splashGlyph(src, 1024));
+console.log("Generated: icon-192 (transparent), icon-512 (transparent), icon-splash-1024 (glyph), icon-maskable-192 (green bg, logo 90%), icon-maskable-512 (green bg, logo 90%), apple-touch-icon (green bg, logo 94%)");
