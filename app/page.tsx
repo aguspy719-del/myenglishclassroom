@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Reveal, CountUp, FloatingBlob } from "@/components/landing-motion";
 
+// Translate Indonesian day names from the DB to English for display
+const DAY_EN: Record<string, string> = {
+  Senin: "Monday", Selasa: "Tuesday", Rabu: "Wednesday", Kamis: "Thursday",
+  Jumat: "Friday", "Jum'at": "Friday", Sabtu: "Saturday", Minggu: "Sunday",
+};
+const dayEn = (day: string) => DAY_EN[day.trim()] ?? day;
+
 const features = [
   { icon: BookOpen,     title: "Digital Materials",   desc: "Access learning materials anytime, anywhere",    color: "from-emerald-500 to-emerald-700" },
   { icon: ClipboardList, title: "Online Assignments",  desc: "Submit assignments digitally with ease",          color: "from-teal-500 to-teal-700" },
@@ -300,10 +307,10 @@ export default async function LandingPage() {
                   <div className="flex items-center justify-between gap-3 bg-white border border-gray-200 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 rounded-2xl p-4 transition-all">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-11 h-11 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                        <span className="text-[11px] font-black text-white leading-none">{item.day.substring(0, 3).toUpperCase()}</span>
+                        <span className="text-[11px] font-black text-white leading-none">{dayEn(item.day).substring(0, 3).toUpperCase()}</span>
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-gray-900 text-sm truncate">{item.day}</p>
+                        <p className="font-bold text-gray-900 text-sm truncate">{dayEn(item.day)}</p>
                         <p className="text-xs text-gray-500 tabular-nums">{item.time}</p>
                       </div>
                     </div>
