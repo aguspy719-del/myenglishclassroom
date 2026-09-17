@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, Shield, BellOff, Focus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -283,9 +284,12 @@ export function QuizAntiCheat({
   }, [isActive, isFullscreen]);
 
   // Warning overlay — blocks everything, no way to dismiss without acknowledging.
-  // overflow-y-auto + my-auto keeps the dialog fully visible on small screens.
+  // Rendered through a portal to <body> so ancestor transforms (page-enter
+  // animation) can never turn it into a zero-height containing block and make
+  // the whole screen go blank. overflow-y-auto + my-auto keeps the dialog
+  // fully visible on small screens.
   if (showWarning && isActive) {
-    return (
+    const overlay = (
       <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 overflow-y-auto">
         <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl my-auto">
           <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -310,16 +314,20 @@ export function QuizAntiCheat({
         </div>
       </div>
     );
+    return createPortal(overlay, document.body);
   }
 
   // Fullscreen prompt — must enter fullscreen to start (no skip on Android/desktop).
+  // Portaled to <body>: the quiz wrapper's page-enter animation keeps a
+  // transform after finishing, which would otherwise collapse this fixed
+  // overlay into a zero-height box → blank screen after pressing Start.
   // overflow-y-auto + my-auto: on short screens the dialog scrolls instead of
   // being cut off above the viewport.
   if (showFullscreenPrompt && isActive) {
     const iosDevice = isIOS();
     const androidDevice = isAndroid();
 
-    return (
+    const overlay = (
       <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-emerald-700 to-teal-800 flex items-center justify-center p-4 overflow-y-auto">
         <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl my-auto">
           <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -367,6 +375,7 @@ export function QuizAntiCheat({
         </div>
       </div>
     );
+    return createPortal(overlay, document.body);
   }
 
   return (

@@ -217,9 +217,15 @@ html {
 }
 
 .page-enter {
-  animation: page-in 0.22s ease-out both;
-  will-change: opacity, transform;
+  animation: page-in 0.22s ease-out backwards;
+  will-change: auto;
 }
+
+/* IMPORTANT: do not keep a transform on .page-enter after the animation ends
+   (no fill-mode "both"/"forwards"). A retained transform makes the element the
+   containing block for position:fixed descendants — fixed overlays inside the
+   page (e.g. the quiz secure-mode prompt) would be positioned relative to it
+   and collapse to zero height, showing a blank screen. */
 
 @media (prefers-reduced-motion: reduce) {
   .page-enter {
