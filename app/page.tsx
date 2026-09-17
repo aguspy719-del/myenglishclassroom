@@ -90,9 +90,8 @@ export default async function LandingPage() {
         <FloatingBlob className="bg-emerald-300/25 w-72 h-72 -top-8 right-10" style={{ animationDelay: "-2s" }} />
         <FloatingBlob className="bg-teal-300/25 w-80 h-80 -bottom-20 left-6" style={{ animationDelay: "-5s", animationDuration: "11s" }} />
 
-        <div className="relative max-w-6xl mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-14 items-center">
-          {/* Left: headline + CTA + stats */}
-          <div className="text-center lg:text-left">
+        <div className="relative max-w-3xl mx-auto text-center">
+          <div>
             <div className="relative inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-full px-4 py-2 mb-6 text-sm overflow-hidden hero-badge-shimmer hero-pop">
               <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
               <span className="text-gray-700 font-medium">SMK Negeri 1 Buduran · English Subject</span>
@@ -108,11 +107,11 @@ export default async function LandingPage() {
               <span className="text-gray-500 text-2xl sm:text-3xl font-bold">English with Mr. Agus</span>
             </h1>
 
-            <p className="text-lg text-gray-600 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed hero-pop" style={{ animationDelay: "0.24s" }}>
+            <p className="text-lg text-gray-600 mb-8 max-w-xl mx-auto leading-relaxed hero-pop" style={{ animationDelay: "0.24s" }}>
               Kelas digital bahasa Inggris: materi, tugas, absensi, dan nilai — semuanya dalam satu aplikasi.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-10 hero-pop" style={{ animationDelay: "0.36s" }}>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10 hero-pop" style={{ animationDelay: "0.36s" }}>
               <Link href="/register">
                 <Button size="lg" className="w-full sm:w-auto h-13 px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all text-white font-bold text-base gap-2">
                   Get Started <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
@@ -126,7 +125,7 @@ export default async function LandingPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto lg:mx-0 hero-pop" style={{ animationDelay: "0.48s" }}>
+            <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto hero-pop" style={{ animationDelay: "0.48s" }}>
               <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-emerald-300 hover:-translate-y-0.5 transition-all">
                 <p className="text-2xl font-black text-gray-900">
                   <CountUp value={allClasses.length || 8} />
@@ -145,41 +144,6 @@ export default async function LandingPage() {
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">Digital</p>
               </div>
-            </div>
-          </div>
-
-          {/* Right: branding panel — matches the auth pages */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white rounded-3xl p-8 shadow-2xl shadow-emerald-500/20 hero-pop" style={{ animationDelay: "0.3s" }}>
-            <div className="absolute -top-20 -right-20 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none floating-blob" />
-            <div className="absolute -bottom-24 -left-12 w-72 h-72 bg-teal-400/20 rounded-full blur-3xl pointer-events-none floating-blob" style={{ animationDelay: "-4s" }} />
-
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-7">
-                <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-xl bg-white/95 p-1 flex-shrink-0">
-                  <Image src="/icons/icon-192.png" alt="My Classroom" width={48} height={48} className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <p className="font-black leading-tight">My Classroom</p>
-                  <p className="text-xs text-emerald-100">English Learning Management System</p>
-                </div>
-              </div>
-
-              <ul className="space-y-3.5">
-                {[
-                  "Asesmen & tugas online dengan anti-cheat",
-                  "Absensi cepat dengan verifikasi lokasi sekolah",
-                  "Nilai & rekap kehadiran transparan",
-                ].map((text, idx) => (
-                  <li
-                    key={text}
-                    className="flex items-start gap-3 hero-pop"
-                    style={{ animationDelay: `${0.5 + idx * 0.12}s` }}
-                  >
-                    <CheckCircle2 className="w-5 h-5 text-emerald-200 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-emerald-50">{text}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
           </div>
         </div>
@@ -235,7 +199,7 @@ export default async function LandingPage() {
                     <h2 className="text-2xl sm:text-3xl font-black mb-1">{teacher.name}</h2>
                     <p className="text-emerald-50 mb-3 text-sm">{teacher.bio || "English Teacher · SMK Negeri 1 Buduran"}</p>
                     {teacher.tagline && (
-                      <p className="text-yellow-300 text-sm italic mb-3">"{teacher.tagline}"</p>
+                      <p className="text-yellow-300 text-sm italic mb-3">&quot;{teacher.tagline}&quot;</p>
                     )}
                     <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                       {(teacher.certifications?.length > 0 ? teacher.certifications : []).map((cert: string) => (

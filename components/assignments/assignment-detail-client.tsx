@@ -105,7 +105,7 @@ function SubmitForm({
             className="h-12 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
           />
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Upload tugas ke Google Drive / TikTok / YouTube dulu, lalu paste link-nya di sini. Pastikan link bisa diakses guru (untuk Drive: set "Anyone with the link").
+            Upload tugas ke Google Drive / TikTok / YouTube dulu, lalu paste link-nya di sini. Pastikan link bisa diakses guru (untuk Drive: set &quot;Anyone with the link&quot;).
           </p>
         </div>
       )}
