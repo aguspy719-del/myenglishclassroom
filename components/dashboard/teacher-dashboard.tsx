@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
+import { MarqueeText } from "@/components/ui/marquee-text";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import type { User, Assignment, Submission, Announcement } from "@/types";
@@ -228,12 +229,8 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                 {recentSubmissions.map((sub) => (
                   <div key={sub.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="flex-1 min-w-0 overflow-hidden mr-2">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {(sub.student as any)?.name || "Student"}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {(sub.assignment as any)?.title || "Assignment"}
-                      </p>
+                      <MarqueeText text={(sub.student as any)?.name || "Student"} className="text-sm font-medium text-gray-900 dark:text-white" />
+                      <MarqueeText text={(sub.assignment as any)?.title || "Assignment"} duration={7} className="text-xs text-gray-500 dark:text-gray-400" />
                     </div>
                     <Badge variant="warning" className="text-xs whitespace-nowrap flex-shrink-0">Ungraded</Badge>
                   </div>
@@ -271,12 +268,12 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                   <Link key={assignment.id} href={`/assignments/${assignment.id}`}>
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                       <div className="flex-1 min-w-0 overflow-hidden mr-2">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {assignment.title}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {(assignment.class as any)?.class_name} · {formatDate(assignment.deadline)}
-                        </p>
+                        <MarqueeText text={assignment.title} className="text-sm font-medium text-gray-900 dark:text-white" />
+                        <MarqueeText
+                          text={`${(assignment.class as any)?.class_name || ""} · ${formatDate(assignment.deadline)}`}
+                          duration={7}
+                          className="text-xs text-gray-500 dark:text-gray-400"
+                        />
                       </div>
                       <Clock className="w-4 h-4 text-orange-500 flex-shrink-0" />
                     </div>
@@ -382,7 +379,7 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
                   className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl group"
                 >
                   <div className="flex-1 min-w-0 overflow-hidden">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{ann.title}</p>
+                    <MarqueeText text={ann.title} className="text-sm font-semibold text-gray-900 dark:text-white" />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{ann.content}</p>
                     <p className="text-xs text-gray-400 mt-1">{formatDate(ann.created_at)}</p>
                   </div>

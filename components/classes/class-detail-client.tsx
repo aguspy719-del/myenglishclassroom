@@ -22,6 +22,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { MarqueeText } from "@/components/ui/marquee-text";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatDate, formatDateTime, getDeadlineStatus, getInitials } from "@/lib/utils";
@@ -334,9 +335,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
           </Button>
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">
-            {classData.class_name}
-          </h1>
+          <MarqueeText text={classData.class_name} className="text-xl font-bold text-gray-900 dark:text-white" />
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {classData.major} · Grade {classData.grade}
           </p>
@@ -479,7 +478,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                             <ClipboardList className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{a.title}</p>
+                            <MarqueeText text={a.title} className="font-medium text-sm text-gray-900 dark:text-white" />
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <Clock className="w-3 h-3 text-gray-400" />
                               <p className="text-xs text-gray-500">{formatDateTime(a.deadline)}</p>
@@ -535,7 +534,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                         <FileText className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{m.title}</p>
+                        <MarqueeText text={m.title} className="font-medium text-sm text-gray-900 dark:text-white" />
                         <p className="text-xs text-gray-500">{formatDate(m.created_at)}</p>
                       </div>
                       {m.file_url && (
@@ -604,7 +603,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                             <FileQuestion className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{q.title}</p>
+                            <MarqueeText text={q.title} className="font-medium text-sm text-gray-900 dark:text-white" />
                           </div>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${typeColors[quizType]}`}>
                             {typeLabels[quizType]}
@@ -632,7 +631,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                     <Link key={a.id} href={`/assignments/${a.id}`}>
                       <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{a.title}</p>
+                          <MarqueeText text={a.title} className="font-medium text-sm text-gray-900 dark:text-white" />
                           <p className="text-xs text-gray-500">{formatDateTime(a.deadline)}</p>
                         </div>
                         <Badge variant="destructive" className="text-xs flex-shrink-0">Closed</Badge>
@@ -738,7 +737,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{m.title}</p>
+                        <MarqueeText text={m.title} className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0" />
                         {m.is_archived && <Badge variant="secondary" className="text-[10px] flex-shrink-0 gap-1"><Archive className="w-2.5 h-2.5" />Archived</Badge>}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -899,7 +898,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{a.title}</p>
+                          <MarqueeText text={a.title} className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0" />
                           {a.is_archived && (
                             <Badge variant="secondary" className="text-[10px] flex-shrink-0 gap-1">
                               <Archive className="w-2.5 h-2.5" />Archived
@@ -1047,7 +1046,7 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{q.title}</p>
+                          <MarqueeText text={q.title} className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0" />
                           {q.is_archived && <Badge variant="secondary" className="text-[10px] flex-shrink-0 gap-1"><Archive className="w-2.5 h-2.5" />Archived</Badge>}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -1166,8 +1165,8 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{student.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{student.email}</p>
+                    <MarqueeText text={student.name} className="font-semibold text-sm text-gray-900 dark:text-white" />
+                    <MarqueeText text={student.email} duration={7} className="text-xs text-gray-500 dark:text-gray-400" />
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs text-gray-400 hidden sm:block">#{idx + 1}</span>

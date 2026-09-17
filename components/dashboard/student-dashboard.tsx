@@ -220,7 +220,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                 {recentGrades.map((s) => (
                   <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{(s.assignment as any)?.title || "Assignment"}</p>
+                      <MarqueeText text={(s.assignment as any)?.title || "Assignment"} className="text-sm font-medium text-gray-900 dark:text-white" />
                       {s.feedback && <p className="text-xs text-gray-500 truncate">{s.feedback}</p>}
                     </div>
                     <div className="flex items-center gap-2 ml-2">

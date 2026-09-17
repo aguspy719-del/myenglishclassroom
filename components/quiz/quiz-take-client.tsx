@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { cn, getGradeColor, getGradeLabel, formatDateTime } from "@/lib/utils";
+import { MarqueeText } from "@/components/ui/marquee-text";
 import { QuizAntiCheat } from "./quiz-anti-cheat";
 import { QuizSendPanel } from "./quiz-send-panel";
 import type { User, Quiz, QuizQuestion } from "@/types";
@@ -689,8 +690,8 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                           {sel && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium truncate text-xs">{q.title}</p>
-                          <p className="text-xs text-gray-500 truncate">{q.class?.class_name}</p>
+                          <MarqueeText text={q.title} duration={6} className="font-medium text-xs" />
+                          <MarqueeText text={q.class?.class_name || ""} duration={7} className="text-xs text-gray-500" />
                         </div>
                       </button>
                     );
@@ -876,14 +877,14 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                   <div className="flex items-center justify-between p-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center text-xs font-bold text-emerald-600 flex-shrink-0">{idx + 1}</div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
-                          {a.student?.name || "Student"}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <MarqueeText text={a.student?.name || "Student"} className="font-medium text-sm text-gray-900 dark:text-white flex-1 min-w-0" />
                           {(studentViolations.length > 0 || (a.violations || 0) > 0) && (
                             <button
                               type="button"
                               onClick={() => setExpandedViolations((p) => ({ ...p, [a.id]: !p[a.id] }))}
-                              className="ml-2 align-middle"
+                              className="flex-shrink-0"
                               title="Show violation details"
                             >
                               <Badge className={cn(
@@ -897,7 +898,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                               </Badge>
                             </button>
                           )}
-                        </p>
+                        </div>
                         <p className="text-xs text-gray-500">{a.completed_at ? formatDateTime(a.completed_at) : "-"}</p>
                       </div>
                     </div>
@@ -991,9 +992,7 @@ function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
       <CardContent className="pt-4 pb-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
-              {essayAnswer.student?.name || "Student"}
-            </p>
+            <MarqueeText text={essayAnswer.student?.name || "Student"} className="font-semibold text-sm text-gray-900 dark:text-white" />
             <div className="mt-1">
               <p className={`text-xs text-gray-500 dark:text-gray-400 ${!showQuestion && isLongQuestion ? "line-clamp-2" : "whitespace-pre-wrap"}`}>
                 {questionText}

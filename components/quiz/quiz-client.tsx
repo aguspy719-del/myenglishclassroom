@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MarqueeText } from "@/components/ui/marquee-text";
 import type { User, Quiz, Class } from "@/types";
 
 interface QuizClientProps {
@@ -282,7 +283,7 @@ export function QuizClient({ user }: QuizClientProps) {
                           </Button>
                         )}
                       </div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{quiz.title}</h3>
+                      <MarqueeText text={quiz.title} duration={7} className="font-semibold text-gray-900 dark:text-white mb-1" />
                       {quiz.description && (
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{quiz.description}</p>
                       )}
