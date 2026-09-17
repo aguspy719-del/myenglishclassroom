@@ -6,32 +6,35 @@ import { cn } from "@/lib/utils";
 interface MarqueeTextProps {
   text: string;
   className?: string;
-  /** Animation duration in seconds (slower = higher) */
+  /** Fixed animation duration in seconds (default: auto, based on distance) */
   duration?: number;
 }
 
 /**
  * Text that scrolls horizontally (marquee) only when it overflows its
  * container — otherwise it renders as a normal static label.
- * Use for labels that get truncated on narrow screens (e.g. "Not checked in",
- * long dates, assignment titles).
+ * The scroll distance is measured in pixels (text width − container width),
+ * so the animation always travels exactly far enough to reveal the whole text.
  */
-export function MarqueeText({ text, className, duration = 6 }: MarqueeTextProps) {
+export function MarqueeText({ text, className, duration }: MarqueeTextProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
-  const [overflows, setOverflows] = useState(false);
+  /** Overflow in px, or null when the text fits (no animation) */
+  const [shift, setShift] = useState<number | null>(null);
 
   useEffect(() => {
     const check = () => {
       const c = containerRef.current;
       const t = textRef.current;
       if (!c || !t) return;
-      setOverflows(t.scrollWidth > c.clientWidth + 2);
+      const overflow = t.scrollWidth - c.clientWidth;
+      setShift(overflow > 4 ? overflow : null);
     };
     check();
-    // Re-check when the text changes or the viewport resizes
+    // Re-check when layout changes (viewport rotate, container resize, font load)
     const ro = new ResizeObserver(check);
     if (containerRef.current) ro.observe(containerRef.current);
+    if (textRef.current) ro.observe(textRef.current);
     window.addEventListener("resize", check);
     return () => {
       ro.disconnect();
@@ -39,21 +42,20 @@ export function MarqueeText({ text, className, duration = 6 }: MarqueeTextProps)
     };
   }, [text]);
 
+  // Longer distances scroll slower so the text stays readable
+  const animDuration = duration ?? (shift ? Math.max(4, Math.min(12, shift / 25)) : 6);
+
   return (
-    <div
-      ref={containerRef}
-      className={cn("relative overflow-hidden w-full", className)}
-      style={{ "--marquee-container": "100%" } as React.CSSProperties}
-    >
+    <div ref={containerRef} className={cn("relative overflow-hidden w-full", className)}>
       <span
         ref={textRef}
         className={cn(
-          "inline-block whitespace-nowrap max-w-full truncate",
-          overflows && "!max-w-none !overflow-visible marquee-scroll"
+          "inline-block whitespace-nowrap",
+          shift === null ? "max-w-full truncate" : "marquee-scroll"
         )}
         style={
-          overflows
-            ? ({ "--marquee-duration": `${duration}s`, "--marquee-container": "100%" } as React.CSSProperties)
+          shift !== null
+            ? ({ "--marquee-shift": `${-shift}px`, "--marquee-duration": `${animDuration}s` } as React.CSSProperties)
             : undefined
         }
       >

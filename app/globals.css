@@ -317,23 +317,24 @@ html {
   width: 280px;
 }
 
-/* ── Truncated-label marquee: scrolls text that overflows its container ── */
+/* ── Truncated-label marquee: scrolls text that overflows its container ──
+   The exact pixel distance is set inline via --marquee-shift by MarqueeText. */
 @keyframes marquee-label {
-  0%, 12% {
+  0%, 10% {
     transform: translateX(0);
   }
-  88%, 100% {
-    transform: translateX(calc(-100% + var(--marquee-container, 100%)));
+  90%, 100% {
+    transform: translateX(var(--marquee-shift, -50%));
   }
 }
 
 .marquee-scroll {
-  animation: marquee-label var(--marquee-duration, 6s) linear infinite;
+  display: inline-block;
+  animation: marquee-label var(--marquee-duration, 6s) ease-in-out infinite;
   will-change: transform;
 }
 
-/* The scroll distance must be (text width − container width); CSS approximates
-   with a parent-driven variable set inline. Pause on touch/interaction. */
+/* Pause while the user is reading/touching the label */
 .marquee-scroll:hover,
 .marquee-scroll:active {
   animation-play-state: paused;
@@ -342,6 +343,9 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .marquee-scroll {
     animation: none;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
