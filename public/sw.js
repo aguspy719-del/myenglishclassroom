@@ -1,4 +1,4 @@
-const CACHE_NAME = "english-lms-v7"; // v1.3.1 — bump to ship updated maskable icons to installed PWAs
+const CACHE_NAME = "english-lms-v8"; // v1.3.1 — bump to ship larger full-bleed PWA icons
 const STATIC_ASSETS = [
   "/",
   "/dashboard",
