@@ -45,10 +45,10 @@ interface StudentRecapRow {
 }
 
 const statusConfig: Record<AttendanceStatus, { label: string; color: string; icon: React.ElementType; bg: string; text: string }> = {
-  present: { label: "Hadir", color: "success", icon: CheckCircle, bg: "bg-emerald-100 dark:bg-emerald-900", text: "text-emerald-600 dark:text-emerald-400" },
-  absent: { label: "Alpha", color: "destructive", icon: XCircle, bg: "bg-red-100 dark:bg-red-900", text: "text-red-600 dark:text-red-400" },
-  late: { label: "Telat", color: "warning", icon: Clock, bg: "bg-amber-100 dark:bg-amber-900", text: "text-amber-600 dark:text-amber-400" },
-  excused: { label: "Izin", color: "info", icon: AlertCircle, bg: "bg-sky-100 dark:bg-sky-900", text: "text-sky-600 dark:text-sky-400" },
+  present: { label: "Present", color: "success", icon: CheckCircle, bg: "bg-emerald-100 dark:bg-emerald-900", text: "text-emerald-600 dark:text-emerald-400" },
+  absent: { label: "Absent", color: "destructive", icon: XCircle, bg: "bg-red-100 dark:bg-red-900", text: "text-red-600 dark:text-red-400" },
+  late: { label: "Late", color: "warning", icon: Clock, bg: "bg-amber-100 dark:bg-amber-900", text: "text-amber-600 dark:text-amber-400" },
+  excused: { label: "Excused", color: "info", icon: AlertCircle, bg: "bg-sky-100 dark:bg-sky-900", text: "text-sky-600 dark:text-sky-400" },
 };
 
 // ── Konfigurasi lokasi sekolah ─────────────────────────────
@@ -247,7 +247,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
         .from("attendance")
         .update({ status: manualForm.status, timestamp: new Date().toISOString() })
         .eq("id", existing.id);
-      if (error) { toast.error("Gagal update: " + error.message); }
+      if (error) { toast.error("Failed to update: " + error.message); }
       else { toast.success("Record diupdate"); }
     } else {
       // Insert baru
@@ -258,7 +258,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
         status: manualForm.status,
         timestamp: new Date().toISOString(),
       }]);
-      if (error) { toast.error("Gagal menyimpan: " + error.message); }
+      if (error) { toast.error("Failed to save: " + error.message); }
       else { toast.success("Record berhasil ditambahkan"); }
     }
 
@@ -300,10 +300,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
             "No": idx + 1,
             "Nama Siswa": student.name,
             "Email": student.email,
-            "Hadir": present,
+            "Present": present,
             "Terlambat": late,
-            "Absen": absent,
-            "Izin": excused,
+            "Absent": absent,
+            "Excused": excused,
             "Total Pertemuan": total,
             "Kehadiran (%)": rate,
             "Keterangan": rate >= 80 ? "Baik" : rate >= 60 ? "Cukup" : "Kurang",
@@ -341,7 +341,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       position = await getCurrentPosition();
     } catch {
       setLocationStatus("denied");
-      toast.error("Izin lokasi ditolak. Aktifkan GPS di browser untuk bisa absen.", { duration: 5000 });
+      toast.error("Location permission denied. Enable GPS in your browser to check in.", { duration: 5000 });
       setMarking(false);
       return;
     }
@@ -365,7 +365,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
           toast.error(data.error, { duration: 5000 });
         } else {
           setLocationStatus("idle");
-          toast.error(data.error || "Gagal absen");
+          toast.error(data.error || "Failed to check in");
         }
         setMarking(false);
         return;
@@ -374,7 +374,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       // Sukses
       setLocationStatus("ok");
       setStudentDistance(data.distance);
-      toast.success(`Absensi tercatat: ${statusConfig[status].label} ✅`);
+      toast.success(`Attendance recorded: ${statusConfig[status].label} ✅`);
       fetchData();
     } catch {
       setLocationStatus("idle");
@@ -420,10 +420,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {user.role === "teacher" ? "Attendance Records" : "Riwayat Attendance"}
+          Attendance
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          {user.role === "teacher" ? "Monitor dan kelola kehadiran siswa" : "Lihat history kehadiran kamu"}
+          {user.role === "teacher" ? "Monitor and manage student attendance" : "View your attendance history"}
         </p>
       </div>
 
@@ -438,8 +438,8 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                   <UserCheck className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-bold leading-tight">Absensi Hari Ini</p>
-                  <p className="text-xs text-emerald-100">Presensi wajib setiap hari sekolah</p>
+                  <p className="font-bold leading-tight">Today&apos;s Attendance</p>
+                  <p className="text-xs text-emerald-100">Check in every school day</p>
                 </div>
               </div>
               {todayAttendance && (
@@ -460,19 +460,19 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                     })()}
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white">
-                        Tercatat: <span className="font-bold">{statusConfig[todayAttendance.status as AttendanceStatus]?.label}</span>
+                        Recorded: <span className="font-bold">{statusConfig[todayAttendance.status as AttendanceStatus]?.label}</span>
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-300">{formatDateTime(todayAttendance.timestamp)}</p>
                     </div>
                   </div>
                   <p className="text-xs text-emerald-700 dark:text-emerald-300 text-center">
-                    Salah status? Klik <strong>Reset</strong> di atas untuk absen ulang.
+                    Wrong status? Click <strong>Reset</strong> above to check in again.
                   </p>
                 </div>
               ) : (
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 font-medium">
-                    Pilih status kehadiran kamu untuk hari ini:
+                    Choose your attendance status for today:
                   </p>
 
                   {/* Location status indicator */}
@@ -491,11 +491,11 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                       <MapPin className="w-4 h-4 flex-shrink-0" />
                     )}
                     <span className="text-xs font-medium">
-                      {locationStatus === "idle" && `Lokasi akan dicek saat kamu absen (maks ${MAX_DISTANCE_METERS}m dari ${SCHOOL_LOCATION_NAME})`}
-                      {locationStatus === "checking" && "Mengecek lokasi GPS..."}
-                      {locationStatus === "ok" && `✅ Kamu berada di area sekolah (${studentDistance}m)`}
-                      {locationStatus === "tooFar" && `❌ Terlalu jauh dari sekolah (${studentDistance}m · maks ${MAX_DISTANCE_METERS}m)`}
-                      {locationStatus === "denied" && "❌ Izin lokasi ditolak — aktifkan GPS di browser"}
+                      {locationStatus === "idle" && `Location is checked when you check in (max ${MAX_DISTANCE_METERS}m from ${SCHOOL_LOCATION_NAME})`}
+                      {locationStatus === "checking" && "Checking GPS location..."}
+                      {locationStatus === "ok" && `✅ You're in the school area (${studentDistance}m)`}
+                      {locationStatus === "tooFar" && `❌ Too far from school (${studentDistance}m · max ${MAX_DISTANCE_METERS}m)`}
+                      {locationStatus === "denied" && "❌ Location permission denied — enable GPS in your browser"}
                     </span>
                   </div>
 
@@ -526,9 +526,9 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
           {total > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "Hadir", value: presentCount, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950" },
-                { label: "Telat", value: lateCount, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950" },
-                { label: "Alpha", value: absentCount, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950" },
+                { label: "Present", value: presentCount, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950" },
+                { label: "Late", value: lateCount, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950" },
+                { label: "Absent", value: absentCount, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950" },
                 { label: "Kehadiran", value: `${attendanceRate}%`, color: "text-teal-600 dark:text-teal-400", bg: "bg-teal-50 dark:bg-teal-950" },
               ].map((stat) => (
                 <Card key={stat.label} className="border-0 shadow-sm">
@@ -551,10 +551,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                 <span className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center flex-shrink-0">
                   <History className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </span>
-                Riwayat Kehadiran
+                Attendance History
               </CardTitle>
               <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1 ml-10">
-                {total} hari tercatat · {attendanceRate}% tingkat kehadiran
+                {total} days recorded · {attendanceRate}% attendance rate
               </p>
             </CardHeader>
             <CardContent>
@@ -565,8 +565,8 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                   <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center">
                     <UserCheck className="w-7 h-7 text-emerald-300 dark:text-emerald-700" />
                   </div>
-                  <p className="font-medium">Belum ada riwayat kehadiran</p>
-                  <p className="text-xs mt-1">Absen hari ini lewat kartu di atas, ya!</p>
+                  <p className="font-medium">No attendance history yet</p>
+                  <p className="text-xs mt-1">Check in today using the card above!</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -751,10 +751,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <Select value={rekapClass} onValueChange={setRekapClass}>
                 <SelectTrigger className="w-full sm:w-52 rounded-xl">
-                  <SelectValue placeholder="Semua Kelas" />
+                  <SelectValue placeholder="All Classes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Semua Kelas</SelectItem>
+                  <SelectItem value="all">All Classes</SelectItem>
                   {classes.map((cls) => (
                     <SelectItem key={cls.id} value={cls.id}>{cls.class_name}</SelectItem>
                   ))}
@@ -784,7 +784,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
             ) : rekapRows.length === 0 ? (
               <div className="text-center py-16 text-gray-500 dark:text-gray-400">
                 <UserCheck className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p className="font-medium">Belum ada data kehadiran</p>
+                <p className="font-medium">No attendance data yet</p>
               </div>
             ) : (
               <>
@@ -825,10 +825,10 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                       <tr className="bg-gray-50 dark:bg-gray-800/70 border-b border-gray-100 dark:border-gray-700">
                         <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 w-8">#</th>
                         <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500">Nama Siswa</th>
-                        <th className="px-3 py-3 text-center text-xs font-semibold text-green-600">Hadir</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-green-600">Present</th>
                         <th className="px-3 py-3 text-center text-xs font-semibold text-yellow-600">Terlambat</th>
-                        <th className="px-3 py-3 text-center text-xs font-semibold text-red-600">Absen</th>
-                        <th className="px-3 py-3 text-center text-xs font-semibold text-sky-600">Izin</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-red-600">Absent</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-sky-600">Excused</th>
                         <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">Total</th>
                         <th className="px-3 py-3 text-center text-xs font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 whitespace-nowrap">Kehadiran</th>
                         <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 bg-gray-100 dark:bg-gray-700">Ket.</th>
@@ -898,7 +898,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
-                Tambah Record Absensi Manual
+                  Add Manual Attendance Record
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -908,7 +908,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
 
               {/* Kelas */}
               <div className="space-y-2">
-                <Label>Kelas *</Label>
+                <Label>Class *</Label>
                 <Select
                   value={manualForm.class_id}
                   onValueChange={(v) => {
@@ -917,7 +917,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                   }}
                 >
                   <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder="Pilih kelas..." />
+                    <SelectValue placeholder="Choose a class..." />
                   </SelectTrigger>
                   <SelectContent>
                     {classes.map((cls) => (
@@ -936,7 +936,7 @@ export function AttendanceClient({ user }: AttendanceClientProps) {
                   disabled={manualStudents.length === 0}
                 >
                   <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder={manualStudents.length === 0 ? "Pilih kelas dulu..." : "Pilih siswa..."} />
+                    <SelectValue placeholder={manualStudents.length === 0 ? "Pick a class first..." : "Pick a student..."} />
                   </SelectTrigger>
                   <SelectContent>
                     {manualStudents.map((s) => (

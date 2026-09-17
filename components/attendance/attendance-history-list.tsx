@@ -10,10 +10,10 @@ const statusConfig: Record<
   AttendanceStatus,
   { label: string; icon: any; bg: string; text: string; color: string }
 > = {
-  present: { label: "Hadir", icon: CheckCircle, bg: "bg-emerald-100 dark:bg-emerald-950", text: "text-emerald-600 dark:text-emerald-400", color: "success" },
-  late: { label: "Telat", icon: Clock, bg: "bg-amber-100 dark:bg-amber-950", text: "text-amber-500", color: "warning" },
-  absent: { label: "Alpha", icon: XCircle, bg: "bg-red-100 dark:bg-red-950", text: "text-red-500", color: "destructive" },
-  excused: { label: "Izin", icon: MailX, bg: "bg-sky-100 dark:bg-sky-950", text: "text-sky-500", color: "info" },
+  present: { label: "Present", icon: CheckCircle, bg: "bg-emerald-100 dark:bg-emerald-950", text: "text-emerald-600 dark:text-emerald-400", color: "success" },
+  late: { label: "Late", icon: Clock, bg: "bg-amber-100 dark:bg-amber-950", text: "text-amber-500", color: "warning" },
+  absent: { label: "Absent", icon: XCircle, bg: "bg-red-100 dark:bg-red-950", text: "text-red-500", color: "destructive" },
+  excused: { label: "Excused", icon: MailX, bg: "bg-sky-100 dark:bg-sky-950", text: "text-sky-500", color: "info" },
 };
 
 /**
@@ -40,10 +40,10 @@ export function AttendanceHistoryList({
           <span className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center flex-shrink-0">
             <History className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </span>
-          Riwayat Presensi
+          Attendance History
         </CardTitle>
         <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1 ml-10">
-          {total} hari tercatat · {limit > 0 && recent.length > 0 ? `${recent.length} terbaru` : "belum ada data"}
+          {total} days recorded · {limit > 0 && recent.length > 0 ? `${recent.length} recent` : "no data yet"}
         </p>
       </CardHeader>
       <CardContent>
@@ -58,8 +58,8 @@ export function AttendanceHistoryList({
             <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center">
               <UserCheck className="w-7 h-7 text-emerald-300 dark:text-emerald-700" />
             </div>
-            <p className="font-medium">Belum ada riwayat presensi</p>
-            <p className="text-xs mt-1">Absen hari ini lewat menu Attendance, ya!</p>
+            <p className="font-medium">No attendance history yet</p>
+            <p className="text-xs mt-1">Check in today from the Attendance menu!</p>
           </div>
         ) : (
           <div className="space-y-2">

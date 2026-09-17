@@ -317,6 +317,22 @@ html {
   width: 280px;
 }
 
+/* ── App-wide entrance animation for cards & list rows ── */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.card-anim {
+  animation: card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ── Landing page motion ── */
 @keyframes float-slow {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
@@ -387,6 +403,9 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .card-anim {
+    animation: none;
+  }
   .floating-blob,
   .marquee-track {
     animation: none;

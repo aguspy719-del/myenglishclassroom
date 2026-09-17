@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Bell, X, CheckCheck, Zap, Trophy, Info, ClipboardList, FileText, Flame } from "lucide-react";
+import { Bell, X, CheckCheck, Zap, Trophy, Info, ClipboardList, FileText, Flame, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { formatRelativeTime } from "@/lib/utils";
@@ -13,12 +13,34 @@ interface NotificationsProps {
   userId: string;
 }
 
+interface AppUpdateNotice {
+  reload: () => void;
+}
+
 export function Notifications({ userId }: NotificationsProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // ── App update notice (from UpdateNotification provider) ──
+  const [updateNotice, setUpdateNotice] = useState<AppUpdateNotice | null>(null);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
+
+  useEffect(() => {
+    const onUpdate = (e: Event) => {
+      setUpdateNotice((e as CustomEvent<AppUpdateNotice>).detail);
+      setUpdateDismissed(false);
+    };
+    window.addEventListener("app-update-available", onUpdate);
+    return () => window.removeEventListener("app-update-available", onUpdate);
+  }, []);
+
+  const dismissUpdate = () => {
+    setUpdateDismissed(true);
+    window.dispatchEvent(new Event("app-update-dismissed"));
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length + (updateNotice && !updateDismissed ? 1 : 0);
 
   const fetchNotifications = useCallback(async () => {
     const supabase = createClient();
@@ -117,6 +139,28 @@ export function Notifications({ userId }: NotificationsProps) {
 
             {/* List */}
             <div className="max-h-96 overflow-y-auto">
+              {/* App update notice — pinned on top, dismissible once */}
+              {updateNotice && !updateDismissed && (
+                <div className="flex items-start gap-3 p-4 border-b border-emerald-100 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/40 animate-in slide-in-from-top-2 duration-300">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <RefreshCw className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">App update available</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">Refresh to get the latest improvements.</p>
+                    <button
+                      onClick={() => { updateNotice.reload(); }}
+                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-3 py-1.5 transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Update now
+                    </button>
+                  </div>
+                  <button onClick={dismissUpdate} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="Dismiss update notice">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
               {loading || (notifications.length === 0 && !loading) ? (
                 notifications.length === 0 ? (
                   <div className="text-center py-10 text-gray-500 dark:text-gray-400">

@@ -1,22 +1,22 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format, formatDistanceToNow, isPast, isToday } from "date-fns";
-import { id } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function formatDate(date: string | Date): string {
-  return format(new Date(date), "dd MMMM yyyy", { locale: id });
+  return format(new Date(date), "dd MMMM yyyy", { locale: enUS });
 }
 
 export function formatDateTime(date: string | Date): string {
-  return format(new Date(date), "dd MMM yyyy, HH:mm", { locale: id });
+  return format(new Date(date), "dd MMM yyyy, HH:mm", { locale: enUS });
 }
 
 export function formatRelativeTime(date: string | Date): string {
-  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: id });
+  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: enUS });
 }
 
 export function isDeadlinePast(deadline: string): boolean {

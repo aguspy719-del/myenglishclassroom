@@ -41,18 +41,18 @@ export function AttendanceStreakCard({
   }, []);
 
   const clock = now
-    ? now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).replace(/\./g, ":")
+    ? now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "--:--:--";
   const dateLabel = now
-    ? now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    ? now.toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
     : "";
 
   const todayLabel =
-    todayStatus === "present" ? "Hadir ✅"
-    : todayStatus === "late" ? "Telat 🟡"
-    : todayStatus === "excused" ? "Izin 🔵"
-    : todayStatus === "absent" ? "Alpha ❌"
-    : "Belum absen";
+    todayStatus === "present" ? "Present ✅"
+    : todayStatus === "late" ? "Late 🟡"
+    : todayStatus === "excused" ? "Excused 🔵"
+    : todayStatus === "absent" ? "Absent ❌"
+    : "Not checked in";
 
   return (
     <div className="rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-500/20 p-5">
@@ -63,7 +63,7 @@ export function AttendanceStreakCard({
             <CalendarDays className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="font-bold leading-tight">Status Kehadiran</p>
+            <p className="font-bold leading-tight">Attendance Status</p>
             <p className="text-xs text-emerald-100 truncate">{dateLabel || "\u00a0"}</p>
           </div>
         </div>
@@ -72,7 +72,7 @@ export function AttendanceStreakCard({
 
       {/* Heatmap panel */}
       <div className="mt-4 rounded-2xl bg-white/10 p-4">
-        <p className="text-sm font-semibold mb-3">Kehadiran 3 Bulan Terakhir</p>
+        <p className="text-sm font-semibold mb-3">Last 3 Months</p>
         {loading ? (
           <div className="h-28 bg-white/10 rounded-xl animate-pulse" />
         ) : (
@@ -84,17 +84,17 @@ export function AttendanceStreakCard({
       <div className="grid grid-cols-3 gap-2.5 mt-4">
         <div className="rounded-2xl bg-white/10 p-3 text-center">
           <Clock className="w-4 h-4 mx-auto mb-1.5 text-emerald-100" />
-          <p className="text-[11px] text-emerald-100">Hari Ini</p>
+          <p className="text-[11px] text-emerald-100">Today</p>
           <p className="text-sm font-bold mt-0.5 truncate">{loading ? "…" : todayLabel}</p>
         </div>
         <div className="rounded-2xl bg-white/10 p-3 text-center">
           <Flame className="w-4 h-4 mx-auto mb-1.5 text-amber-300" />
           <p className="text-[11px] text-emerald-100">Streak</p>
-          <p className="text-sm font-bold mt-0.5">{streakDays} hari</p>
+          <p className="text-sm font-bold mt-0.5">{streakDays} days</p>
         </div>
         <div className="rounded-2xl bg-white/10 p-3 text-center">
           <TrendingUp className="w-4 h-4 mx-auto mb-1.5 text-emerald-100" />
-          <p className="text-[11px] text-emerald-100">Rata-rata</p>
+          <p className="text-[11px] text-emerald-100">Average</p>
           <p className="text-sm font-bold mt-0.5">{attendanceRate}%</p>
         </div>
       </div>

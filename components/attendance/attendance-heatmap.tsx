@@ -13,7 +13,7 @@ interface AttendanceHeatmapProps {
   weeks?: number;
 }
 
-const DAY_LABELS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+const DAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
 /**
  * Attendance heatmap like the reference design: rows = weekdays (Sen..Min),
@@ -71,18 +71,18 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
 
   const statusLabel = (status?: string) =>
     status === "present"
-      ? "Hadir"
+      ? "Present"
       : status === "late"
-      ? "Terlambat"
+      ? "Late"
       : status === "absent"
-      ? "Alpha"
+      ? "Absent"
       : status === "excused"
-      ? "Izin"
-      : "Tidak presensi";
+      ? "Excused"
+      : "No check-in";
 
   const dayTooltip = (iso: string, status?: string) => {
     const d = new Date(iso);
-    const label = d.toLocaleDateString("id-ID", {
+    const label = d.toLocaleDateString("en-US", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -94,7 +94,7 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
   return (
     <div>
       <p className="text-xs text-white/80 mb-2.5">
-        <span className="font-bold text-white">{presentCount}</span> hari hadir dalam {weeks} minggu terakhir
+        <span className="font-bold text-white">{presentCount}</span> days present in the last {weeks} weeks
       </p>
 
       <div className="overflow-x-auto pb-1 -mx-1 px-1">
@@ -136,19 +136,19 @@ export function AttendanceHeatmap({ records, today, weeks = 14 }: AttendanceHeat
       {/* Legend — 5 statuses, matching the Attendance page calendar */}
       <div className="flex items-center gap-3 mt-3 text-[10px] text-white/80 flex-wrap">
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Hadir
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Present
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Telat
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Late
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-sky-400" /> Izin
+          <span className="w-2.5 h-2.5 rounded-full bg-sky-400" /> Excused
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-white/90" /> Alpha
+          <span className="w-2.5 h-2.5 rounded-full bg-white/90" /> Absent
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-white/25" /> Tidak presensi
+          <span className="w-2.5 h-2.5 rounded-full bg-white/25" /> No check-in
         </span>
       </div>
     </div>

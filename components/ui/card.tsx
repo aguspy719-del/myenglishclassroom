@@ -1,11 +1,19 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+/**
+ * Card with a soft entrance animation: every card fades/rises in. Pass
+ * `data-index` inside a grid/list to stagger siblings. Pure CSS, honors
+ * prefers-reduced-motion.
+ */
+export type CardProps = React.HTMLAttributes<HTMLDivElement> & { "data-index"?: number };
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, style, "data-index": idx, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)}
+      className={cn("card-anim rounded-lg border bg-card text-card-foreground shadow-sm", className)}
+      style={typeof idx === "number" ? { animationDelay: `${Math.min(idx * 60, 480)}ms`, ...style } : style}
       {...props}
     />
   )

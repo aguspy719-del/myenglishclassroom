@@ -8,18 +8,18 @@ import { cn } from "@/lib/utils";
 import type { Attendance } from "@/types";
 
 const MONTHS = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 
 const DAY_HEADERS = [
-  { label: "SEN", weekend: false },
-  { label: "SEL", weekend: false },
-  { label: "RAB", weekend: false },
-  { label: "KAM", weekend: false },
-  { label: "JUM", weekend: false },
-  { label: "SAB", weekend: true },
-  { label: "MIN", weekend: true },
+  { label: "MON", weekend: false },
+  { label: "TUE", weekend: false },
+  { label: "WED", weekend: false },
+  { label: "THU", weekend: false },
+  { label: "FRI", weekend: false },
+  { label: "SAT", weekend: true },
+  { label: "SUN", weekend: true },
 ];
 
 /** Extract HH:MM check-in time from the record timestamp */
@@ -27,7 +27,7 @@ function timeLabel(ts?: string) {
   if (!ts) return null;
   const d = new Date(ts);
   if (isNaN(d.getTime())) return null;
-  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(/\./g, ":");
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
 interface AttendanceCalendarProps {
@@ -119,10 +119,10 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
   };
 
   const legendCounts = [
-    { label: "Presensi", dot: "bg-emerald-500", count: mPresent },
-    { label: "Telat", dot: "bg-amber-400", count: mLate },
-    { label: "Izin", dot: "bg-sky-400", count: mExcused },
-    { label: "Alpha", dot: "bg-red-400", count: mAbsent },
+    { label: "Present", dot: "bg-emerald-500", count: mPresent },
+    { label: "Late", dot: "bg-amber-400", count: mLate },
+    { label: "Excused", dot: "bg-sky-400", count: mExcused },
+    { label: "Absent", dot: "bg-red-400", count: mAbsent },
   ];
 
   return (
@@ -135,7 +135,7 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
           Kalender Riwayat Presensi
         </CardTitle>
         <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1 ml-10">
-          Pantau tingkat kehadiran dan jam masuk bulan ini
+          Track your attendance rate and check-in times this month
         </p>
       </CardHeader>
 
@@ -145,13 +145,13 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
           <button
             type="button"
             onClick={prevMonth}
-            aria-label="Bulan sebelumnya"
+            aria-label="Previous month"
             className="w-9 h-9 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center flex-shrink-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-            <SelectTrigger className="flex-1 rounded-xl text-sm font-semibold" aria-label="Pilih bulan">
+            <SelectTrigger className="flex-1 rounded-xl text-sm font-semibold"            aria-label="Pick month">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -161,7 +161,7 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
             </SelectContent>
           </Select>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-            <SelectTrigger className="w-24 rounded-xl text-sm font-semibold" aria-label="Pilih tahun">
+            <SelectTrigger className="w-24 rounded-xl text-sm font-semibold"            aria-label="Pick year">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -174,7 +174,7 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
             type="button"
             onClick={nextMonth}
             disabled={isCurrentMonth}
-            aria-label="Bulan berikutnya"
+            aria-label="Next month"
             className="w-9 h-9 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center flex-shrink-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronRight className="w-4 h-4" />
@@ -190,7 +190,7 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
             </span>
           ))}
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" /> Tidak presensi
+            <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" /> No check-in
           </span>
         </div>
 
@@ -227,11 +227,11 @@ export function AttendanceCalendar({ records, loading }: AttendanceCalendarProps
                   title={`${cell.day} ${MONTHS[month]} ${year}${
                     cell.record
                       ? ` — ${
-                          cell.record.status === "present" ? "Hadir"
-                          : cell.record.status === "late" ? "Terlambat"
-                          : cell.record.status === "absent" ? "Alpha" : "Izin"
+                          cell.record.status === "present" ? "Present"
+                          : cell.record.status === "late" ? "Late"
+                          : cell.record.status === "absent" ? "Absent" : "Excused"
                         }${timeLabel(cell.record.timestamp) ? ` · ${timeLabel(cell.record.timestamp)}` : ""}`
-                      : cell.isFuture ? "" : " — Tidak presensi"
+                      : cell.isFuture ? "" : " — No check-in"
                   }`}
                   className={cn(
                     "h-14 sm:h-16 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all active:scale-90",
