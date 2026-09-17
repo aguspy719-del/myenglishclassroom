@@ -39,12 +39,12 @@ export function GradesClient({ user }: GradesClientProps) {
           .not("score", "is", null)
           .order("submitted_at", { ascending: false });
 
-        // Fetch quiz attempts
+        // Fetch quiz attempts — include attempts still waiting for essay grading
         const { data: attemptsData } = await supabase
           .from("quiz_attempts")
           .select("*, quiz:quizzes(title, class_id, quiz_type, class:classes(class_name))")
           .eq("student_id", user.id)
-          .not("score", "is", null)
+          .not("completed_at", "is", null)
           .order("completed_at", { ascending: false });
 
         // Normalize to unified format
@@ -119,7 +119,8 @@ export function GradesClient({ user }: GradesClientProps) {
     return matchSearch && matchClass;
   });
 
-  const scores = filtered.map((g) => g.score || 0);
+  const scored = filtered.filter((g) => g.score !== null && g.score !== undefined);
+  const scores = scored.map((g) => g.score);
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
   const maxScore = scores.length > 0 ? Math.max(...scores) : 0;
   const minScore = scores.length > 0 ? Math.min(...scores) : 0;
@@ -428,13 +429,14 @@ export function GradesClient({ user }: GradesClientProps) {
                 className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm"
               >
                 <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 font-bold text-base ${
-                  (grade.score || 0) >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" :
-                  (grade.score || 0) >= 80 ? "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300" :
-                  (grade.score || 0) >= 70 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" :
-                  (grade.score || 0) >= 60 ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" :
+                  grade.score == null ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500" :
+                  (grade.score) >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" :
+                  (grade.score) >= 80 ? "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300" :
+                  (grade.score) >= 70 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" :
+                  (grade.score) >= 60 ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" :
                   "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
                 }`}>
-                  {getGradeLabel(grade.score || 0)}
+                  {grade.score == null ? "⏳" : getGradeLabel(grade.score)}
                 </div>
 
                 <div className="flex-1 min-w-0 overflow-hidden">
@@ -470,10 +472,18 @@ export function GradesClient({ user }: GradesClientProps) {
                 </div>
 
                 <div className="text-right flex-shrink-0 ml-1">
-                  <p className={`text-xl font-bold ${getGradeColor(grade.score || 0)}`}>
-                    {grade.score}
-                  </p>
-                  <p className="text-xs text-gray-400">/ 100</p>
+                  {grade.score == null ? (
+                    <p className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 whitespace-nowrap">
+                      ⏳ Pending grade
+                    </p>
+                  ) : (
+                    <>
+                      <p className={`text-xl font-bold ${getGradeColor(grade.score)}`}>
+                        {grade.score}
+                      </p>
+                      <p className="text-xs text-gray-400">/ 100</p>
+                    </>
+                  )}
                 </div>
               </div>
             );

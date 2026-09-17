@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft, Clock, CheckCircle, ChevronRight, ChevronLeft,
-  Plus, Trash2, Loader2, Trophy, Users, BarChart2, FileText, PenLine,
+  ArrowLeft, Clock, CheckCircle, ChevronRight, ChevronLeft, ChevronDown,
+  Plus, Trash2, Loader2, Trophy, Users, BarChart2, FileText, PenLine, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +29,13 @@ interface QuizTakeClientProps {
 
 const LETTERS = ["A", "B", "C", "D"] as const;
 const OPT_KEYS = ["a", "b", "c", "d"] as const;
+
+// English labels for logged anti-cheat violation types
+const VIOLATION_LABELS: Record<string, string> = {
+  tab_switch: "Left the page (tab, app, or notification)",
+  focus_loss: "Page lost focus (opened another app or notification)",
+  fullscreen_exit: "Exited fullscreen mode",
+};
 
 const emptyMC = () => ({
   id: crypto.randomUUID(),
@@ -176,7 +183,8 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
               {existingScore !== null && existingScore !== undefined ? (
                 <>
                   <p className={`text-6xl font-bold ${getGradeColor(existingScore)}`}>{existingScore}</p>
-                  <Badge className="text-lg px-4 py-1">{getGradeLabel(existingScore)}</Badge>
+                  <p className="text-sm text-gray-500">Final Score</p>
+                  <Badge className="text-lg px-4 py-1">Grade: {getGradeLabel(existingScore)}</Badge>
                 </>
               ) : (
                 <div className="py-4">
@@ -237,13 +245,26 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
           </div>
           <Card className="border-0 shadow-sm">
             <CardContent className="pt-6 pb-6 space-y-3">
-              {result.mcCount > 0 && (
+              {result.mcCount > 0 ? (
                 <>
                   <p className={`text-6xl font-bold ${getGradeColor(result.score || 0)}`}>{result.score}</p>
-                  <p className="text-gray-500 dark:text-gray-400">Multiple Choice Score</p>
-                  <Badge className="text-lg px-4 py-1">{getGradeLabel(result.score || 0)}</Badge>
+                  <p className="text-sm text-gray-500">Multiple Choice Score</p>
+                  <Badge className="text-lg px-4 py-1">Grade: {getGradeLabel(result.score || 0)}</Badge>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Correct: {result.correctCount} of {result.mcCount}</p>
+                  {result.essaySaved > 0 && (
+                    <p className="text-xs text-gray-500">Final score updates after essays are graded</p>
+                  )}
                 </>
+              ) : (
+                <div className="py-2">
+                  <div className="flex items-center gap-2 justify-center mb-1">
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
+                    <p className="text-base font-semibold text-yellow-600 dark:text-yellow-400">
+                      Waiting for teacher to grade essays
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500">Your score will appear in the Grades menu once graded</p>
+                </div>
               )}
               {result.essaySaved > 0 && (
                 <div className="p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
@@ -404,6 +425,8 @@ interface TeacherQuizViewProps {
 function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps) {
   const [attempts, setAttempts] = useState<any[]>([]);
   const [essayAnswers, setEssayAnswers] = useState<any[]>([]);
+  const [violations, setViolations] = useState<any[]>([]);
+  const [expandedViolations, setExpandedViolations] = useState<Record<string, boolean>>({});
   const [loadingAttempts, setLoadingAttempts] = useState(true);
   const [drafts, setDrafts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
@@ -414,12 +437,14 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
 
   const refreshData = useCallback(async () => {
     const supabase = createClient();
-    const [a, e] = await Promise.all([
+    const [a, e, v] = await Promise.all([
       supabase.from("quiz_attempts").select("*, student:users(name,email)").eq("quiz_id", quiz.id).not("completed_at", "is", null).order("completed_at", { ascending: false }),
       supabase.from("essay_answers").select("*, student:users(name), question:quiz_questions(question)").eq("quiz_id", quiz.id).order("submitted_at", { ascending: false }),
+      supabase.from("quiz_violations").select("id, student_id, type, detail, created_at").eq("quiz_id", quiz.id).order("created_at", { ascending: false }),
     ]);
     setAttempts(a.data || []);
     setEssayAnswers(e.data || []);
+    setViolations(v.data || []);
     setLoadingAttempts(false);
   }, [quiz.id]);
 
@@ -843,45 +868,91 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
             </div>
           ) : (
             <div className="space-y-2">
-              {attempts.map((a, idx) => (
-                <div key={a.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center text-xs font-bold text-emerald-600 flex-shrink-0">{idx + 1}</div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
-                        {a.student?.name || "Student"}
-                        {(a.violations || 0) > 0 && (
-                          <Badge className="ml-2 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-[10px]">
-                            ⚠ {a.violations} violation{(a.violations || 0) > 1 ? "s" : ""}
-                          </Badge>
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-500">{a.completed_at ? formatDateTime(a.completed_at) : "-"}</p>
+              {attempts.map((a, idx) => {
+                const studentViolations = violations.filter((v) => v.student_id === (a.student_id || a.student?.id));
+                const isExpanded = !!expandedViolations[a.id];
+                return (
+                <div key={a.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between p-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center text-xs font-bold text-emerald-600 flex-shrink-0">{idx + 1}</div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                          {a.student?.name || "Student"}
+                          {(studentViolations.length > 0 || (a.violations || 0) > 0) && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedViolations((p) => ({ ...p, [a.id]: !p[a.id] }))}
+                              className="ml-2 align-middle"
+                              title="Show violation details"
+                            >
+                              <Badge className={cn(
+                                "text-[10px] cursor-pointer hover:opacity-80 transition-opacity gap-0.5",
+                                studentViolations.length > 0
+                                  ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                                  : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                              )}>
+                                ⚠ {studentViolations.length || a.violations} violation{(studentViolations.length || a.violations) > 1 ? "s" : ""}
+                                <ChevronDown className={cn("w-3 h-3 transition-transform", isExpanded && "rotate-180")} />
+                              </Badge>
+                            </button>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500">{a.completed_at ? formatDateTime(a.completed_at) : "-"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-xl font-bold ${getGradeColor(a.score || 0)}`}>{a.score ?? "—"}</span>
+                      {a.score !== null && <Badge variant="outline" className="text-xs">{getGradeLabel(a.score || 0)}</Badge>}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950 gap-1 rounded-xl"
+                        onClick={async () => {
+                          if (!confirm(`Reset attempt for ${a.student?.name}? They will be able to retake the assessment.`)) return;
+                          const supabase = createClient();
+                          const { error } = await supabase.from("quiz_attempts").delete().eq("id", a.id);
+                          if (error) { toast.error("Failed to reset"); return; }
+                          await supabase.from("essay_answers").delete()
+                            .eq("quiz_id", quiz.id).eq("student_id", a.student_id || a.student?.id);
+                          toast.success(`Attempt reset for ${a.student?.name}.`);
+                          refreshData();
+                        }}
+                      >
+                        Reset
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`text-xl font-bold ${getGradeColor(a.score || 0)}`}>{a.score ?? "—"}</span>
-                    {a.score !== null && <Badge variant="outline" className="text-xs">{getGradeLabel(a.score || 0)}</Badge>}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950 gap-1 rounded-xl"
-                      onClick={async () => {
-                        if (!confirm(`Reset attempt for ${a.student?.name}? They will be able to retake the assessment.`)) return;
-                        const supabase = createClient();
-                        const { error } = await supabase.from("quiz_attempts").delete().eq("id", a.id);
-                        if (error) { toast.error("Failed to reset"); return; }
-                        await supabase.from("essay_answers").delete()
-                          .eq("quiz_id", quiz.id).eq("student_id", a.student_id || a.student?.id);
-                        toast.success(`Attempt reset for ${a.student?.name}.`);
-                        refreshData();
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </div>
+                  {/* Expandable violation details per student */}
+                  {isExpanded && (
+                    <div className="px-3 pb-3">
+                      {studentViolations.length === 0 ? (
+                        <p className="text-xs text-gray-400 px-1 py-2">
+                          Detailed log is unavailable for this attempt (logged before the violation log existed).
+                          Total recorded: {a.violations || 0}.
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {studentViolations.map((v) => (
+                            <div key={v.id} className="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-950/50 rounded-lg text-xs">
+                              <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0 mt-0.5" />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-red-700 dark:text-red-300">
+                                  {VIOLATION_LABELS[v.type] || v.type}
+                                </p>
+                                <p className="text-red-500/80 dark:text-red-400/70 mt-0.5">
+                                  {v.created_at ? formatDateTime(v.created_at) : ""}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </TabsContent>

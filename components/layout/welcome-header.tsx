@@ -5,13 +5,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Notifications } from "./notifications";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Settings, Menu } from "lucide-react";
+import { Moon, Sun, Settings } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import type { User } from "@/types";
 
 interface WelcomeHeaderProps {
   user: User;
-  onMenuClick?: () => void;
 }
 
 function getGreeting(): string {
@@ -27,7 +26,7 @@ function getGreeting(): string {
  * user's name, and quick actions on the right (notifications, settings,
  * dark/light toggle). On mobile the hamburger is shown instead.
  */
-export function WelcomeHeader({ user, onMenuClick }: WelcomeHeaderProps) {
+export function WelcomeHeader({ user }: WelcomeHeaderProps) {
   const { theme, setTheme } = useTheme();
   const greetingText = getGreeting();
   const firstName = user.name.split(" ")[0];
@@ -35,17 +34,6 @@ export function WelcomeHeader({ user, onMenuClick }: WelcomeHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
-        {/* Hamburger on mobile */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden h-10 w-10 flex-shrink-0"
-          onClick={onMenuClick}
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5" />
-        </Button>
-
         <Link href="/profile" className="flex items-center gap-3 min-w-0 group">
           <Avatar className="h-11 w-11 border-2 border-white dark:border-gray-800 shadow-md flex-shrink-0">
             <AvatarImage src={user.avatar_url} alt={user.name} />

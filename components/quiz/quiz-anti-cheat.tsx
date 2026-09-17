@@ -39,6 +39,10 @@ export function QuizAntiCheat({
   const warningsRef = useRef(0);
   const isActiveRef = useRef(isActive);
   const wakeLockRef = useRef<any>(null);
+  // Cooldown anti dobel: 1 kejadian (keluar halaman) memicu visibilitychange
+  // DAN blur bersamaan — tanpa ini 1 keluar terhitung 2 peringatan.
+  const lastWarningAtRef = useRef(0);
+  const WARNING_COOLDOWN_MS = 2500;
 
   useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
 
@@ -82,6 +86,11 @@ export function QuizAntiCheat({
 
   const addWarning = useCallback((reason: string, type: string) => {
     if (!isActiveRef.current) return;
+
+    // Satu kejadian = satu peringatan. Abaikan pemicu ganda dalam jeda singkat.
+    const now = Date.now();
+    if (now - lastWarningAtRef.current < WARNING_COOLDOWN_MS) return;
+    lastWarningAtRef.current = now;
 
     playAlarm();
     speakWarning();

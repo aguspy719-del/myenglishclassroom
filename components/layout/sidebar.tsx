@@ -1,15 +1,14 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import {
   GraduationCap, Home, FileSpreadsheet,
-  LayoutDashboard, LogOut, Star, Users, UserCheck, FileText, X, BookMarked,
+  LayoutDashboard, LogOut, Star, Users, UserCheck, FileText, BookMarked,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -17,8 +16,6 @@ import type { UserRole } from "@/types";
 
 interface SidebarProps {
   role: UserRole;
-  isOpen: boolean;
-  onClose: () => void;
 }
 
 const teacherNavItems = [
@@ -56,7 +53,7 @@ const studentBottomNav = [
   { href: "/attendance", label: "Attend", icon: UserCheck },
 ];
 
-export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
+export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const navItems = role === "teacher" ? teacherNavItems : studentNavItems;
@@ -91,22 +88,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden" onClick={onClose} />
-      )}
-
-      {/* Tablet+ Sidebar (hidden on phones — bottom nav covers navigation there) */}
-      <aside
-        className={cn(
-          "fixed left-0 top-0 z-50 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-transform duration-300 ease-in-out shadow-xl",
-          "md:translate-x-0 md:static md:z-auto md:shadow-none",
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
+      {/* Desktop sidebar only — mobile navigates via the bottom navbar */}
+      <aside className="hidden md:flex fixed left-0 top-0 z-50 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex-col shadow-none md:static md:z-auto">
         {/* Logo */}
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
-          <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onClose}>
+          <Link href="/dashboard" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md flex-shrink-0">
               <Logo size={36} className="w-full h-full" />
             </div>
@@ -115,9 +101,6 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">SMK N 1 Buduran</p>
             </div>
           </Link>
-          <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </Button>
         </div>
 
         {/* Role badge */}
@@ -142,7 +125,6 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={onClose}
                 prefetch={true}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
@@ -166,10 +148,9 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Bottom actions */}
-        <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-0.5 pb-20 md:pb-3">
+        <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-0.5">
           <Link
             href="/"
-            onClick={onClose}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-all"
           >
             <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
@@ -220,4 +201,3 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
     </>
   );
 }
-

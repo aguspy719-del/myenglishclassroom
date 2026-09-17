@@ -14,7 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
 import type { User, Assignment, Submission, Announcement, Attendance } from "@/types";
-import { AttendanceStreakCard, AttendanceHistorySection } from "@/components/dashboard/attendance-streak-card";
+import { AttendanceStreakCard } from "@/components/dashboard/attendance-streak-card";
 
 interface StudentDashboardProps {
   user: User;
@@ -129,17 +129,13 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     <div className="space-y-6">
       {/* Greeting is rendered by WelcomeHeader in DashboardLayout */}
 
-      {/* Status Kehadiran — combined card: live clock, heatmap, streak & stats */}
+      {/* Status Kehadiran — combined card: live clock, today, streak & average */}
       <AttendanceStreakCard
-        records={attendanceRecords}
         loading={loading}
         streakDays={loginStreak}
         attendanceRate={attendanceRate}
         todayStatus={todayAttendanceStatus}
       />
-
-      {/* Recent attendance history — same list style as the Attendance page */}
-      <AttendanceHistorySection records={attendanceRecords} loading={loading} />
 
       {/* Stats — the essentials */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

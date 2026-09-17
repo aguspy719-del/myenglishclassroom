@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { CalendarDays, Clock, Flame, TrendingUp } from "lucide-react";
-import { AttendanceHeatmap } from "@/components/attendance/attendance-heatmap";
-import { AttendanceHistoryList } from "@/components/attendance/attendance-history-list";
 import type { Attendance } from "@/types";
 
 interface AttendanceStreakCardProps {
-  /** Attendance records for the heatmap */
-  records: Attendance[];
   /** Whether the base data is still loading */
   loading: boolean;
   /** Login streak in days */
@@ -20,12 +16,11 @@ interface AttendanceStreakCardProps {
 }
 
 /**
- * Combined "Status Kehadiran" card (reference-style): header with a live
- * clock and date, the GitHub-style heatmap, and three stat tiles —
- * Hari Ini, Streak, and Rata-rata — all on one emerald gradient card.
+ * Combined "Attendance Status" card: header with a live clock and date,
+ * plus three stat tiles — Today, Streak, and Average — all on one
+ * emerald gradient card. Icons sit on white circles for contrast.
  */
 export function AttendanceStreakCard({
-  records,
   loading,
   streakDays,
   attendanceRate,
@@ -40,8 +35,9 @@ export function AttendanceStreakCard({
     return () => clearInterval(t);
   }, []);
 
+  // Clock: numbers only, 24-hour — no AM/PM suffix
   const clock = now
-    ? now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    ? now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })
     : "--:--:--";
   const dateLabel = now
     ? now.toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
@@ -59,8 +55,8 @@ export function AttendanceStreakCard({
       {/* Header: icon + date | live clock */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center flex-shrink-0">
-            <CalendarDays className="w-5 h-5" />
+          <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center flex-shrink-0">
+            <CalendarDays className="w-5 h-5 text-emerald-600" />
           </div>
           <div className="min-w-0">
             <p className="font-bold leading-tight">Attendance Status</p>
@@ -68,16 +64,6 @@ export function AttendanceStreakCard({
           </div>
         </div>
         <p className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight flex-shrink-0">{clock}</p>
-      </div>
-
-      {/* Heatmap panel */}
-      <div className="mt-4 rounded-2xl bg-white/10 p-4">
-        <p className="text-sm font-semibold mb-3">Last 3 Months</p>
-        {loading ? (
-          <div className="h-28 bg-white/10 rounded-xl animate-pulse" />
-        ) : (
-          <AttendanceHeatmap records={records} weeks={14} />
-        )}
       </div>
 
       {/* Stat tiles */}
@@ -100,9 +86,4 @@ export function AttendanceStreakCard({
       </div>
     </div>
   );
-}
-
-/** Recent attendance history, matching the attendance page style. */
-export function AttendanceHistorySection({ records, loading }: { records: Attendance[]; loading: boolean }) {
-  return <AttendanceHistoryList records={records} loading={loading} limit={10} />;
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User as UserIcon, Mail, Shield, Loader2, Save, Bell, BellOff, Globe, Flame, Camera, Trash2 } from "lucide-react";
+import { User as UserIcon, Mail, Shield, Loader2, Save, Bell, BellOff, Globe, Flame, Camera, Trash2, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -209,6 +209,13 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
     if (error) toast.error("Failed: " + error.message);
     else { toast.success("Password changed!"); setPasswords({ new: "", confirm: "" }); }
     setChangingPassword(false);
+  };
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    toast.success("Signed out successfully");
+    router.push("/login");
   };
 
   return (
@@ -546,6 +553,16 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Sign Out */}
+      <Button
+        variant="outline"
+        onClick={handleLogout}
+        className="w-full gap-2 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950 border-red-200 dark:border-red-900"
+      >
+        <LogOut className="w-4 h-4" />
+        Sign Out
+      </Button>
     </div>
   );
 }
