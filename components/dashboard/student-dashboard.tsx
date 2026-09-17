@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
 import type { User, Assignment, Submission, Announcement, Attendance } from "@/types";
 import { AttendanceStreakCard } from "@/components/dashboard/attendance-streak-card";
+import { MarqueeText } from "@/components/ui/marquee-text";
 
 interface StudentDashboardProps {
   user: User;
@@ -186,7 +187,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                       <div className="flex items-start gap-3 flex-1 min-w-0">
                         {isUrgent ? <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" /> : <Clock className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />}
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{a.title}</p>
+                          <MarqueeText text={a.title} duration={7} className="text-sm font-medium text-gray-900 dark:text-white" />
                           <p className="text-xs text-gray-500">Due: {formatDate(a.deadline)}</p>
                         </div>
                       </div>

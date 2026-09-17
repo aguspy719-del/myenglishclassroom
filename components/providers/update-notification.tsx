@@ -2,80 +2,72 @@
 
 import { useEffect } from "react";
 
-const DISMISS_KEY = "app-update-dismissed";
-
 /**
- * App update notification — appears in the notifications bell.
+ * Version-based app update notification.
  *
- * When a new service worker is waiting (new deploy shipped), a DOM event
- * is emitted and the Notifications bell shows an "App update available"
- * entry pinned on top. Dismissing it persists for the session, so it
- * never nags — it only reappears for the NEXT shipped version (new page
- * load after the user updates).
+ * APP_VERSION is bumped on every release (keep in sync with package.json
+ * and the service worker cache name). When a client sees a version that
+ * differs from the one they last saw/dismissed, the bell shows an
+ * "App update available" entry pinned on top for ALL users (students and
+ * teachers). Dismissing it stores the version in localStorage, so it
+ * never nags again for THAT version — it reappears only for the NEXT
+ * shipped version.
  */
+export const APP_VERSION = "1.3.0";
+
+const SEEN_KEY = "app-update-version";
+
 export function UpdateNotification() {
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
+    if (typeof window === "undefined") return;
 
-    let dismissed = false;
+    let seenVersion: string | null = null;
     try {
-      dismissed = sessionStorage.getItem(DISMISS_KEY) === "1";
+      seenVersion = localStorage.getItem(SEEN_KEY);
     } catch {}
 
-    const announce = (detail: { reload: () => void }) => {
-      if (dismissed) return;
-      window.dispatchEvent(new CustomEvent("app-update-available", { detail }));
-    };
+    // New version detected (or first visit) → announce to the bell UI
+    if (seenVersion !== APP_VERSION) {
+      window.dispatchEvent(
+        new CustomEvent("app-update-available", {
+          detail: { version: APP_VERSION },
+        })
+      );
+    }
 
-    let toastShown = false;
-    const showUpdateToast = (reg: ServiceWorkerRegistration) => {
-      if (toastShown) return;
-      toastShown = true;
-      announce({
-        reload: () => {
-          const sw = reg.waiting || reg.installing;
-          if (sw) {
-            sw.postMessage({ type: "SKIP_WAITING" });
-            navigator.serviceWorker.addEventListener("controllerchange", () => {
-              window.location.reload();
-            }, { once: true });
-            setTimeout(() => window.location.reload(), 1500);
-          } else {
-            window.location.reload();
-          }
-        },
-      });
-    };
-
-    navigator.serviceWorker.getRegistration().then((reg) => {
-      if (!reg) return;
-      if (reg.waiting && navigator.serviceWorker.controller) showUpdateToast(reg);
-
-      reg.addEventListener("updatefound", () => {
-        const installing = reg.installing;
-        if (!installing) return;
-        installing.addEventListener("statechange", () => {
-          if (installing.state === "installed" && navigator.serviceWorker.controller) {
-            showUpdateToast(reg);
-          }
-        });
-      });
-    }).catch(() => {});
-
-    const interval = setInterval(() => {
-      navigator.serviceWorker.getRegistration().then((reg) => reg?.update().catch(() => {})).catch(() => {});
-    }, 60 * 60 * 1000);
-
-    // Listen for dismissal so it stays gone for this version
+    // Dismissal persists per version — never shows again until the next bump
     const onDismiss = () => {
-      try { sessionStorage.setItem(DISMISS_KEY, "1"); } catch {}
-      dismissed = true;
+      try {
+        localStorage.setItem(SEEN_KEY, APP_VERSION);
+      } catch {}
     };
     window.addEventListener("app-update-dismissed", onDismiss);
 
+    // "Update now" → hard refresh to pick up the new deploy
+    const onUpdateNow = () => {
+      try {
+        localStorage.setItem(SEEN_KEY, APP_VERSION);
+      } catch {}
+      // Clear SW caches so the reload gets fresh assets, then reload
+      const w = window as any;
+      if (w.caches?.keys) {
+        w.caches.keys().then((keys: string[]) => {
+          Promise.all(keys.map((k: string) => w.caches.delete(k))).finally(() => window.location.reload());
+        }).catch(() => window.location.reload());
+      } else {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("app-update-now", onUpdateNow);
+
+    // Keep the service worker fresh in the background (no nagging from here)
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => reg?.update().catch(() => {})).catch(() => {});
+    }
+
     return () => {
-      clearInterval(interval);
       window.removeEventListener("app-update-dismissed", onDismiss);
+      window.removeEventListener("app-update-now", onUpdateNow);
     };
   }, []);
 

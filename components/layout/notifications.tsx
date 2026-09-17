@@ -14,7 +14,7 @@ interface NotificationsProps {
 }
 
 interface AppUpdateNotice {
-  reload: () => void;
+  version: string;
 }
 
 export function Notifications({ userId }: NotificationsProps) {
@@ -37,7 +37,12 @@ export function Notifications({ userId }: NotificationsProps) {
 
   const dismissUpdate = () => {
     setUpdateDismissed(true);
+    // Persist per version — dismissed updates never come back
     window.dispatchEvent(new Event("app-update-dismissed"));
+  };
+
+  const handleUpdateNow = () => {
+    window.dispatchEvent(new Event("app-update-now"));
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length + (updateNotice && !updateDismissed ? 1 : 0);
@@ -146,10 +151,12 @@ export function Notifications({ userId }: NotificationsProps) {
                     <RefreshCw className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">App update available</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">Refresh to get the latest improvements.</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      Update v{updateNotice.version} available
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">New improvements are ready. Update to the latest version.</p>
                     <button
-                      onClick={() => { updateNotice.reload(); }}
+                      onClick={handleUpdateNow}
                       className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-3 py-1.5 transition-colors"
                     >
                       <RefreshCw className="w-3 h-3" />

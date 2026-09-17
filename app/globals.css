@@ -317,6 +317,34 @@ html {
   width: 280px;
 }
 
+/* ── Truncated-label marquee: scrolls text that overflows its container ── */
+@keyframes marquee-label {
+  0%, 12% {
+    transform: translateX(0);
+  }
+  88%, 100% {
+    transform: translateX(calc(-100% + var(--marquee-container, 100%)));
+  }
+}
+
+.marquee-scroll {
+  animation: marquee-label var(--marquee-duration, 6s) linear infinite;
+  will-change: transform;
+}
+
+/* The scroll distance must be (text width − container width); CSS approximates
+   with a parent-driven variable set inline. Pause on touch/interaction. */
+.marquee-scroll:hover,
+.marquee-scroll:active {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-scroll {
+    animation: none;
+  }
+}
+
 /* ── App-wide entrance animation for cards & list rows ── */
 @keyframes card-in {
   from {

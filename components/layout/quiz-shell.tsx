@@ -19,10 +19,15 @@ export function QuizShell({ user, children }: QuizShellProps) {
   const isStudentTakingQuiz = user.role === "student" && pathname !== "/quiz";
 
   if (isStudentTakingQuiz) {
-    // Clean, focused page for the student taking the assessment
+    // Clean, focused page for the student taking the assessment.
+    // Top padding = safe-area (notch/status bar in PWA standalone) + fixed gap,
+    // so content is never cut off at the top of the screen.
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="page-enter max-w-2xl mx-auto p-4 pb-10">{children}</div>
+      <div
+        className="min-h-screen bg-gray-50 dark:bg-gray-950"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)" }}
+      >
+        <div className="page-enter max-w-2xl mx-auto px-4 pb-10">{children}</div>
       </div>
     );
   }

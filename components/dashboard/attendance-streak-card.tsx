@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalendarDays, Clock, Flame, TrendingUp } from "lucide-react";
+import { MarqueeText } from "@/components/ui/marquee-text";
 import type { Attendance } from "@/types";
 
 interface AttendanceStreakCardProps {
@@ -58,9 +59,13 @@ export function AttendanceStreakCard({
           <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center flex-shrink-0">
             <CalendarDays className="w-5 h-5 text-emerald-600" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="font-bold leading-tight">Attendance Status</p>
-            <p className="text-xs text-emerald-100 truncate">{dateLabel || "\u00a0"}</p>
+            <MarqueeText
+              text={dateLabel || "\u00a0"}
+              duration={7}
+              className="text-xs text-emerald-100"
+            />
           </div>
         </div>
         <p className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight flex-shrink-0">{clock}</p>
@@ -71,7 +76,11 @@ export function AttendanceStreakCard({
         <div className="rounded-2xl bg-white/10 p-3 text-center">
           <Clock className="w-4 h-4 mx-auto mb-1.5 text-emerald-100" />
           <p className="text-[11px] text-emerald-100">Today</p>
-          <p className="text-sm font-bold mt-0.5 truncate">{loading ? "…" : todayLabel}</p>
+          {loading ? (
+            <p className="text-sm font-bold mt-0.5">…</p>
+          ) : (
+            <MarqueeText text={todayLabel} duration={5} className="text-sm font-bold mt-0.5" />
+          )}
         </div>
         <div className="rounded-2xl bg-white/10 p-3 text-center">
           <Flame className="w-4 h-4 mx-auto mb-1.5 text-amber-300" />
