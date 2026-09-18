@@ -31,9 +31,15 @@ export default function RegisterPage() {
 
   useEffect(() => {
     const fetchClasses = async () => {
-      const supabase = createClient();
-      const { data } = await supabase.from("classes").select("*").order("grade").order("class_name");
-      setClasses(data || []);
+      // Classes are RLS-protected (login required), so fetch via the public
+      // API route — anonymous visitors would otherwise get an empty list.
+      try {
+        const res = await fetch("/api/classes");
+        const json = await res.json();
+        if (res.ok) setClasses(json.classes || []);
+      } catch {
+        // Dropdown stays empty; the form still shows an error on submit
+      }
     };
     fetchClasses();
   }, []);
