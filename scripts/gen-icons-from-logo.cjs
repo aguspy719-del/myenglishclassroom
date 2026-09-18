@@ -1,5 +1,5 @@
 /**
- * Generate all PWA icons from public/icons/logonew.png (the source logo).
+ * Generate all PWA icons from public/icons/logo-myclassroom.png (the source logo).
  *
  * - icon-192.png / icon-512.png  → transparent RGBA (logo only, NO background)
  * - icon-maskable-*.png          → full-bleed GREEN matching the logo's own edge
@@ -14,7 +14,7 @@
 const zlib = require("zlib");
 const fs = require("fs");
 
-const SOURCE = "public/icons/logonew.png";
+const SOURCE = "public/icons/logo-myclassroom.png";
 
 // ── PNG decode (supports RGB + RGBA) ────────────────────────
 function readPNG(path) {
