@@ -98,12 +98,24 @@ export function Sidebar({ role, collapsed = false, onToggle }: SidebarProps) {
         )}
       >
         {/* Logo */}
-        <div className={cn("flex items-center border-b border-gray-100 dark:border-gray-800", collapsed ? "px-3 py-4 justify-center" : "p-4 justify-between")}>
-          {collapsed ? (
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-2 px-2 py-3 border-b border-gray-100 dark:border-gray-800">
             <Link href="/dashboard" aria-label="My Classroom" className="flex items-center justify-center w-9 h-9 rounded-xl overflow-hidden shadow-md flex-shrink-0">
               <Logo size={36} className="w-full h-full" />
             </Link>
-          ) : (
+            {onToggle && (
+              <button
+                onClick={onToggle}
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:border-emerald-700 dark:hover:bg-gray-800 transition-all"
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
             <Link href="/dashboard" className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md flex-shrink-0">
                 <Logo size={36} className="w-full h-full" />
@@ -113,17 +125,18 @@ export function Sidebar({ role, collapsed = false, onToggle }: SidebarProps) {
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">SMK N 1 Buduran</p>
               </div>
             </Link>
-          )}
-          {!collapsed && onToggle && (
-            <button
-              onClick={onToggle}
-              aria-label="Collapse sidebar"
-              className="hidden md:flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-gray-800 transition-all"
-            >
-              <PanelLeftClose className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+            {onToggle && (
+              <button
+                onClick={onToggle}
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-gray-800 transition-all"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Role badge */}
         {collapsed ? (
@@ -215,16 +228,6 @@ export function Sidebar({ role, collapsed = false, onToggle }: SidebarProps) {
             </div>
             {!collapsed && "Sign Out"}
           </button>
-          {collapsed && onToggle && (
-            <button
-              onClick={onToggle}
-              aria-label="Expand sidebar"
-              title="Expand sidebar"
-              className="w-full flex items-center justify-center px-2 py-2.5 rounded-xl text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-gray-800 transition-all"
-            >
-              <PanelLeftOpen className="h-4 w-4" />
-            </button>
-          )}
         </div>
       </aside>
 

@@ -19,9 +19,11 @@ import { Notifications } from "./notifications";
 
 interface NavbarProps {
   user: User;
+  /** Hide the brand logo/text (used when the sidebar is collapsed to avoid two logos). */
+  hideBrand?: boolean;
 }
 
-export function Navbar({ user }: NavbarProps) {
+export function Navbar({ user, hideBrand = false }: NavbarProps) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
@@ -34,13 +36,15 @@ export function Navbar({ user }: NavbarProps) {
 
   return (
     <header className="sticky top-0 z-30 h-14 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 flex items-center px-4 gap-4">
-      {/* Brand */}
-      <Link href="/dashboard" prefetch={true} className="flex items-center gap-1.5">
-        <div className="w-6 h-6 rounded-md overflow-hidden flex-shrink-0">
-          <Logo size={24} className="w-full h-full" />
-        </div>
-        <span className="font-bold text-sm text-gray-900 dark:text-white">My Classroom</span>
-      </Link>
+      {/* Brand — hidden when the sidebar is collapsed to avoid two logos */}
+      {!hideBrand && (
+        <Link href="/dashboard" prefetch={true} className="flex items-center gap-1.5">
+          <div className="w-6 h-6 rounded-md overflow-hidden flex-shrink-0">
+            <Logo size={24} className="w-full h-full" />
+          </div>
+          <span className="font-bold text-sm text-gray-900 dark:text-white">My Classroom</span>
+        </Link>
+      )}
 
       <div className="flex-1" />
 
