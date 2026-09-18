@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,9 +19,11 @@ import { Notifications } from "./notifications";
 
 interface NavbarProps {
   user: User;
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
-export function Navbar({ user }: NavbarProps) {
+export function Navbar({ user, sidebarCollapsed, onToggleSidebar }: NavbarProps) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
@@ -34,6 +36,17 @@ export function Navbar({ user }: NavbarProps) {
 
   return (
     <header className="sticky top-0 z-30 h-14 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 flex items-center px-4 gap-4">
+      {/* Sidebar collapse toggle — desktop only */}
+      {onToggleSidebar && (
+        <button
+          onClick={onToggleSidebar}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="hidden md:flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-gray-800 transition-all"
+        >
+          {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </button>
+      )}
+
       {/* Brand */}
       <Link href="/dashboard" prefetch={true} className="flex items-center gap-1.5">
         <div className="w-6 h-6 rounded-md overflow-hidden flex-shrink-0">
