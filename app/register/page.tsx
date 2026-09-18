@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeOff, Loader2, ArrowLeft, Mail, Lock, User, GraduationCap, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowLeft, Mail, Lock, User, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -132,29 +132,6 @@ export default function RegisterPage() {
             <p className="text-lg font-black leading-tight">My Classroom</p>
             <p className="text-xs text-emerald-100">English Learning Management System</p>
           </div>
-        </div>
-
-        {/* Headline + features */}
-        <div className="relative max-w-md">
-          <h2 className="text-4xl font-black leading-tight">
-            Mulai perjalanan<br />bahasa Inggrismu.
-          </h2>
-          <p className="text-emerald-100 mt-4 leading-relaxed">
-            Daftar dengan kode kelas dari gurumu, lalu akses asesmen, tugas,
-            absensi, dan nilai dalam satu aplikasi.
-          </p>
-          <ul className="mt-8 space-y-3.5">
-            {[
-              "Ikut asesmen formatif, STS, dan SAS",
-              "Absen dalam hitungan detik dengan GPS",
-              "Pantau nilai dan streak kehadiranmu",
-            ].map((text) => (
-              <li key={text} className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-200 flex-shrink-0 mt-0.5" />
-                <span className="text-sm text-emerald-50">{text}</span>
-              </li>
-            ))}
-          </ul>
         </div>
 
         <p className="relative text-xs text-emerald-200/80">

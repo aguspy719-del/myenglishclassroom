@@ -75,11 +75,6 @@ export default async function LandingPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/register">
-              <Button variant="ghost" size="sm" className="hidden sm:flex text-gray-600 hover:text-gray-900">
-                Register
-              </Button>
-            </Link>
             <Link href="/login">
               <Button size="sm" className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/20 text-white font-semibold">
                 Sign In
@@ -118,15 +113,10 @@ export default async function LandingPage() {
               Your digital English classroom. Access materials, submit assignments, and track your progress—all in one place.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10 hero-pop" style={{ animationDelay: "0.36s" }}>
-              <Link href="/register">
-                <Button size="lg" className="w-full sm:w-auto h-13 px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all text-white font-bold text-base gap-2">
-                  Get Started <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
-                </Button>
-              </Link>
+            <div className="flex justify-center mb-10 hero-pop" style={{ animationDelay: "0.36s" }}>
               <Link href="/login">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto h-13 px-8 border-gray-300 bg-white hover:bg-gray-50 hover:border-emerald-300 text-gray-700 font-semibold text-base">
-                  Sign In
+                <Button size="lg" className="w-full sm:w-auto h-13 px-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all text-white font-bold text-base gap-2">
+                  Sign In <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
                 </Button>
               </Link>
             </div>
@@ -374,19 +364,14 @@ export default async function LandingPage() {
           </Reveal>
           <Reveal delay={100}>
             <h2 className="text-3xl sm:text-4xl font-black mb-4">Ready to Start Learning?</h2>
-            <p className="text-emerald-50 mb-10 text-lg">Join your classmates and access all English learning materials</p>
+            <p className="text-emerald-50 mb-10 text-lg">Sign in to access all English learning materials</p>
           </Reveal>
 
           <Reveal delay={200}>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
-              <Link href="/register">
-                <Button size="lg" className="w-full sm:w-auto px-8 h-12 bg-white text-emerald-600 hover:bg-emerald-50 hover:-translate-y-0.5 transition-all font-bold text-base gap-2 shadow-xl">
-                  Register Now <ArrowRight className="w-5 h-5" />
-                </Button>
-              </Link>
+            <div className="flex justify-center mb-10">
               <Link href="/login">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto px-8 h-12 border-white/30 bg-white/10 hover:bg-white/20 text-white font-semibold text-base backdrop-blur-sm">
-                  Sign In
+                <Button size="lg" className="w-full sm:w-auto px-12 h-12 bg-white text-emerald-600 hover:bg-emerald-50 hover:-translate-y-0.5 transition-all font-bold text-base gap-2 shadow-xl">
+                  Sign In <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
             </div>
@@ -394,7 +379,7 @@ export default async function LandingPage() {
 
           <Reveal delay={300}>
             <div className="flex flex-wrap justify-center gap-4 text-sm text-emerald-50">
-              {["Free to join", "GPS Attendance", "Instant grades", "Works offline"].map((item) => (
+              {["GPS Attendance", "Instant grades", "Works offline"].map((item) => (
                 <div key={item} className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-white" />
                   {item}

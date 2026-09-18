@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeOff, Loader2, ArrowLeft, Mail, Lock, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowLeft, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,29 +65,6 @@ export default function LoginPage() {
             <p className="text-lg font-black leading-tight">My Classroom</p>
             <p className="text-xs text-emerald-100">English Learning Management System</p>
           </div>
-        </div>
-
-        {/* Headline + features */}
-        <div className="relative max-w-md">
-          <h2 className="text-4xl font-black leading-tight">
-            Belajar Bahasa Inggris,<br />lebih terstruktur.
-          </h2>
-          <p className="text-emerald-100 mt-4 leading-relaxed">
-            Satu aplikasi untuk asesmen, tugas, kehadiran, dan nilai — dirancang
-            untuk siswa dan guru SMK Negeri 1 Buduran.
-          </p>
-          <ul className="mt-8 space-y-3.5">
-            {[
-              "Asesmen & tugas online dengan anti-cheat",
-              "Absensi cepat dengan verifikasi lokasi sekolah",
-              "Nilai & rekap kehadiran transparan",
-            ].map((text) => (
-              <li key={text} className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-200 flex-shrink-0 mt-0.5" />
-                <span className="text-sm text-emerald-50">{text}</span>
-              </li>
-            ))}
-          </ul>
         </div>
 
         <p className="relative text-xs text-emerald-200/80">
@@ -192,15 +169,6 @@ export default function LoginPage() {
                   ) : "Sign In"}
                 </Button>
               </form>
-
-              <div className="mt-6 pt-5 border-t border-gray-100 text-center">
-                <p className="text-sm text-gray-500">
-                  Don&apos;t have an account?{" "}
-                  <Link href="/register" className="text-emerald-600 font-bold hover:text-emerald-700 transition-colors">
-                    Register here
-                  </Link>
-                </p>
-              </div>
             </div>
 
             <p className="text-center text-xs text-gray-400 mt-6 lg:hidden">
