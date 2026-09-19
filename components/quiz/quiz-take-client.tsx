@@ -326,10 +326,10 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
                 {quizType === "sumatif_tengah" && <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">Sumatif Tengah Semester · 1 attempt only</Badge>}
                 {quizType === "sumatif_akhir" && <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">Sumatif Akhir Semester · 1 attempt only</Badge>}
               </div>
-              <div className="flex justify-center gap-6 text-sm text-gray-600 dark:text-gray-400">
-                {mcCount > 0 && <div className="text-center min-w-16"><p className="text-2xl font-bold text-gray-900 dark:text-white">{mcCount}</p><p>Multiple Choice</p></div>}
-                {essayCount > 0 && <div className="text-center min-w-16"><p className="text-2xl font-bold text-gray-900 dark:text-white">{essayCount}</p><p>Essay</p></div>}
-                {quiz.time_limit && <div className="text-center min-w-16"><p className="text-2xl font-bold text-gray-900 dark:text-white">{quiz.time_limit}</p><p>Minutes</p></div>}
+              <div className="flex text-sm text-gray-600 dark:text-gray-400">
+                {mcCount > 0 && <div className="flex-1 text-center"><p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{mcCount}</p><p>Multiple Choice</p></div>}
+                {essayCount > 0 && <div className="flex-1 text-center"><p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{essayCount}</p><p>Essay</p></div>}
+                {quiz.time_limit && <div className="flex-1 text-center"><p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{quiz.time_limit}</p><p>Minutes</p></div>}
               </div>
               <div className="p-3 bg-red-50 dark:bg-red-950 rounded-xl text-sm text-red-700 dark:text-red-300 font-medium">
                 ⚠️ 1 attempt only. Questions are shuffled per student. Leaving the page triggers a loud alarm — 3 warnings = auto-submit.
