@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 
@@ -41,8 +41,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing userIds or payload" }, { status: 400 });
     }
 
-    // Fetch subscriptions for target users
-    const { data: subscriptions } = await supabase
+    // Fetch subscriptions for target users.
+    // Must use the service client: RLS only exposes each user's OWN
+    // subscription rows, so a teacher sending to students would otherwise
+    // see zero subscriptions and push would silently never send.
+    const admin = createServiceClient();
+    const { data: subscriptions } = await admin
       .from("push_subscriptions")
       .select("*")
       .in("user_id", userIds);
@@ -66,7 +70,7 @@ export async function POST(request: NextRequest) {
         // Rows without valid keys can never receive pushes — delete them
         // instead of failing every send.
         if (!sub.p256dh || !sub.auth) {
-          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+          await admin.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
           failed.push(sub.endpoint);
           return;
         }
@@ -82,7 +86,7 @@ export async function POST(request: NextRequest) {
         } catch (err: any) {
           // 410 Gone = subscription expired, remove it
           if (err.statusCode === 410 || err.statusCode === 404) {
-            await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+            await admin.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
           }
           failed.push(sub.endpoint);
         }
