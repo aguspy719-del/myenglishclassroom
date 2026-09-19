@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
 import type { User, Assignment, Submission, Announcement, Attendance } from "@/types";
 import { AttendanceStreakCard } from "@/components/dashboard/attendance-streak-card";
+import { PushNotificationBanner } from "@/components/dashboard/push-notification-banner";
 import { MarqueeText } from "@/components/ui/marquee-text";
 
 interface StudentDashboardProps {
@@ -129,6 +130,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   return (
     <div className="space-y-6">
       {/* Greeting is rendered by WelcomeHeader in DashboardLayout */}
+
+      {/* Push notification opt-in — push only works after the user grants permission on this device */}
+      <PushNotificationBanner user={user} />
 
       {/* Status Kehadiran — combined card: live clock, today, streak & average */}
       <AttendanceStreakCard

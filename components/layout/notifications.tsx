@@ -21,7 +21,6 @@ interface AppUpdateNotice {
 export function Notifications({ userId }: NotificationsProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   // ── App update notice (from UpdateNotification provider) ──
   const [updateNotice, setUpdateNotice] = useState<AppUpdateNotice | null>(null);
@@ -67,7 +66,6 @@ export function Notifications({ userId }: NotificationsProps) {
 
   useEffect(() => {
     fetchNotifications();
-    setLoading(false);
     // Real-time subscription — badge updates WITHOUT refresh when the
     // teacher sends an assignment or assessment
     const supabase = createClient();
@@ -175,14 +173,13 @@ export function Notifications({ userId }: NotificationsProps) {
                   </button>
                 </div>
               )}
-              {loading || (notifications.length === 0 && !loading) ? (
-                notifications.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500 dark:text-gray-400">
-                    <Bell className="w-10 h-10 mx-auto mb-2 opacity-20" />
-                    <p className="text-sm">No notifications yet</p>
-                  </div>
-                ) : (
-                  notifications.map((notif) => (
+              {notifications.length === 0 ? (
+                <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+                  <Bell className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                  <p className="text-sm">No notifications yet</p>
+                </div>
+              ) : (
+                notifications.map((notif) => (
                     <Link
                       key={notif.id}
                       href={notif.link || "#"}
@@ -204,8 +201,7 @@ export function Notifications({ userId }: NotificationsProps) {
                       )}
                     </Link>
                   ))
-                )
-              ) : null}
+              )}
             </div>
           </div>
         </>
