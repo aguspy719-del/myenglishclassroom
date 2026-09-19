@@ -569,25 +569,29 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
 
     if (!attempt) return;
 
-    const mcCount = questions.filter((q) => (q as any).question_type !== "essay").length;
-    const essayCount = questions.filter((q) => (q as any).question_type === "essay").length;
-    const totalQuestions = mcCount + essayCount;
+    // Points model: every question (MC & essay) carries a max_score weight.
+    // MC attempt.score is the % of weighted MC points earned; essays are
+    // graded directly in points. Final = earned ÷ total points × 100,
+    // so the combined score can never exceed 100.
+    const mcQuestions = questions.filter((q) => (q as any).question_type !== "essay");
+    const essayQuestions = questions.filter((q) => (q as any).question_type === "essay");
+    const mcMaxPoints = mcQuestions.reduce((sum, q) => sum + (Math.max(1, (q as any).max_score) || 10), 0);
+    const essayMaxPoints = essayQuestions.reduce((sum, q) => sum + (Math.max(1, (q as any).max_score) || 10), 0);
+    const totalPoints = mcMaxPoints + essayMaxPoints;
 
-    if (totalQuestions === 0) return;
+    if (totalPoints === 0) return;
 
-    // MC score is stored as percentage of MC questions
-    const mcScore = mcCount > 0 ? (attempt.score || 0) * mcCount / 100 : 0;
-
-    // Essay score: sum of (score/max_score) per essay
-    const essayTotalScore = (allEssayAnswers || []).reduce((sum, ea) => {
-      const maxScore = (ea.question as any)?.max_score || 10;
-      return sum + ((ea.score || 0) / maxScore) * 100;
+    // Graded essays: sum of awarded points (clamped to each essay's max)
+    const essayEarnedPoints = (allEssayAnswers || []).reduce((sum, ea) => {
+      const maxScore = Math.max(1, (ea.question as any)?.max_score) || 10;
+      return sum + Math.min(Math.max(0, ea.score || 0), maxScore);
     }, 0);
-    const essayAvg = essayCount > 0 ? essayTotalScore / essayCount : 0;
 
-    const combinedScore = Math.round(
-      (mcCount * (attempt.score || 0) + essayCount * essayAvg) / totalQuestions
-    );
+    const mcEarnedPoints = mcMaxPoints > 0
+      ? ((attempt.score || 0) / 100) * mcMaxPoints
+      : 0;
+
+    const combinedScore = Math.round((mcEarnedPoints + essayEarnedPoints) / totalPoints * 100);
 
     await supabase.from("quiz_attempts")
       .update({ score: combinedScore })
@@ -800,13 +804,14 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                     </>
                   )}
 
-                  {/* Essay max score */}
-                  {draft.question_type === "essay" && (
-                    <div className="flex items-center gap-3">
-                      <Label className="text-xs whitespace-nowrap">Max Score:</Label>
-                      <Input type="number" min="1" max="100" value={draft.max_score} onChange={(e) => updateDraft(draft.id, "max_score", e.target.value)} className="w-24 h-8 rounded-xl text-sm" />
-                    </div>
-                  )}
+                  {/* Max score — MC correctness + weight, essay grading scale */}
+                  <div className="flex items-center gap-3">
+                    <Label className="text-xs whitespace-nowrap">Max Score:</Label>
+                    <Input type="number" min="1" max="100" value={draft.max_score} onChange={(e) => updateDraft(draft.id, "max_score", e.target.value)} className="w-24 h-8 rounded-xl text-sm" />
+                    {draft.question_type === "multiple_choice" && (
+                      <span className="text-[11px] text-gray-400">points for a correct answer</span>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -832,7 +837,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                             <Badge className={isEssayQ ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 text-xs" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 text-xs"}>
                               {isEssayQ ? "Essay" : "MC"}
                             </Badge>
-                            {isEssayQ && (q as any).max_score && <span className="text-xs text-gray-500">Max: {(q as any).max_score} pts</span>}
+                            {(q as any).max_score && <span className="text-xs text-gray-500">Max: {(q as any).max_score} pts</span>}
                           </div>
                           <p className="font-medium text-gray-900 dark:text-white text-sm mb-3 whitespace-pre-wrap leading-relaxed">{q.question}</p>
                           {!isEssayQ && (
@@ -1012,6 +1017,8 @@ function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
   const [showQuestion, setShowQuestion] = useState(false);
   const questionText = essayAnswer.question?.question || "";
   const isLongQuestion = questionText.length > 120;
+  // Essays are graded in points against the question's max_score
+  const maxScore = Math.max(1, essayAnswer.question?.max_score) || 10;
 
   return (
     <Card className="border-0 shadow-sm">
@@ -1058,8 +1065,8 @@ function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
           <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-700">
             <div className="flex gap-3">
               <div className="space-y-1 flex-1">
-                <Label className="text-xs">Score (0-100)</Label>
-                <Input type="number" min="0" max="100" placeholder="85" value={score}
+                <Label className="text-xs">Score (0-{maxScore})</Label>
+                <Input type="number" min="0" max={maxScore} placeholder={`${Math.round(maxScore * 0.85)}`} value={score}
                   onChange={(e) => setScore(e.target.value)} className="rounded-xl h-9" />
               </div>
               <div className="space-y-1 flex-1">
@@ -1071,7 +1078,7 @@ function EssayGradeCard({ essayAnswer, onGrade, onDelete }: {
             <div className="flex gap-2">
               <Button size="sm" className="gap-1 rounded-xl" onClick={() => {
                 const s = parseInt(score);
-                if (isNaN(s) || s < 0 || s > 100) { toast.error("Score must be 0-100"); return; }
+                if (isNaN(s) || s < 0 || s > maxScore) { toast.error(`Score must be 0-${maxScore}`); return; }
                 onGrade(essayAnswer.id, s, feedback);
                 setEditing(false);
               }}><CheckCircle className="w-3 h-3" />Save Grade</Button>

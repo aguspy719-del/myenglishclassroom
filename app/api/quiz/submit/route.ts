@@ -79,16 +79,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This assessment has no questions" }, { status: 400 });
     }
 
-    // Grade multiple choice server-side
+    // Grade multiple choice server-side.
+    // Each question carries a max_score weight — the MC score is the share of
+    // weighted points earned, so teachers can make some questions worth more
+    // (and the combined MC+essay score can never exceed 100).
     const mcQuestions = questions.filter(
       (q) => (q as any).question_type !== "essay"
     );
     const validMc = new Set(mcQuestions.map((q) => q.id));
+    const mcMaxPoints = mcQuestions.reduce(
+      (sum, q) => sum + (Math.max(1, (q as any).max_score) || 10),
+      0
+    );
+    const mcEarnedPoints = mcQuestions.reduce((sum, q) => {
+      const answer = mc[q.id];
+      const isCorrect = answer && validMc.has(q.id) && answer === q.correct_answer;
+      return sum + (isCorrect ? Math.max(1, (q as any).max_score) || 10 : 0);
+    }, 0);
     const correctCount = mcQuestions.filter(
       (q) => mc[q.id] && validMc.has(q.id) && mc[q.id] === q.correct_answer
     ).length;
     const score = mcQuestions.length > 0
-      ? Math.round((correctCount / mcQuestions.length) * 100)
+      ? Math.round((mcEarnedPoints / mcMaxPoints) * 100)
       : 0;
     const essayOnly = mcQuestions.length === 0 && questions.some((q) => (q as any).question_type === "essay");
 
