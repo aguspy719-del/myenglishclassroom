@@ -76,6 +76,10 @@ END $$;
 ALTER TABLE public.quiz_attempts
   ADD COLUMN IF NOT EXISTS violations INTEGER NOT NULL DEFAULT 0;
 
+-- Review answers: store the student's MC choices on the attempt
+ALTER TABLE public.quiz_attempts
+  ADD COLUMN IF NOT EXISTS answers JSONB;
+
 CREATE TABLE IF NOT EXISTS public.quiz_violations (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   attempt_id UUID REFERENCES public.quiz_attempts(id) ON DELETE CASCADE,

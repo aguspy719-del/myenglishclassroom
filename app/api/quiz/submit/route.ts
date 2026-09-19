@@ -122,6 +122,8 @@ export async function POST(request: NextRequest) {
         score: hasEssays ? null : mcScorePct,
         started_at: submittedAt,
         completed_at: submittedAt,
+        // Store MC answers so the student and teacher can review them later
+        answers: mc,
       }])
       .select("id, score")
       .single();

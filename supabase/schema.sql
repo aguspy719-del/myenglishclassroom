@@ -120,7 +120,10 @@ CREATE TABLE IF NOT EXISTS public.quiz_attempts (
   student_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   score INTEGER CHECK (score >= 0 AND score <= 100),
   started_at TIMESTAMPTZ DEFAULT NOW(),
-  completed_at TIMESTAMPTZ
+  completed_at TIMESTAMPTZ,
+  -- Student's MC answers {questionId: "a"|"b"|"c"|"d"} so students and
+  -- teachers can review responses after the attempt
+  answers JSONB
 );
 
 -- ============================================================

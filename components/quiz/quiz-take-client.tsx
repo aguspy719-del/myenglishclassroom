@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { cn, getGradeColor, getGradeLabel, formatDateTime } from "@/lib/utils";
+import { AnswerReview } from "@/components/quiz/answer-review";
 import { MarqueeText } from "@/components/ui/marquee-text";
 import { QuizAntiCheat } from "./quiz-anti-cheat";
 import { QuizSendPanel } from "./quiz-send-panel";
@@ -434,6 +435,87 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
 
 
 // ── Teacher View ──────────────────────────────────────────
+
+/** Loads and shows one student's answers (MC + essays) inside the Results tab */
+function TeacherAttemptReview({ quizId, attempt, onClose }: {
+  quizId: string;
+  attempt: any;
+  onClose: () => void;
+}) {
+  const [questions, setQuestions] = useState<any[] | null>(null);
+  const [essayAnswers, setEssayAnswers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const studentId = attempt.student_id || attempt.student?.id;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const [q, ea] = await Promise.all([
+          supabase.from("quiz_questions").select("*").eq("quiz_id", quizId).order("order_number"),
+          supabase.from("essay_answers").select("*, question:quiz_questions(question, max_score)")
+            .eq("quiz_id", quizId).eq("student_id", studentId)
+            .order("submitted_at", { ascending: false }),
+        ]);
+        setQuestions(q.data || []);
+        setEssayAnswers(ea.data || []);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [quizId, studentId]);
+
+  if (loading) {
+    return (
+      <div className="px-3 pb-3">
+        <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 pb-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-gray-500">
+          {attempt.student?.name || "Student"} — answers
+        </p>
+        <Button variant="ghost" size="sm" className="h-7 text-xs rounded-xl" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+      {questions && (
+        <AnswerReview
+          questions={questions}
+          answers={(attempt.answers as Record<string, string>) || {}}
+          essaySlot={(qId: string) => {
+            const ea = essayAnswers.find((a) => a.question_id === qId);
+            return ea ? (
+              <div className="space-y-2">
+                <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                  <p className="text-[11px] font-semibold text-gray-500 mb-1">Answer:</p>
+                  <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap break-words">{ea.answer}</p>
+                </div>
+                {ea.score != null && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                      Score: {ea.score}/{(ea.question as any)?.max_score || 10}
+                    </Badge>
+                    {ea.feedback && (
+                      <p className="text-xs text-gray-600 dark:text-gray-400 italic">“{ea.feedback}”</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">(no answer)</p>
+            );
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 interface TeacherQuizViewProps {
   quiz: Quiz;
   questions: QuizQuestion[];
@@ -452,6 +534,8 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
   const [sameTypeQuizzes, setSameTypeQuizzes] = useState<any[]>([]);
   const [copyTargets, setCopyTargets] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
+  // Which student's attempt is being reviewed in the Results tab
+  const [reviewingAttempt, setReviewingAttempt] = useState<any | null>(null);
 
   const refreshData = useCallback(async () => {
     const supabase = createClient();
@@ -925,6 +1009,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
               {attempts.map((a, idx) => {
                 const studentViolations = violations.filter((v) => v.student_id === (a.student_id || a.student?.id));
                 const isExpanded = !!expandedViolations[a.id];
+                const studentId = a.student_id || a.student?.id;
                 return (
                 <div key={a.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
                   <div className="flex items-center justify-between p-3">
@@ -957,7 +1042,22 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`text-xl font-bold ${getGradeColor(a.score || 0)}`}>{a.score ?? "—"}</span>
-                      {a.score !== null && <Badge variant="outline" className="text-xs">{getGradeLabel(a.score || 0)}</Badge>}
+                      {a.score !== null && a.score !== undefined ? (
+                        <Badge variant="outline" className="text-xs">{getGradeLabel(a.score)}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-gray-400">grading…</Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 gap-1 rounded-xl"
+                        onClick={() => {
+                          setReviewingAttempt(reviewingAttempt?.id === a.id ? null : a);
+                        }}
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Answers
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -977,6 +1077,14 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                       </Button>
                     </div>
                   </div>
+                  {/* Student answer review — teacher only, loads on demand */}
+                  {reviewingAttempt?.id === a.id && (
+                    <TeacherAttemptReview
+                      quizId={quiz.id}
+                      attempt={reviewingAttempt}
+                      onClose={() => setReviewingAttempt(null)}
+                    />
+                  )}
                   {/* Expandable violation details per student */}
                   {isExpanded && (
                     <div className="px-3 pb-3">

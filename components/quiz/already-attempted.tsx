@@ -1,11 +1,14 @@
 ﻿"use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Lock, Trophy } from "lucide-react";
+import { ArrowLeft, Lock, Trophy, FileText, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getGradeColor, getGradeLabel, formatDateTime } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { AnswerReview } from "@/components/quiz/answer-review";
 
 interface AlreadyAttemptedProps {
   quiz: any;
@@ -14,6 +17,34 @@ interface AlreadyAttemptedProps {
 
 export function AlreadyAttempted({ quiz, attempt }: AlreadyAttemptedProps) {
   const quizType = quiz.quiz_type || "formatif";
+  // Review data — loaded on demand when the student opens the review
+  const [questions, setQuestions] = useState<any[] | null>(null);
+  const [essayAnswers, setEssayAnswers] = useState<any[]>([]);
+  const [loadingReview, setLoadingReview] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+
+  const loadReview = async () => {
+    setLoadingReview(true);
+    try {
+      const supabase = createClient();
+      const [q, ea] = await Promise.all([
+        supabase.from("quiz_questions").select("*").eq("quiz_id", quiz.id).order("order_number"),
+        supabase.from("essay_answers").select("*, question:quiz_questions(question, max_score)")
+          .eq("quiz_id", quiz.id).eq("student_id", attempt.student_id)
+          .order("submitted_at", { ascending: false }),
+      ]);
+      setQuestions(q.data || []);
+      setEssayAnswers(ea.data || []);
+    } catch {
+      // keep review closed on failure
+    }
+    setLoadingReview(false);
+  };
+
+  useEffect(() => {
+    if (showReview && questions === null) loadReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showReview]);
 
   return (
     <div className="max-w-lg mx-auto text-center space-y-6 py-8">
@@ -72,6 +103,50 @@ export function AlreadyAttempted({ quiz, attempt }: AlreadyAttemptedProps) {
               </>
             )}
           </div>
+
+          {/* Answer review — available after the teacher has graded */}
+          {attempt.score !== null && attempt.score !== undefined && (
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full gap-2 rounded-xl"
+                onClick={() => setShowReview((v) => !v)}
+                disabled={loadingReview}
+              >
+                <FileText className="w-4 h-4" />
+                {showReview ? "Hide My Answers" : "Review My Answers"}
+              </Button>
+              {showReview && questions && (
+                <AnswerReview
+                  questions={questions}
+                  answers={(attempt.answers as Record<string, string>) || {}}
+                  essaySlot={(qId: string) => {
+                    const ea = essayAnswers.find((a) => a.question_id === qId);
+                    return ea ? (
+                      <div className="space-y-2">
+                        <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                          <p className="text-[11px] font-semibold text-gray-500 mb-1">Your Answer:</p>
+                          <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap break-words">{ea.answer}</p>
+                        </div>
+                        {ea.score != null && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                              Score: {ea.score}/{(ea.question as any)?.max_score || 10}
+                            </Badge>
+                            {ea.feedback && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400 italic">“{ea.feedback}”</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400">(no answer)</p>
+                    );
+                  }}
+                />
+              )}
+            </div>
+          )}
 
           <div className="p-3 bg-red-50 dark:bg-red-950 rounded-xl">
             <p className="text-sm text-red-700 dark:text-red-300 font-medium">
