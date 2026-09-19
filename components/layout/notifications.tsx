@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Bell, X, CheckCheck, Zap, Trophy, Info, ClipboardList, FileText, Flame, RefreshCw } from "lucide-react";
+import { Bell, X, CheckCheck, Zap, Trophy, Info, ClipboardList, FileText, Flame, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { formatRelativeTime } from "@/lib/utils";
 import { isUpdatePending, APP_VERSION } from "@/components/providers/update-notification";
+import { toast } from "sonner";
 import Link from "next/link";
 
 import type { Notification } from "@/types";
@@ -101,6 +102,28 @@ export function Notifications({ userId }: NotificationsProps) {
     fetchNotifications();
   };
 
+  const deleteNotification = async (id: string) => {
+    // Optimistic remove — instantly disappears from the list
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    const supabase = createClient();
+    const { error } = await supabase.from("notifications").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete notification");
+      fetchNotifications();
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    if (!confirm("Clear all notifications? This cannot be undone.")) return;
+    setNotifications([]);
+    const supabase = createClient();
+    const { error } = await supabase.from("notifications").delete().eq("user_id", userId);
+    if (error) {
+      toast.error("Failed to clear notifications");
+      fetchNotifications();
+    }
+  };
+
   const getIcon = (type: string, title?: string) => {
     if (type === "achievement") return <Trophy className="w-4 h-4 text-amber-500" />;
     if (type === "points") return <Zap className="w-4 h-4 text-emerald-500" />;
@@ -135,6 +158,12 @@ export function Notifications({ userId }: NotificationsProps) {
             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
               <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>
               <div className="flex items-center gap-2">
+                {notifications.length > 0 && (
+                  <button onClick={clearAllNotifications} className="text-xs text-red-500 dark:text-red-400 hover:underline flex items-center gap-1">
+                    <Trash2 className="w-3 h-3" />
+                    Clear all
+                  </button>
+                )}
                 {unreadCount > 0 && (
                   <button onClick={markAllRead} className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
                     <CheckCheck className="w-3 h-3" />
@@ -180,26 +209,37 @@ export function Notifications({ userId }: NotificationsProps) {
                 </div>
               ) : (
                 notifications.map((notif) => (
-                    <Link
+                    <div
                       key={notif.id}
-                      href={notif.link || "#"}
-                      onClick={() => markRead(notif.id)}
-                      className={`flex items-start gap-3 p-4 border-b border-gray-50 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                      className={`relative flex items-start gap-3 p-4 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group ${
                         !notif.read ? "bg-emerald-50/50 dark:bg-emerald-950/30" : ""
                       }`}
                     >
-                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        {getIcon(notif.type, notif.title)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{notif.title}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{notif.message}</p>
-                        <p className="text-xs text-gray-400 mt-1">{formatRelativeTime(notif.created_at)}</p>
-                      </div>
+                      <Link
+                        href={notif.link || "#"}
+                        onClick={() => markRead(notif.id)}
+                        className="flex items-start gap-3 flex-1 min-w-0"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          {getIcon(notif.type, notif.title)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{notif.title}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{notif.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">{formatRelativeTime(notif.created_at)}</p>
+                        </div>
+                      </Link>
                       {!notif.read && (
                         <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 mt-2" />
                       )}
-                    </Link>
+                      <button
+                        onClick={() => deleteNotification(notif.id)}
+                        className="p-1 rounded-md text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity flex-shrink-0"
+                        aria-label="Delete notification"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   ))
               )}
             </div>
