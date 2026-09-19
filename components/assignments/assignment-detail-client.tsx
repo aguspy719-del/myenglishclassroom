@@ -242,10 +242,18 @@ export function AssignmentDetailClient({ user, assignment }: AssignmentDetailCli
     if (error) { toast.error("Failed to save grade"); return; }
     toast.success("Grade saved!");
 
-    // Push notification to student
+    // Notify the student: in-app bell + web push (if enabled on their device)
     try {
       const sub = allSubmissions.find((s) => s.id === submissionId);
       if (sub) {
+        await supabase.from("notifications").insert({
+          user_id: sub.student_id,
+          title: "⭐ Assignment Graded",
+          message: `${assignment.title} — Score: ${score}`,
+          type: "grade",
+          link: `/assignments/${assignment.id}`,
+        });
+
         await fetch("/api/push/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

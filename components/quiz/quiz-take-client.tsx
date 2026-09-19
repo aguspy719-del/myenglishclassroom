@@ -593,6 +593,32 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
       .update({ score: combinedScore })
       .eq("id", attempt.id);
 
+    // Notify the student: in-app bell + web push (if enabled on their device)
+    try {
+      await supabase.from("notifications").insert({
+        user_id: studentId,
+        title: "📝 Assessment Graded",
+        message: `${quiz.title} — Score: ${combinedScore}`,
+        type: "grade",
+        link: `/quiz/${quiz.id}`,
+      });
+
+      await fetch("/api/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userIds: [studentId],
+          payload: {
+            title: "📝 Assessment Graded",
+            body: `${quiz.title} — Score: ${combinedScore}`,
+            url: `/quiz/${quiz.id}`,
+          },
+        }),
+      });
+    } catch {
+      // Push failure should not block grading
+    }
+
     refreshData();
   };
 
