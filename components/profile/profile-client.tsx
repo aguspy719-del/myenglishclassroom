@@ -29,6 +29,7 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [subscribing, setSubscribing] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialUser.avatar_url || null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const router = useRouter();
@@ -85,6 +86,26 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
       toast.error("Something went wrong");
     } finally {
       setSubscribing(false);
+    }
+  };
+
+  const sendTestPush = async () => {
+    setSendingTest(true);
+    try {
+      const res = await fetch("/api/push/test", { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        toast.success(`Test notification sent to ${data.sent} device(s)! 🔔`);
+      } else {
+        // Surface the diagnostic info so problems are identifiable
+        toast.error(data.error || "Test push failed", {
+          description: data.checks ? Object.entries(data.checks).map(([k, v]) => `${k}: ${v}`).join(" · ") : undefined,
+        });
+      }
+    } catch {
+      toast.error("Failed to send test notification");
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -516,11 +537,27 @@ export function ProfileClient({ user: initialUser }: ProfileClientProps) {
                 )}
               </Button>
             </div>
-          )}
-          {notifPermission === "denied" && (
-            <p className="text-xs text-red-500 dark:text-red-400 mt-2">
-              Notifications are blocked. Please allow them in your browser settings.
-            </p>
+          )}          {notifPermission === "denied" && (
+              <p className="text-xs text-red-500 dark:text-red-400 mt-2">
+                Notifications are blocked. Please allow them in your browser settings.
+              </p>
+            )}
+          {notifPermission === "granted" && (
+            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 rounded-xl text-xs"
+                onClick={sendTestPush}
+                disabled={sendingTest}
+              >
+                {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+                Kirim notifikasi tes
+              </Button>
+              <p className="text-[11px] text-gray-400 mt-1.5">
+                Tutup aplikasi setelah menekan tombol ini — jika notifikasinya tetap muncul, push berkerja meski app tertutup.
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
