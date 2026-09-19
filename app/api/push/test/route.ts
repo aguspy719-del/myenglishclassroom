@@ -32,9 +32,11 @@ export async function POST() {
 
     const { data: subs } = await supabase
       .from("push_subscriptions")
-      .select("endpoint")
+      .select("endpoint, p256dh, auth")
       .eq("user_id", user.id);
     checks.subscriptions = String(subs?.length || 0);
+    const corrupt = subs?.filter((s) => !s.p256dh || !s.auth).length || 0;
+    if (corrupt > 0) checks.corrupt = `${corrupt} row(s) missing keys — auto-fixed`;
 
     if (!subs?.length) {
       return NextResponse.json(
@@ -54,9 +56,16 @@ export async function POST() {
     const failed: string[] = [];
     await Promise.allSettled(
       subs.map(async (sub) => {
+        // Rows without valid keys can never receive pushes — delete them
+        // instead of failing the test.
+        if (!sub.p256dh || !sub.auth) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+          failed.push("corrupt-row (deleted)");
+          return;
+        }
         try {
           await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: (sub as any).p256dh, auth: (sub as any).auth } },
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
             payload
           );
           sent++;

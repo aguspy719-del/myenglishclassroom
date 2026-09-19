@@ -24,6 +24,21 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   return await Notification.requestPermission();
 }
 
+/** Encode an ArrayBuffer key as base64. Returns null when the key is missing. */
+function encodeKey(key: ArrayBuffer | null): string | null {
+  if (!key) return null;
+  const bytes = new Uint8Array(key);
+  // Guard against zero-length keys — they produce empty strings that
+  // corrupt the subscription row in the DB.
+  if (bytes.length === 0) return null;
+  let binary = "";
+  // Chunked to avoid stack overflow from spreading large arrays
+  for (let i = 0; i < bytes.length; i += 4096) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 4096));
+  }
+  return btoa(binary);
+}
+
 /** Subscribe to push and save subscription to DB via API */
 export async function subscribeToPush(userId: string): Promise<boolean> {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return false;
@@ -49,16 +64,34 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
       });
     }
 
+    // Extract and validate keys — a subscription without valid p256dh/auth
+    // keys is unusable, so discard it and resubscribe fresh.
+    let p256dh = encodeKey(subscription.getKey("p256dh"));
+    let auth = encodeKey(subscription.getKey("auth"));
+
+    if (!p256dh || !auth) {
+      // Stale/corrupt browser subscription — drop it and create a new one
+      await subscription.unsubscribe();
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+      p256dh = encodeKey(subscription.getKey("p256dh"));
+      auth = encodeKey(subscription.getKey("auth"));
+    }
+
+    if (!p256dh || !auth || !subscription.endpoint) {
+      console.error("[Push] Subscription missing valid keys after resubscribe");
+      return false;
+    }
+
     // Save to DB
     const res = await fetch("/api/push/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         endpoint: subscription.endpoint,
-        keys: {
-          p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey("p256dh")!))),
-          auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey("auth")!))),
-        },
+        keys: { p256dh, auth },
       }),
     });
 

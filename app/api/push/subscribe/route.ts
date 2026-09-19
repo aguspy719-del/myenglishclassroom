@@ -10,7 +10,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { endpoint, keys } = body;
 
-    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    // Keys must be non-empty strings — empty values create corrupt rows
+    // that break web-push sending later ("must have 'auth' and 'p256dh' keys").
+    if (
+      !endpoint ||
+      typeof endpoint !== "string" ||
+      !keys?.p256dh ||
+      !keys?.auth ||
+      typeof keys.p256dh !== "string" ||
+      typeof keys.auth !== "string"
+    ) {
       return NextResponse.json({ error: "Invalid subscription data" }, { status: 400 });
     }
 

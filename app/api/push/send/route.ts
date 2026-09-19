@@ -63,6 +63,13 @@ export async function POST(request: NextRequest) {
 
     await Promise.allSettled(
       subscriptions.map(async (sub) => {
+        // Rows without valid keys can never receive pushes — delete them
+        // instead of failing every send.
+        if (!sub.p256dh || !sub.auth) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+          failed.push(sub.endpoint);
+          return;
+        }
         try {
           await webpush.sendNotification(
             {
