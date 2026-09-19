@@ -56,10 +56,11 @@ export default async function QuizTakePage({
 
     if (notSent || closed) redirect("/quiz");
 
-    // Check if student already attempted — ALL types are 1 attempt only
+    // Check if student already attempted — ALL types are 1 attempt only.
+    // answers is needed by the post-grading answer review.
     const { data: existingAttempt } = await supabase
       .from("quiz_attempts")
-      .select("id, score, completed_at")
+      .select("id, student_id, score, completed_at, answers")
       .eq("quiz_id", id)
       .eq("student_id", user.id)
       .not("completed_at", "is", null)

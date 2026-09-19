@@ -11,6 +11,8 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchWithCache } from "@/lib/offline-cache";
 import { toast } from "sonner";
 import { formatDate, getGradeColor, getGradeLabel } from "@/lib/utils";
+import { AnswerReview } from "@/components/quiz/answer-review";
+import { ChevronDown } from "lucide-react";
 import type { User, Submission, Class } from "@/types";
 
 interface GradesClientProps {
@@ -42,7 +44,7 @@ export function GradesClient({ user }: GradesClientProps) {
         // Fetch quiz attempts — include attempts still waiting for essay grading
         const { data: attemptsData } = await supabase
           .from("quiz_attempts")
-          .select("*, quiz:quizzes(title, class_id, quiz_type, class:classes(class_name))")
+          .select("*, quiz:quizzes(id, title, class_id, quiz_type, class:classes(class_name))")
           .eq("student_id", user.id)
           .not("completed_at", "is", null)
           .order("completed_at", { ascending: false });
@@ -69,6 +71,9 @@ export function GradesClient({ user }: GradesClientProps) {
           title: (a.quiz as any)?.title || "Assessment",
           class_name: (a.quiz as any)?.class?.class_name || "",
           class_id: (a.quiz as any)?.class_id || "",
+          quiz_id: (a.quiz as any)?.id || a.quiz_id,
+          answers: a.answers || null,
+          student_id: a.student_id,
         }));
 
         // Merge and sort by date
@@ -412,22 +417,72 @@ export function GradesClient({ user }: GradesClientProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((grade) => {
-            const quizTypeLabels: Record<string, string> = {
-              formatif: "Formatif",
-              sumatif_tengah: "STS",
-              sumatif_akhir: "SAS",
-            };
-            const quizTypeColors: Record<string, string> = {
-              formatif: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-              sumatif_tengah: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-              sumatif_akhir: "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300",
-            };
-            return (
-              <div
-                key={grade.id}
-                className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm"
-              >
+          {filtered.map((grade) => (
+            <GradeRow key={grade.id} grade={grade} userRole={user.role} userId={user.id} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One row in the grades list — assessments expand into an answer review */
+function GradeRow({ grade, userRole, userId }: {
+  grade: any;
+  userRole: string;
+  userId: string;
+}) {
+  const quizTypeLabels: Record<string, string> = {
+    formatif: "Formatif",
+    sumatif_tengah: "STS",
+    sumatif_akhir: "SAS",
+  };
+  const quizTypeColors: Record<string, string> = {
+    formatif: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+    sumatif_tengah: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+    sumatif_akhir: "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300",
+  };
+  // Review state — only assessment rows with a final score can expand
+  const canReview = grade.type === "assessment" && grade.score != null;
+  const [expanded, setExpanded] = useState(false);
+  const [questions, setQuestions] = useState<any[] | null>(null);
+  const [essayAnswers, setEssayAnswers] = useState<any[]>([]);
+  const [loadingReview, setLoadingReview] = useState(false);
+
+  const loadReview = async () => {
+    setLoadingReview(true);
+    try {
+      const supabase = createClient();
+      const studentId = grade.student_id || userId;
+      const [q, ea] = await Promise.all([
+        supabase.from("quiz_questions").select("*").eq("quiz_id", grade.quiz_id).order("order_number"),
+        supabase.from("essay_answers").select("*, question:quiz_questions(question, max_score)")
+          .eq("quiz_id", grade.quiz_id).eq("student_id", studentId)
+          .order("submitted_at", { ascending: false }),
+      ]);
+      setQuestions(q.data || []);
+      setEssayAnswers(ea.data || []);
+    } catch {
+      // leave review empty on failure
+    }
+    setLoadingReview(false);
+  };
+
+  const toggle = () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && questions === null) loadReview();
+  };
+
+  return (
+    <div className="space-y-2">
+      <div
+        role={canReview ? "button" : undefined}
+        onClick={canReview ? toggle : undefined}
+        className={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm ${
+          canReview ? "cursor-pointer hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors" : ""
+        }`}
+      >
                 <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 font-bold text-base ${
                   grade.score == null ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500" :
                   (grade.score) >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" :
@@ -458,7 +513,7 @@ export function GradesClient({ user }: GradesClientProps) {
                       <Badge variant="secondary" className="text-xs">{grade.class_name}</Badge>
                     )}
                   </div>
-                  {user.role === "teacher" && (
+                  {userRole === "teacher" && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                       {(grade.student as any)?.name}
                     </p>
@@ -471,7 +526,7 @@ export function GradesClient({ user }: GradesClientProps) {
                   <p className="text-xs text-gray-400 mt-0.5">{formatDate(grade.submitted_at)}</p>
                 </div>
 
-                <div className="text-right flex-shrink-0 ml-1">
+                <div className="text-right flex-shrink-0 ml-1 flex items-center gap-1.5">
                   {grade.score == null ? (
                     <p className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 whitespace-nowrap">
                       ⏳ Pending grade
@@ -484,12 +539,50 @@ export function GradesClient({ user }: GradesClientProps) {
                       <p className="text-xs text-gray-400">/ 100</p>
                     </>
                   )}
+                  {canReview && (
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+
+              {/* Answer review — expandable under the row */}
+              {canReview && expanded && (
+                <div className="pl-1 pr-1 pb-1">
+                  {loadingReview ? (
+                    <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+                  ) : questions && questions.length > 0 ? (
+                    <AnswerReview
+                      questions={questions}
+                      answers={(grade.answers as Record<string, string>) || {}}
+                      essaySlot={(qId: string) => {
+                        const ea = essayAnswers.find((a) => a.question_id === qId);
+                        return ea ? (
+                          <div className="space-y-2">
+                            <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                              <p className="text-[11px] font-semibold text-gray-500 mb-1">Answer:</p>
+                              <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap break-words">{ea.answer}</p>
+                            </div>
+                            {ea.score != null && (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                                  Score: {ea.score}/{(ea.question as any)?.max_score || 10}
+                                </Badge>
+                                {ea.feedback && (
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 italic">“{ea.feedback}”</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-400">(no answer)</p>
+                        );
+                      }}
+                    />
+                  ) : (
+                    <p className="text-xs text-gray-400 text-center py-3">Answer details unavailable for this attempt.</p>
+                  )}
+                </div>
+              )}
+            </div>
   );
 }
