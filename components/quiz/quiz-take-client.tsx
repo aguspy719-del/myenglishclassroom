@@ -81,13 +81,15 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [essayAnswers, setEssayAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ score: number | null; correctCount: number; mcCount: number; essaySaved: number } | null>(null);
+  const [result, setResult] = useState<{ score: number | null; mcScore?: number; correctCount: number; mcCount: number; essaySaved: number } | null>(null);
   const [submitError, setSubmitError] = useState("");
   const [timeLeft, setTimeLeft] = useState((quiz.time_limit || 30) * 60);
 
   // Shuffle maps, created once when the student starts
   const [shuffledQs, setShuffledQs] = useState<QuizQuestion[] | null>(null);
   const [optionMaps, setOptionMaps] = useState<Record<string, string[]>>({});
+  // Total questions across the attempt — used for the submit completeness check
+  const activeQuestionsCount = (shuffledQs || questions).length;
 
   // Check if already attempted on mount (client-side guard)
   useEffect(() => {
@@ -123,6 +125,11 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
   // Submit through the server API — correct answers never live in the browser
   const handleSubmit = useCallback(async () => {
     if (finished || submitting) return;
+    // Warn instead of silently submitting an incomplete attempt
+    const unanswered = activeQuestionsCount - Object.keys(answers).filter((id) => answers[id]).length - Object.keys(essayAnswers).filter((id) => essayAnswers[id]?.trim()).length;
+    if (unanswered > 0 && !confirm(`${unanswered} question(s) are still empty. Submit anyway?\nEmpty questions score 0.`)) {
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/quiz/submit", {
@@ -144,7 +151,7 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
       toast.error("Network error — try again");
     }
     setSubmitting(false);
-  }, [answers, essayAnswers, finished, submitting, quiz.id]);
+  }, [answers, essayAnswers, finished, submitting, quiz.id, activeQuestionsCount]);
 
   const handleFinishRef = useRef(handleSubmit);
   useEffect(() => { handleFinishRef.current = handleSubmit; }, [handleSubmit]);
@@ -247,15 +254,25 @@ export function QuizTakeClient({ user, quiz, questions: initialQuestions }: Quiz
           <Card className="border-0 shadow-sm">
             <CardContent className="pt-6 pb-6 space-y-3">
               {result.mcCount > 0 ? (
-                <>
-                  <p className={`text-6xl font-bold ${getGradeColor(result.score || 0)}`}>{result.score}</p>
-                  <p className="text-sm text-gray-500">Multiple Choice Score</p>
-                  <Badge className="text-lg px-4 py-1">Grade: {getGradeLabel(result.score || 0)}</Badge>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Correct: {result.correctCount} of {result.mcCount}</p>
-                  {result.essaySaved > 0 && (
-                    <p className="text-xs text-gray-500">Final score updates after essays are graded</p>
-                  )}
-                </>
+                result.score != null ? (
+                  <>
+                    <p className={`text-6xl font-bold ${getGradeColor(result.score)}`}>{result.score}</p>
+                    <p className="text-sm text-gray-500">Final Score</p>
+                    <Badge className="text-lg px-4 py-1">Grade: {getGradeLabel(result.score)}</Badge>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Correct: {result.correctCount} of {result.mcCount}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className={`text-5xl font-bold ${getGradeColor(result.mcScore || 0)}`}>{result.mcScore}</p>
+                    <p className="text-sm text-gray-500">Multiple Choice Score (temporary)</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Correct: {result.correctCount} of {result.mcCount}</p>
+                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
+                      <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
+                        ⏳ Final score comes after essays are graded
+                      </p>
+                    </div>
+                  </>
+                )
               ) : (
                 <div className="py-2">
                   <div className="flex items-center gap-2 justify-center mb-1">
@@ -812,6 +829,11 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                       <span className="text-[11px] text-gray-400">points for a correct answer</span>
                     )}
                   </div>
+                  {draft.question_type === "essay" && (
+                    <p className="text-[11px] text-gray-400">
+                      Students type a score from 0 to this number when grading.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ))}

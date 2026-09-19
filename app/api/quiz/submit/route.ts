@@ -79,12 +79,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This assessment has no questions" }, { status: 400 });
     }
 
-    // Grade multiple choice server-side.
-    // Each question carries a max_score weight — the MC score is the share of
-    // weighted points earned, so teachers can make some questions worth more
-    // (and the combined MC+essay score can never exceed 100).
+    // Weighted scoring across ALL questions (MC + essay).
+    // MC is auto-graded here; essays are graded later by the teacher.
     const mcQuestions = questions.filter(
       (q) => (q as any).question_type !== "essay"
+    );
+    const essayQuestions = questions.filter(
+      (q) => (q as any).question_type === "essay"
     );
     const validMc = new Set(mcQuestions.map((q) => q.id));
     const mcMaxPoints = mcQuestions.reduce(
@@ -99,10 +100,17 @@ export async function POST(request: NextRequest) {
     const correctCount = mcQuestions.filter(
       (q) => mc[q.id] && validMc.has(q.id) && mc[q.id] === q.correct_answer
     ).length;
-    const score = mcQuestions.length > 0
+    // MC performance as a percentage of MC points only — shown to the
+    // student right after submit, BEFORE essays are graded.
+    const mcScorePct = mcMaxPoints > 0
       ? Math.round((mcEarnedPoints / mcMaxPoints) * 100)
       : 0;
-    const essayOnly = mcQuestions.length === 0 && questions.some((q) => (q as any).question_type === "essay");
+    // A quiz with essays has NO final score until the teacher grades them:
+    // the attempt row stays score=NULL ("waiting for teacher" everywhere).
+    // Storing the MC-only percentage as the final score used to display a
+    // misleading 100 for mixed quizzes.
+    const hasEssays = essayQuestions.length > 0;
+    const essayOnly = hasEssays && mcQuestions.length === 0;
 
     const submittedAt = new Date().toISOString();
 
@@ -111,7 +119,7 @@ export async function POST(request: NextRequest) {
       .insert([{
         quiz_id: quizId,
         student_id: user.id,
-        score: essayOnly ? null : score,
+        score: hasEssays ? null : mcScorePct,
         started_at: submittedAt,
         completed_at: submittedAt,
       }])
@@ -154,15 +162,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Gamification (best-effort, never blocks the result)
-    // Reward diligence: finishing the assessment earns base XP regardless of score;
-    // a strong score (>= 75) earns the full bonus on top.
+    // Reward diligence: finishing the assessment earns base XP regardless of score.
+    // Score bonuses only apply when the final score is already known (no essays);
+    // essay quizzes get their bonus after the teacher grades them.
     try {
       const { awardPoints } = await import("@/lib/gamification");
       await awardPoints(user.id, 25, `completing ${quiz.title}`);
-      if (score >= 75) {
+      if (!hasEssays && mcScorePct >= 75) {
         await awardPoints(user.id, 100, `great score on ${quiz.title}`);
       }
-      if (score === 100 && mcQuestions.length > 0) {
+      if (!hasEssays && mcScorePct === 100 && mcQuestions.length > 0) {
         const { awardBadge } = await import("@/lib/gamification");
         await awardBadge(user.id, "perfect_score");
       }
@@ -172,7 +181,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      score: essayOnly ? null : score,
+      // NULL = final score pending (essays not graded yet)
+      score: hasEssays ? null : mcScorePct,
+      mcScore: mcScorePct,
       correctCount,
       mcCount: mcQuestions.length,
       essaySaved: Object.keys(essays).filter((id) => questions.some((q) => q.id === id)).length,
