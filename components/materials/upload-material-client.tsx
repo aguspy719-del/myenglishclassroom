@@ -75,20 +75,20 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
     try {
       if (file) {
         setUploadProgress(30);
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${form.class_id}/${fileName}`;
-
-        const { error: uploadError, data: uploadData } = await supabase.storage
-          .from("materials")
-          .upload(filePath, file, { cacheControl: "3600", upsert: false });
-
-        if (uploadError) throw uploadError;
-
-        setUploadProgress(70);
-
-        const { data: urlData } = supabase.storage.from("materials").getPublicUrl(filePath);
-        fileUrl = urlData.publicUrl;
+        // Upload via server route: storage RLS policies are a project-wide
+        // dependency and after the Supabase project recreation they were
+        // missing, so every browser upload failed with
+        // "new row violates row-level security policy".
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("bucket", "materials");
+        fd.append("classId", form.class_id);
+        const res = await fetch("/api/uploads", { method: "POST", body: fd });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.url) {
+          throw new Error(json.error || "Gagal upload file materi");
+        }
+        fileUrl = json.url;
       }
 
       setUploadProgress(90);
@@ -105,6 +105,44 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
       if (error) throw error;
 
       setUploadProgress(100);
+
+      // Notify students in the class instantly — bell badge updates without
+      // refresh via the realtime subscription in components/layout/notifications.tsx
+      try {
+        const { data: students } = await supabase
+          .from("users")
+          .select("id")
+          .eq("class_id", form.class_id)
+          .eq("role", "student");
+
+        if (students && students.length > 0) {
+          await supabase.from("notifications").insert(
+            students.map((s) => ({
+              user_id: s.id,
+              title: "📘 New Material",
+              message: form.title,
+              type: "info" as const,
+              link: `/classes/${form.class_id}`,
+            }))
+          );
+
+          await fetch("/api/push/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userIds: students.map((s) => s.id),
+              payload: {
+                title: "📘 New Material",
+                body: form.title,
+                url: `/classes/${form.class_id}`,
+              },
+            }),
+          }).catch(() => {});
+        }
+      } catch {
+        // Notification failure should not block the upload
+      }
+
       toast.success("Material uploaded successfully!");
       // Go back to class if came from one
       const classId = searchParams.get("class") || form.class_id;

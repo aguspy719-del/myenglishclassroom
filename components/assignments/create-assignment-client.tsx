@@ -73,14 +73,19 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
     try {
       let attachmentUrl = "";
       if (file) {
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("assignments")
-          .upload(`shared/${fileName}`, file);
-        if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from("assignments").getPublicUrl(`shared/${fileName}`);
-        attachmentUrl = urlData.publicUrl;
+        // Upload via server route: storage RLS policies are a project-wide
+        // dependency and after the Supabase project recreation they were
+        // missing, so every browser upload failed with
+        // "new row violates row-level security policy".
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("bucket", "assignments");
+        const res = await fetch("/api/uploads", { method: "POST", body: fd });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.url) {
+          throw new Error(json.error || "Gagal upload file lampiran");
+        }
+        attachmentUrl = json.url;
       }
 
       const insertData = selectedClasses.map((classId) => ({

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Bell, X, CheckCheck, Zap, Trophy, Info, ClipboardList, FileText, Flame, RefreshCw, Trash2 } from "lucide-react";
+import { Bell, X, CheckCheck, Zap, Trophy, Info, ClipboardList, FileText, Flame, RefreshCw, Trash2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { formatRelativeTime } from "@/lib/utils";
@@ -80,12 +80,22 @@ export function Notifications({ userId }: NotificationsProps) {
       }, () => fetchNotifications())
       .subscribe();
 
+    // Fallback polling every 30s — realtime websockets can silently fail
+    // (publications not enabled, proxies, sleeping tabs), and a missed event
+    // would mean students only see new work after a full refresh.
+    const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchNotifications();
+      }
+    }, 30_000);
+
     // Also refetch when the tab/window regains focus (covers missed events)
     const onFocus = () => fetchNotifications();
     window.addEventListener("focus", onFocus);
 
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
       window.removeEventListener("focus", onFocus);
     };
   }, [userId, fetchNotifications]);
@@ -130,6 +140,7 @@ export function Notifications({ userId }: NotificationsProps) {
     if (title?.includes("Streak")) return <Flame className="w-4 h-4 text-orange-500" />;
     if (title?.includes("Assessment") || title?.includes("Soal")) return <FileText className="w-4 h-4 text-blue-500" />;
     if (type === "assignment" || type === "grade") return <ClipboardList className="w-4 h-4 text-blue-500" />;
+    if (type === "info" && title?.includes("Materi")) return <BookOpen className="w-4 h-4 text-teal-500" />;
     return <Info className="w-4 h-4 text-gray-500" />;
   };
 

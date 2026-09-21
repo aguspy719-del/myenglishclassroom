@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -31,15 +31,29 @@ export async function POST(request: NextRequest) {
     const fileExt = file.name.split(".").pop();
     const fileName = `ta-${category}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
+    // Service client bypasses storage RLS — role was already verified above.
+    // Browser-side/user-token uploads depend on storage.objects policies that
+    // were missing after the Supabase project recreation.
+    const admin = createServiceClient();
+    const bytes = Buffer.from(await file.arrayBuffer());
+
+    const { error: uploadError } = await admin.storage
       .from("materials")
-      .upload(fileName, file, { cacheControl: "3600", upsert: false });
+      .upload(fileName, bytes, {
+        contentType: file.type || "application/octet-stream",
+        cacheControl: "3600",
+        upsert: false,
+      });
 
     if (uploadError) {
       // Try avatars bucket as fallback
-      const { error: fallbackError } = await supabase.storage
+      const { error: fallbackError } = await admin.storage
         .from("avatars")
-        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+        .upload(fileName, bytes, {
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "3600",
+          upsert: false,
+        });
 
       if (fallbackError) {
         return NextResponse.json({ error: uploadError.message }, { status: 500 });
