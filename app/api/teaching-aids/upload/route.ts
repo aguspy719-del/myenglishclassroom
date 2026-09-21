@@ -1,6 +1,14 @@
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { checkCloudinaryConfig, uploadToCloudinary } from "@/lib/cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+/**
+ * POST — upload a teaching-aids document to Cloudinary & register it in the
+ * teaching_aids table. Files live in the myclassroom/teaching-aids folder so
+ * Supabase Storage quota is not consumed.
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = createClient();
@@ -24,69 +32,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing file or category" }, { status: 400 });
     }
 
-    if (file.size > 50 * 1024 * 1024) {
+    if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ error: "File too large. Max 50MB" }, { status: 400 });
     }
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `ta-${category}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-    // Service client bypasses storage RLS — role was already verified above.
-    // Browser-side/user-token uploads depend on storage.objects policies that
-    // were missing after the Supabase project recreation.
-    const admin = createServiceClient();
-    const bytes = Buffer.from(await file.arrayBuffer());
-
-    const { error: uploadError } = await admin.storage
-      .from("materials")
-      .upload(fileName, bytes, {
-        contentType: file.type || "application/octet-stream",
-        cacheControl: "3600",
-        upsert: false,
-      });
-
-    if (uploadError) {
-      // Try avatars bucket as fallback
-      const { error: fallbackError } = await admin.storage
-        .from("avatars")
-        .upload(fileName, bytes, {
-          contentType: file.type || "application/octet-stream",
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (fallbackError) {
-        return NextResponse.json({ error: uploadError.message }, { status: 500 });
-      }
-
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
-
-      const { error: dbError } = await supabase.from("teaching_aids").insert({
-        category,
-        file_name: file.name,
-        file_url: urlData.publicUrl,
-        file_size: file.size,
-        uploaded_at: new Date().toISOString(),
-      });
-
-      if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
-      return NextResponse.json({ success: true, url: urlData.publicUrl });
+    const configError = checkCloudinaryConfig();
+    if (configError) {
+      console.error("[Teaching Aids Upload]", configError);
+      return NextResponse.json({ error: configError }, { status: 500 });
     }
 
-    const { data: urlData } = supabase.storage.from("materials").getPublicUrl(fileName);
+    const fileExt = (file.name.split(".").pop() || "bin").replace(/[^a-z0-9]/gi, "").slice(0, 8) || "bin";
+    const publicId = `ta-${category}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { secure_url } = await uploadToCloudinary(buffer, {
+      folder: "myclassroom/teaching-aids",
+      publicId,
+      resourceType: "auto",
+    });
 
     const { error: dbError } = await supabase.from("teaching_aids").insert({
       category,
       file_name: file.name,
-      file_url: urlData.publicUrl,
+      file_url: secure_url,
       file_size: file.size,
       uploaded_at: new Date().toISOString(),
     });
 
-    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+    if (dbError) {
+      return NextResponse.json({ error: dbError.message }, { status: 500 });
+    }
 
-    return NextResponse.json({ success: true, url: urlData.publicUrl });
+    return NextResponse.json({ success: true, url: secure_url });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const detail = err?.message ? ` (${String(err.message).slice(0, 140)})` : "";
+    console.error("[Teaching Aids Upload] Error:", err?.message || err);
+    return NextResponse.json({ error: "Upload gagal" + detail }, { status: 500 });
   }
 }

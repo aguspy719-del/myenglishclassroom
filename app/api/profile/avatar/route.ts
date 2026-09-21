@@ -1,50 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
-
-// Cloudinary config — credentials live in .env.local / Vercel env vars
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+import {
+  checkCloudinaryConfig,
+  publicIdFromUrl,
+  uploadToCloudinary,
+} from "@/lib/cloudinary";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB — keeps uploads light & fast
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
-/** Fail fast with a CLEAR message when Cloudinary env vars are missing (e.g. not set in Vercel) */
-function checkCloudinaryConfig(): string | null {
-  const missing: string[] = [];
-  if (!process.env.CLOUDINARY_CLOUD_NAME) missing.push("CLOUDINARY_CLOUD_NAME");
-  if (!process.env.CLOUDINARY_API_KEY) missing.push("CLOUDINARY_API_KEY");
-  if (!process.env.CLOUDINARY_API_SECRET) missing.push("CLOUDINARY_API_SECRET");
-  if (missing.length > 0) {
-    return `Server upload is not configured. Missing environment variables: ${missing.join(", ")}. Add them in Vercel → Settings → Environment Variables, then redeploy.`;
-  }
-  return null;
-}
-
-/**
- * Extract the public_id from a Cloudinary delivery URL.
- * e.g. .../myclassroom/avatars/abc-123.jpg → myclassroom/avatars/abc-123
- */
-function publicIdFromUrl(url: string): string | null {
-  try {
-    const u = new URL(url);
-    if (!u.hostname.includes("res.cloudinary.com")) return null;
-    const parts = u.pathname.split("/"); // /<cloud>/image/upload/v123.../folder/name.jpg
-    const uploadIdx = parts.indexOf("upload");
-    if (uploadIdx === -1) return null;
-    const path = parts
-      .slice(uploadIdx + 1)
-      .filter((p) => !/^v\d+$/.test(p)) // drop version segment
-      .join("/");
-    return path.replace(/\.[a-z0-9]+$/i, ""); // drop extension
-  } catch {
-    return null;
-  }
-}
 
 /** POST — upload a new avatar to Cloudinary & save the URL on the user row */
 export async function POST(request: NextRequest) {
@@ -85,26 +49,15 @@ export async function POST(request: NextRequest) {
 
     // 4. Upload to Cloudinary (server-side, signed) — 400px square, face-focused
     const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadResult = await new Promise<{ secure_url: string; public_id: string }>(
-      (resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "myclassroom/avatars",
-            public_id: `${authUser.id}-${Date.now()}`,
-            transformation: [
-              { width: 400, height: 400, crop: "fill", gravity: "face", quality: "auto:good" },
-            ],
-            format: "webp", // smallest size for a profile photo
-            overwrite: false,
-          },
-          (error, result) => {
-            if (error || !result) reject(error || new Error("Upload gagal"));
-            else resolve({ secure_url: result.secure_url, public_id: result.public_id });
-          }
-        );
-        stream.end(buffer);
-      }
-    );
+    const uploadResult = await uploadToCloudinary(buffer, {
+      folder: "myclassroom/avatars",
+      publicId: `${authUser.id}-${Date.now()}`,
+      resourceType: "image",
+      format: "webp", // smallest size for a profile photo
+      transformations: [
+        { width: 400, height: 400, crop: "fill", gravity: "face", quality: "auto:good" },
+      ],
+    });
 
     // 5. Delete the previous Cloudinary asset so the quota is not eaten
     const { data: profile } = await supabase
