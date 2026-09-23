@@ -108,7 +108,9 @@ export function GradesClient({ user }: GradesClientProps) {
         })));
 
         const { data: classData } = await supabase.from("classes").select("*").order("class_name");
-        setClasses(classData || []);
+        // Archived classes are hidden from the filter — their grades still
+        // appear in the list, they just can't be filtered by.
+        setClasses((classData || []).filter((c: any) => !c.is_archived));
       }
       setLoading(false);
     };

@@ -18,6 +18,7 @@ interface ClassSummary {
   studentCount: number;
   avgScore: number;
   submissionCount: number;
+  is_archived: boolean;
 }
 
 export function RaporClient() {
@@ -52,6 +53,7 @@ export function RaporClient() {
             studentCount: (students as any)?.length || 0,
             avgScore: avg,
             submissionCount: classSubmissions.length,
+            is_archived: !!(cls as any).is_archived,
           };
         })
       );
@@ -72,7 +74,11 @@ export function RaporClient() {
       const supabase = createClient();
       const wb = XLSX.utils.book_new();
 
-      const targetClasses = isAll ? classes : classes.filter((c) => c.id === classId);
+      // "Export Semua" skips archived classes — export a single archived
+      // class via its own Export button.
+      const targetClasses = isAll
+        ? classes.filter((c) => !c.is_archived)
+        : classes.filter((c) => c.id === classId);
 
       for (const cls of targetClasses) {
         const { data: students } = await supabase
@@ -173,7 +179,7 @@ export function RaporClient() {
       }
 
       // Summary sheet
-      const summaryData = targetClasses.map((cls) => ({
+      const summaryData = targetClasses.map((cls: any) => ({
         "Kelas": cls.class_name,
         "Jumlah Siswa": cls.studentCount,
         "Rata-rata Nilai": cls.avgScore,
@@ -264,15 +270,31 @@ export function RaporClient() {
       ) : (
         <div className="space-y-3">
           {classes.map((cls) => (
-            <Card key={cls.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+            <Card
+              key={cls.id}
+              className={`border-0 shadow-sm hover:shadow-md transition-shadow ${
+                cls.is_archived ? "opacity-75 border border-dashed border-gray-300 dark:border-gray-700" : ""
+              }`}
+            >
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                      cls.is_archived
+                        ? "bg-gray-400 dark:bg-gray-600"
+                        : "bg-gradient-to-br from-emerald-500 to-teal-600"
+                    }`}>
                       <span className="text-white font-bold text-sm">{cls.grade}</span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-gray-900 dark:text-white truncate">{cls.class_name}</p>
+                      <p className="font-bold text-gray-900 dark:text-white truncate">
+                        {cls.class_name}
+                        {cls.is_archived && (
+                          <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full align-middle">
+                            Arsip
+                          </span>
+                        )}
+                      </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="text-xs text-gray-500 flex items-center gap-1">
                           <Users className="w-3 h-3 flex-shrink-0" />{cls.studentCount} siswa
@@ -292,7 +314,11 @@ export function RaporClient() {
                     onClick={() => exportRapor(cls.id)}
                     disabled={exporting === cls.id}
                     size="sm"
-                    className="gap-2 bg-green-600 hover:bg-green-700 text-white rounded-xl flex-shrink-0"
+                    className={`gap-2 rounded-xl flex-shrink-0 ${
+                      cls.is_archived
+                        ? "bg-gray-500 hover:bg-gray-600 text-white"
+                        : "bg-green-600 hover:bg-green-700 text-white"
+                    }`}
                   >
                     {exporting === cls.id
                       ? <Loader2 className="w-4 h-4 animate-spin" />

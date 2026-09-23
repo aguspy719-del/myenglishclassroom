@@ -384,26 +384,36 @@ export function GradesRekapClient() {
     const fetchClasses = async () => {
       const supabase = createClient();
       const { data } = await supabase.from("classes").select("*").order("grade").order("class_name");
-      setClasses(data || []);
-      if (data && data.length > 0) setSelectedClass(data[0].id);
+      const all = data || [];
+      setClasses(all);
+      // Default to the first non-archived class
+      const firstActive = all.find((c) => !c.is_archived);
+      if (firstActive) setSelectedClass(firstActive.id);
+      else if (all.length > 0) setSelectedClass(all[0].id);
       setLoading(false);
     };
     fetchClasses();
   }, []);
 
   // Group classes by grade for an organized selector (XI row, XII row, …)
+  // Archived classes are excluded from the main picker and collected separately.
+  const activeClasses = useMemo(() => classes.filter((c) => !c.is_archived), [classes]);
+  const archivedClasses = useMemo(() => classes.filter((c) => c.is_archived), [classes]);
+
   const gradeGroups = useMemo(() => {
     const map = new Map<string, Class[]>();
-    classes.forEach((c) => {
+    activeClasses.forEach((c) => {
       const key = c.grade || "Lainnya";
       const arr = map.get(key) || [];
       arr.push(c);
       map.set(key, arr);
     });
     return [...map.entries()];
-  }, [classes]);
+  }, [activeClasses]);
 
-  const selectedClassName = classes.find((c) => c.id === selectedClass)?.class_name || "";
+  const selectedClassData = classes.find((c) => c.id === selectedClass);
+  const selectedClassName = selectedClassData?.class_name || "";
+  const selectedIsArchived = !!selectedClassData?.is_archived;
 
   return (
     <div className="space-y-6">
@@ -447,11 +457,23 @@ export function GradesRekapClient() {
                     ))}
                   </div>
                 ))}
+                {archivedClasses.length > 0 && (
+                  <div>
+                    <p className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                      Arsip
+                    </p>
+                    {archivedClasses.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.class_name} (arsip)
+                      </SelectItem>
+                    ))}
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Desktop: grouped chips */}
+          {/* Desktop: grouped chips (active classes only) */}
           <div className="hidden sm:flex sm:flex-wrap gap-x-6 gap-y-3">
             {gradeGroups.map(([grade, list]) => (
               <div key={grade}>
@@ -477,8 +499,39 @@ export function GradesRekapClient() {
             ))}
           </div>
 
+          {/* Archived classes — separate section, data stays viewable */}
+          {archivedClasses.length > 0 && (
+            <div className="hidden sm:block">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                🗄️ Arsip
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {archivedClasses.map((cls) => (
+                  <button
+                    key={cls.id}
+                    onClick={() => setSelectedClass(cls.id)}
+                    className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-all opacity-80 ${
+                      selectedClass === cls.id
+                        ? "bg-gray-500 text-white shadow-md"
+                        : "bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600"
+                    }`}
+                  >
+                    {cls.class_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {selectedClass && (
-            <StudentRekapTable key={selectedClass} classId={selectedClass} className={selectedClassName} />
+            <>
+              {selectedIsArchived && (
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/60 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-sm text-gray-500 dark:text-gray-400">
+                  🗄️ Kelas ini sudah diarsipkan — nilainya masih bisa dilihat, tapi tidak menerima tugas/asesmen baru.
+                </div>
+              )}
+              <StudentRekapTable key={selectedClass} classId={selectedClass} className={selectedClassName} />
+            </>
           )}
         </>
       )}

@@ -24,6 +24,9 @@ export interface Class {
   grade: string;
   created_at: string;
   student_count?: number;
+  // Archive support — archived classes are hidden from pickers but their
+  // grades/exports remain viewable.
+  is_archived?: boolean;
 }
 
 export interface Material {
