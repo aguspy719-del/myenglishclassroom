@@ -321,12 +321,12 @@ export function GradesRekapClient() {
         </Card>
       ) : (
         <>
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+          <div className="flex flex-wrap gap-2">
             {classes.map((cls) => (
               <button
                 key={cls.id}
                 onClick={() => setSelectedClass(cls.id)}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   selectedClass === cls.id
                     ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/25"
                     : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-gray-700 hover:border-emerald-300"
