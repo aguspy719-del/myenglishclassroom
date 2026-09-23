@@ -165,17 +165,21 @@ export function ClassDetailClient({ user, classData }: ClassDetailClientProps) {
 
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
     if (!confirm(`Permanently delete account "${studentName}"? This cannot be undone and will remove all their data.`)) return;
-    const res = await fetch("/api/admin/delete-student", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      toast.error(data.error || "Failed to delete student");
-    } else {
-      toast.success(`${studentName} deleted`);
-      fetchData();
+    try {
+      const res = await fetch("/api/admin/delete-student", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete student");
+      } else {
+        toast.success(`${studentName} deleted`);
+        fetchData();
+      }
+    } catch {
+      toast.error("Network error — please try again");
     }
   };
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, Search, FileSpreadsheet, UserCheck } from "lucide-react";
+import Link from "next/link";
+import { Star, Search, FileSpreadsheet, UserCheck, TableProperties } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -276,14 +277,25 @@ export function GradesClient({ user }: GradesClientProps) {
           <p className="text-gray-500 dark:text-gray-400 mt-1">{filtered.length} records</p>
         </div>
         {user.role === "teacher" && (
-          <Button
-            onClick={handleExportExcel}
-            disabled={exporting}
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto rounded-xl"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            {exporting ? "Exporting..." : "Export Rapor Excel"}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Link href="/grades/rekap" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                className="gap-2 w-full sm:w-auto rounded-xl"
+              >
+                <TableProperties className="w-4 h-4" />
+                Rekap Nilai
+              </Button>
+            </Link>
+            <Button
+              onClick={handleExportExcel}
+              disabled={exporting}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto rounded-xl"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              {exporting ? "Exporting..." : "Export Rapor Excel"}
+            </Button>
+          </div>
         )}
       </div>
 

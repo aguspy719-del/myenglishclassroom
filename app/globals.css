@@ -188,6 +188,13 @@ p, h1, h2, h3, h4, h5, h6, span, a {
   word-break: break-word;
 }
 
+/* Inputs (email/password/name) must NOT break words — break-word on inputs
+   made Android/iOS soft keyboards and autofill overlays wrap mid-word. */
+input, textarea, select {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
 /* iOS safe area */
 .safe-area-bottom {
   padding-bottom: max(env(safe-area-inset-bottom), 8px);

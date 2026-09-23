@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileSpreadsheet, Download, Users, BookOpen, Star, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { FileSpreadsheet, Download, Users, BookOpen, Star, Loader2, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -220,6 +221,16 @@ export function RaporClient() {
               <SelectItem value="2024/2025">2024/2025</SelectItem>
             </SelectContent>
           </Select>
+          <Link href="/grades/rekap" className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              disabled={loading}
+              className="gap-2 rounded-xl w-full sm:w-auto"
+            >
+              <Eye className="w-4 h-4" />
+              Lihat Rekap
+            </Button>
+          </Link>
           <Button
             onClick={() => exportRapor("all")}
             disabled={exportingAll || loading}
