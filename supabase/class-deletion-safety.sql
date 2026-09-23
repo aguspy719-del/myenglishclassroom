@@ -1,5 +1,5 @@
 -- ============================================================
--- English LMS — Class deletion safety net
+-- English LMS — Class deletion safety net (v2)
 -- Run this ONCE in the Supabase SQL Editor.
 --
 -- WHY: deleting a class relies on ON DELETE CASCADE foreign keys.
@@ -25,48 +25,38 @@
 -- 1. Submissions: ensure assignment_id cascades with its class's assignments
 DO $$
 DECLARE
-  fk_exists boolean;
-  fk_cascades boolean;
+  fk_name text;
+  fk_del_type char;
 BEGIN
-  SELECT EXISTS (
-    SELECT 1 FROM information_schema.table_constraints tc
-    JOIN information_schema.constraint_column_usage ccu
-      ON ccu.constraint_name = tc.constraint_name
-     AND ccu.table_schema = tc.table_schema
-    WHERE tc.table_schema = 'public'
-      AND tc.table_name = 'submissions'
-      AND tc.constraint_type = 'FOREIGN KEY'
-      AND ccu.column_name = 'assignment_id'
-  ) INTO fk_exists;
+  -- Find the FK on submissions.assignment_id that references assignments
+  SELECT c.conname, c.confdeltype
+    INTO fk_name, fk_del_type
+  FROM pg_constraint c
+  JOIN pg_attribute a
+    ON a.attrelid = c.conrelid
+   AND a.attname = 'assignment_id'
+   AND a.attnum = ANY (c.conkey)
+  WHERE c.conrelid = 'public.submissions'::regclass
+    AND c.contype = 'f'
+    AND c.confrelid = 'public.assignments'::regclass
+  LIMIT 1;
 
-  IF fk_exists THEN
-    SELECT (
-      confdeltype = 'c'
-    ) INTO fk_cascades
-    FROM pg_constraint
-    WHERE conrelid = 'public.submissions'::regclass
-      AND contype = 'f'
-      AND conname IN (
-        SELECT constraint_name FROM information_schema.constraint_column_usage
-        WHERE table_schema = 'public' AND table_name = 'submissions'
-          AND column_name = 'assignment_id'
-      )
-    LIMIT 1;
-
-    IF fk_cascades IS DISTINCT FROM TRUE THEN
-      EXECUTE 'ALTER TABLE public.submissions DROP CONSTRAINT IF EXISTS submissions_assignment_id_fkey';
-      EXECUTE 'ALTER TABLE public.submissions
-        ADD CONSTRAINT submissions_assignment_id_fkey
-        FOREIGN KEY (assignment_id) REFERENCES public.assignments(id) ON DELETE CASCADE';
-      RAISE NOTICE 'submissions.assignment_id FK repaired to ON DELETE CASCADE';
-    ELSE
-      RAISE NOTICE 'submissions.assignment_id FK already cascades';
-    END IF;
-  ELSE
-    EXECUTE 'ALTER TABLE public.submissions
+  IF fk_name IS NULL THEN
+    -- No usable FK — (re)create one with cascade
+    EXECUTE 'ALTER TABLE public.submissions DROP CONSTRAINT IF EXISTS submissions_assignment_id_fkey';
+    ALTER TABLE public.submissions
       ADD CONSTRAINT submissions_assignment_id_fkey
-      FOREIGN KEY (assignment_id) REFERENCES public.assignments(id) ON DELETE CASCADE';
+      FOREIGN KEY (assignment_id) REFERENCES public.assignments(id) ON DELETE CASCADE;
     RAISE NOTICE 'submissions.assignment_id FK created with ON DELETE CASCADE';
+  ELSIF fk_del_type <> 'c' THEN
+    -- FK exists but does not cascade — replace it
+    EXECUTE format('ALTER TABLE public.submissions DROP CONSTRAINT %I', fk_name);
+    ALTER TABLE public.submissions
+      ADD CONSTRAINT submissions_assignment_id_fkey
+      FOREIGN KEY (assignment_id) REFERENCES public.assignments(id) ON DELETE CASCADE;
+    RAISE NOTICE 'submissions.assignment_id FK repaired to ON DELETE CASCADE';
+  ELSE
+    RAISE NOTICE 'submissions.assignment_id FK already cascades';
   END IF;
 END $$;
 
@@ -74,10 +64,14 @@ END $$;
 DO $$
 BEGIN
   IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'essay_answers'
+  ) THEN
+    RAISE NOTICE 'essay_answers table not found — skipping (nothing to fix)';
+  ELSIF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
     WHERE table_schema = 'public'
       AND table_name = 'essay_answers'
-      AND constraint_type = 'FOREIGN KEY'
       AND constraint_name = 'essay_answers_quiz_id_fkey'
   ) THEN
     ALTER TABLE public.essay_answers
@@ -90,28 +84,34 @@ BEGIN
 END $$;
 
 -- 3. One-time cleanup of rows already orphaned by past deletions
---    (these RUN immediately, they are not triggers)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'essay_answers'
+  ) THEN
+    DELETE FROM public.essay_answers ea
+      WHERE NOT EXISTS (SELECT 1 FROM public.quizzes q WHERE q.id = ea.quiz_id);
+  END IF;
 
--- Essay answers whose quiz no longer exists
-DELETE FROM public.essay_answers ea
-  WHERE NOT EXISTS (SELECT 1 FROM public.quizzes q WHERE q.id = ea.quiz_id);
+  DELETE FROM public.submissions s
+    WHERE NOT EXISTS (SELECT 1 FROM public.assignments a WHERE a.id = s.assignment_id);
 
--- Submissions whose assignment no longer exists
-DELETE FROM public.submissions s
-  WHERE NOT EXISTS (SELECT 1 FROM public.assignments a WHERE a.id = s.assignment_id);
+  RAISE NOTICE 'Orphan cleanup done';
+END $$;
 
--- 4. Optional: auto-clean orphaned rows going forward.
---    Only needed if statement 1/2 could not be applied
---    (e.g. permissions). Skips silently when the FKs cascade.
---    The function is SECURITY DEFINER so it can delete via cascade-less paths.
+-- 4. Auto-clean orphaned rows going forward (final safety sweep)
 CREATE OR REPLACE FUNCTION public.cleanup_orphans_after_class_delete()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Keep tables tidy if any cascade-less FK remains
-  DELETE FROM public.essay_answers ea
-    WHERE NOT EXISTS (SELECT 1 FROM public.quizzes q WHERE q.id = ea.quiz_id);
+  IF to_regclass('public.essay_answers') IS NOT NULL THEN
+    DELETE FROM public.essay_answers ea
+      WHERE NOT EXISTS (SELECT 1 FROM public.quizzes q WHERE q.id = ea.quiz_id);
+  END IF;
+
   DELETE FROM public.submissions s
     WHERE NOT EXISTS (SELECT 1 FROM public.assignments a WHERE a.id = s.assignment_id);
+
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -121,4 +121,9 @@ CREATE TRIGGER trg_cleanup_after_class_delete
   AFTER DELETE ON public.classes
   FOR EACH ROW EXECUTE FUNCTION public.cleanup_orphans_after_class_delete();
 
-RAISE NOTICE 'Class deletion safety net installed successfully.';
+-- 5. Success message (must live inside a DO block — RAISE is
+--    not valid at the top level of plain SQL)
+DO $$
+BEGIN
+  RAISE NOTICE 'Class deletion safety net installed successfully.';
+END $$;
