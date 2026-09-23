@@ -193,11 +193,26 @@ export function ClassesClient({ user }: ClassesClientProps) {
   };
 
   const handleDeleteClass = async (id: string, name: string) => {
-    if (!confirm(`Permanently delete class "${name}"? All data will be lost.`)) return;
+    if (
+      !confirm(
+        `Hapus permanen kelas "${name}"?\n\n` +
+        "Yang akan TERHAPUS:\n" +
+        "• Semua materi, tugas, dan asesmen kelas ini\n" +
+        "• Semua nilai & rekam jejaknya\n\n" +
+        "Yang TIDAK terhapus:\n" +
+        "• Akun siswa — mereka otomatis keluar dari kelas (tanpa kelas)\n\n" +
+        "Tindakan ini TIDAK bisa dibatalkan. Kalau kelas hanya sedang tidak aktif, lebih aman pakai Archive."
+      )
+    ) return;
     const supabase = createClient();
     const { error } = await supabase.from("classes").delete().eq("id", id);
-    if (error) toast.error("Failed to delete class");
-    else { toast.success("Class deleted"); fetchClasses(); }
+    if (error) {
+      console.error("[DeleteClass] failed:", error);
+      toast.error("Gagal menghapus kelas: " + error.message);
+    } else {
+      toast.success(`Kelas "${name}" dihapus`);
+      fetchClasses();
+    }
   };
 
   const openEditDialog = (cls: ClassWithStats) => {
