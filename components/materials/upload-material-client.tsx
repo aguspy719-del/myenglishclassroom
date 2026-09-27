@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Upload, Loader2, File, X } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, File, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,7 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
     meeting: "",
   });
   const [file, setFile] = useState<File | null>(null);
+  const [rejectedFile, setRejectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -55,9 +56,12 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (selected.size > maxSize) {
       toast.error("File terlalu besar. Maksimal 10MB");
+      setRejectedFile(selected);
+      setFile(null);
       return;
     }
     setFile(selected);
+    setRejectedFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -242,6 +246,45 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
             {/* File Upload */}
             <div className="space-y-2">
               <Label>File Materi</Label>
+
+              {/* Oversize hint — toast alone disappears, this stays visible */}
+              {rejectedFile && (
+                <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/50 p-4 text-sm">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-2">
+                      <p className="font-medium text-amber-800 dark:text-amber-200">
+                        &ldquo;{rejectedFile.name}&rdquo; ({formatFileSize(rejectedFile.size)}) melebihi batas 10MB
+                      </p>
+                      <p className="text-amber-700 dark:text-amber-300">
+                        Compress dulu file-nya, lalu upload ulang:
+                      </p>
+                      <ol className="list-decimal list-inside space-y-1 text-amber-700 dark:text-amber-300">
+                        <li>
+                          Buka file di PowerPoint → <b>File → Info → Compress Pictures</b> → pilih Email (96 ppi)
+                        </li>
+                        <li>
+                          Atau lewat web: <a href="https://www.ilovepdf.com/compress_ppt" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100">ilovepdf.com/compress_ppt</a>
+                        </li>
+                        <li>Save / download hasilnya, lalu pilih lagi di sini</li>
+                      </ol>
+                      <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
+                        PPT besar biasanya karena gambar — setelah compress biasanya turun jadi 2–5MB. Kualitas tetap cukup untuk proyektor kelas.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 flex-shrink-0 text-amber-600 dark:text-amber-400"
+                      onClick={() => setRejectedFile(null)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-emerald-400 transition-colors">
                 {file ? (
                   <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950 rounded-lg">
