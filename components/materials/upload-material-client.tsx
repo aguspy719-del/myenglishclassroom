@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileDirect } from "@/lib/upload-client";
 import { toast } from "sonner";
 import { formatFileSize } from "@/lib/utils";
 import type { User, Class } from "@/types";
@@ -50,9 +51,10 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
     const selected = e.target.files?.[0];
     if (!selected) return;
 
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    // Cloudinary free plan caps raw files (pptx/docx/pdf...) at 10MB
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (selected.size > maxSize) {
-      toast.error("File terlalu besar. Maksimal 50MB");
+      toast.error("File terlalu besar. Maksimal 10MB");
       return;
     }
     setFile(selected);
@@ -75,20 +77,16 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
     try {
       if (file) {
         setUploadProgress(30);
-        // Upload via server route: storage RLS policies are a project-wide
-        // dependency and after the Supabase project recreation they were
-        // missing, so every browser upload failed with
-        // "new row violates row-level security policy".
-        const fd = new FormData();
-        fd.append("file", file);
-        fd.append("bucket", "materials");
-        fd.append("classId", form.class_id);
-        const res = await fetch("/api/uploads", { method: "POST", body: fd });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || !json.url) {
-          throw new Error(json.error || "Gagal upload file materi");
-        }
-        fileUrl = json.url;
+        // Signed DIRECT upload to Cloudinary: proxying the file through a
+        // server route breaks on Vercel's 4.5MB request body limit, which is
+        // why larger PPT/DOCX uploads started failing after the Cloudinary
+        // migration. The server only provides a signature; the file goes
+        // straight from the browser to Cloudinary.
+        const result = await uploadFileDirect(file, "materials", {
+          classId: form.class_id,
+          onProgress: (pct) => setUploadProgress(30 + Math.round(pct * 0.5)),
+        });
+        fileUrl = result.url;
       }
 
       setUploadProgress(90);
@@ -270,7 +268,7 @@ export function UploadMaterialClient({ user }: UploadMaterialClientProps) {
                       Klik untuk upload file
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      PDF, DOCX, PPT, MP4, dll. Maks 50MB
+                      PDF, DOCX, PPT, MP4, dll. Maks 10MB
                     </p>
                     <input
                       type="file"

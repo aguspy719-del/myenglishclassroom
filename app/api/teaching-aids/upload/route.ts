@@ -1,13 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import { checkCloudinaryConfig, uploadToCloudinary } from "@/lib/cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-
 /**
- * POST — upload a teaching-aids document to Cloudinary & register it in the
- * teaching_aids table. Files live in the myclassroom/teaching-aids folder so
- * Supabase Storage quota is not consumed.
+ * POST — register a teaching-aids document in the teaching_aids table.
+ *
+ * The file itself is uploaded DIRECTLY from the browser to Cloudinary using a
+ * signature from /api/uploads/sign (bucket "teaching-aids"). This route used
+ * to receive the file as multipart/form-data, but that breaks on Vercel's
+ * 4.5MB request body limit, so now it only records the metadata.
+ *
+ * JSON: { category, file_name, file_url, file_size }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -24,39 +26,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    const category = formData.get("category") as string;
+    const body = await request.json().catch(() => ({}));
+    const category = String(body.category || "");
+    const fileName = String(body.file_name || "");
+    const fileUrl = String(body.file_url || "");
+    const fileSize = Number(body.file_size || 0);
 
-    if (!file || !category) {
-      return NextResponse.json({ error: "Missing file or category" }, { status: 400 });
+    if (!category || !fileName || !fileUrl) {
+      return NextResponse.json({ error: "Missing category, file_name or file_url" }, { status: 400 });
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: "File too large. Max 50MB" }, { status: 400 });
+    // Only accept Cloudinary URLs so the DB can't be filled with arbitrary links
+    if (!fileUrl.includes("res.cloudinary.com")) {
+      return NextResponse.json({ error: "Invalid file_url" }, { status: 400 });
     }
-
-    const configError = checkCloudinaryConfig();
-    if (configError) {
-      console.error("[Teaching Aids Upload]", configError);
-      return NextResponse.json({ error: configError }, { status: 500 });
-    }
-
-    const fileExt = (file.name.split(".").pop() || "bin").replace(/[^a-z0-9]/gi, "").slice(0, 8) || "bin";
-    const publicId = `ta-${category}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const { secure_url } = await uploadToCloudinary(buffer, {
-      folder: "myclassroom/teaching-aids",
-      publicId,
-      resourceType: "auto",
-    });
 
     const { error: dbError } = await supabase.from("teaching_aids").insert({
       category,
-      file_name: file.name,
-      file_url: secure_url,
-      file_size: file.size,
+      file_name: fileName,
+      file_url: fileUrl,
+      file_size: fileSize,
       uploaded_at: new Date().toISOString(),
     });
 
@@ -64,10 +53,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, url: secure_url });
+    return NextResponse.json({ success: true, url: fileUrl });
   } catch (err: any) {
-    const detail = err?.message ? ` (${String(err.message).slice(0, 140)})` : "";
     console.error("[Teaching Aids Upload] Error:", err?.message || err);
-    return NextResponse.json({ error: "Upload gagal" + detail }, { status: 500 });
+    return NextResponse.json({ error: "Gagal menyimpan dokumen" }, { status: 500 });
   }
 }

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileDirect } from "@/lib/upload-client";
 import { toast } from "sonner";
 import { formatFileSize } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -73,19 +74,11 @@ export function CreateAssignmentClient({ user }: CreateAssignmentClientProps) {
     try {
       let attachmentUrl = "";
       if (file) {
-        // Upload via server route: storage RLS policies are a project-wide
-        // dependency and after the Supabase project recreation they were
-        // missing, so every browser upload failed with
-        // "new row violates row-level security policy".
-        const fd = new FormData();
-        fd.append("file", file);
-        fd.append("bucket", "assignments");
-        const res = await fetch("/api/uploads", { method: "POST", body: fd });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || !json.url) {
-          throw new Error(json.error || "Gagal upload file lampiran");
-        }
-        attachmentUrl = json.url;
+        // Signed DIRECT upload to Cloudinary: proxying through a server route
+        // breaks on Vercel's 4.5MB request body limit. The server only
+        // provides a signature; the file goes browser → Cloudinary directly.
+        const result = await uploadFileDirect(file, "assignments");
+        attachmentUrl = result.url;
       }
 
       const insertData = selectedClasses.map((classId) => ({

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileDirect } from "@/lib/upload-client";
 import { toast } from "sonner";
 import { formatDate, formatFileSize } from "@/lib/utils";
 
@@ -149,21 +150,30 @@ export function TeachingAidsClient() {
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
 
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error(`${file.name} is too large. Max 50MB`);
+      if (file.size > 10 * 1024 * 1024) {
+        // Cloudinary free plan caps raw files (pptx/docx/pdf...) at 10MB
+        toast.error(`${file.name} is too large. Max 10MB`);
         continue;
       }
 
       try {
         setUploadProgress(Math.round(((i + 0.3) / selectedFiles.length) * 100));
 
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("category", category);
+        // Signed DIRECT upload to Cloudinary: proxying through a server route
+        // breaks on Vercel's 4.5MB request body limit. The DB row is still
+        // registered via the server route below, but the file itself no
+        // longer passes through it.
+        const direct = await uploadFileDirect(file, "teaching-aids");
 
         const response = await fetch("/api/teaching-aids/upload", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            category,
+            file_name: file.name,
+            file_url: direct.url,
+            file_size: file.size,
+          }),
         });
 
         const result = await response.json();
