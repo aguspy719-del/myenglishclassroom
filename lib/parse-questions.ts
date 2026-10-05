@@ -180,7 +180,19 @@ function finalizeBlock(block: Block): ParsedQuestion | null {
     if (o.letter in options) options[o.letter as keyof typeof options] = o.text;
   }
   if (letters.has("e")) {
-    warnings.push("Option E is not supported (the app has A–D). Its text was skipped.");
+    // Show the E text itself so the teacher can move it to another option
+    // manually — nothing about the question is silently lost.
+    const eText = block.options
+      .filter((o) => o.letter === "e")
+      .map((o) => o.text)
+      .filter(Boolean)
+      .join(" / ");
+    const shown = eText.length > 60 ? `${eText.slice(0, 60)}…` : eText;
+    warnings.push(
+      eText
+        ? `Option E is not supported (the app has A–D) and was skipped. E text: “${shown}” — copy it into another option or edit the question.`
+        : "Option E is not supported (the app has A–D)."
+    );
   }
   const missing = OPT_KEYS.filter((k) => !options[k].trim());
   if (missing.length > 0) {
