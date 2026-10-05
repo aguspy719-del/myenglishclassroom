@@ -7,6 +7,7 @@ import {
   Plus, ArrowRight, TrendingUp, Clock, CheckCircle, Megaphone, Trash2, ChevronDown, ChevronUp,
   Sparkles,
 } from "lucide-react";
+import { TeachingJournalCard } from "@/components/dashboard/teaching-journal-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -311,6 +312,9 @@ export function TeacherDashboard({ user }: TeacherDashboardProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Teaching Journal */}
+      <TeachingJournalCard user={user} />
 
       {/* Announcements */}
       <Card>

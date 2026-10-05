@@ -185,3 +185,34 @@ export interface TeachingAid {
   file_size?: number;
   uploaded_at: string;
 }
+
+export type TeachingMethod =
+  | "ceramah"
+  | "diskusi"
+  | "tanya_jawab"
+  | "presentasi"
+  | "demonstrasi"
+  | "game"
+  | "project"
+  | "lainnya";
+
+export interface TeachingJournal {
+  id: string;
+  teacher_id: string;
+  class_id: string;
+  date: string;
+  meeting_number: number;
+  topic: string;
+  subtopic?: string;
+  teaching_method: TeachingMethod;
+  students_present: number;
+  students_absent: number;
+  learning_objectives: string;
+  activities: string;
+  notes?: string;
+  reflection?: string;
+  next_plan?: string;
+  created_at: string;
+  // Joined
+  class?: Class;
+}

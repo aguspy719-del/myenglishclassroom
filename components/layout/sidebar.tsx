@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import {
   GraduationCap, Home, FileSpreadsheet,
   LayoutDashboard, LogOut, Star, Users, UserCheck, FileText, BookMarked,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, NotebookPen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/logo";
@@ -28,6 +28,7 @@ const teacherNavItems = [
   { href: "/rapor", label: "Rapor Export", icon: FileSpreadsheet },
   { href: "/quiz", label: "Assessment", icon: FileText },
   { href: "/teaching-aids", label: "Teaching Aids", icon: BookMarked },
+  { href: "/teaching-journal", label: "Teaching Journal", icon: NotebookPen },
 ];
 
 const studentNavItems = [
