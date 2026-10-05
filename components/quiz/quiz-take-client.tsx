@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Clock, CheckCircle, ChevronRight, ChevronLeft, ChevronDown,
-  Plus, Trash2, Loader2, Trophy, Users, BarChart2, FileText, PenLine, AlertTriangle,
+  Plus, Trash2, Loader2, Trophy, Users, BarChart2, FileText, PenLine, AlertTriangle, ClipboardPaste,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +21,8 @@ import { AnswerReview } from "@/components/quiz/answer-review";
 import { MarqueeText } from "@/components/ui/marquee-text";
 import { QuizAntiCheat } from "./quiz-anti-cheat";
 import { QuizSendPanel } from "./quiz-send-panel";
+import { ImportQuestionsDialog } from "./import-questions-dialog";
+import type { ParsedQuestion } from "@/lib/parse-questions";
 import type { User, Quiz, QuizQuestion } from "@/types";
 
 interface QuizTakeClientProps {
@@ -531,6 +533,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
   const [drafts, setDrafts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [showCopy, setShowCopy] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [sameTypeQuizzes, setSameTypeQuizzes] = useState<any[]>([]);
   const [copyTargets, setCopyTargets] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
@@ -577,6 +580,33 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
     setDrafts((p) => p.map((d) => d.id === id ? { ...d, [field]: value } : d));
 
   const removeDraft = (id: string) => setDrafts((p) => p.filter((d) => d.id !== id));
+
+  // Turns questions recognized by the Word-paste parser into editable drafts
+  // (same flow as manual questions — the teacher reviews before saving).
+  const addImportedDrafts = (parsed: ParsedQuestion[]) => {
+    if (parsed.length === 0) return;
+    const newDrafts = parsed.map((q) => ({
+      id: crypto.randomUUID(),
+      question_type: q.question_type,
+      question: q.question,
+      option_a: q.options.a,
+      option_b: q.options.b,
+      option_c: q.options.c,
+      option_d: q.options.d,
+      correct_answer: (q.correct_answer || "a") as "a" | "b" | "c" | "d",
+      max_score: q.max_score,
+    }));
+    setDrafts((p) => [...p, ...newDrafts]);
+    setShowImport(false);
+    const mc = parsed.filter((q) => q.question_type === "multiple_choice").length;
+    const essay = parsed.length - mc;
+    toast.success(
+      `${parsed.length} question${parsed.length > 1 ? "s" : ""} imported (${mc} MC, ${essay} essay) — review below, then tap Save.`
+    );
+    setTimeout(() => {
+      document.getElementById("draft-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
 
   const saveDrafts = async () => {
     // Clear, specific validation so the teacher knows exactly what is missing
@@ -775,7 +805,7 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
             <CardContent className="pt-4 pb-4">
               <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">How to add questions:</p>
               <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
-                <li>Tap <b>Add Multiple Choice</b> or <b>Add Essay</b> below</li>
+                <li>Paste many questions at once with <b>Import from Word</b> — or add them one by one below</li>
                 <li>Write the question, fill options A–D, then <b>tap the circle</b> next to the correct answer</li>
                 <li>Tap <b>Save Questions</b> — then send via the panel above</li>
               </ol>
@@ -785,6 +815,14 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
                 </Button>
                 <Button onClick={() => addDraft("essay")} variant="outline" size="sm" className="gap-1 rounded-xl">
                   <Plus className="w-4 h-4" /><PenLine className="w-4 h-4" />Add Essay
+                </Button>
+                <Button
+                  onClick={() => setShowImport(true)}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 rounded-xl border-blue-400 text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                >
+                  <ClipboardPaste className="w-4 h-4" />Import from Word
                 </Button>
                 {questions.length > 0 && sameTypeQuizzes.length > 0 && (
                   <Button onClick={() => setShowCopy(!showCopy)} variant="outline" size="sm" className="gap-1 rounded-xl border-green-400 text-green-700 hover:bg-green-50 dark:text-green-400">
@@ -835,6 +873,13 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
               </CardContent>
             </Card>
           )}
+
+          {/* Word-paste import dialog */}
+          <ImportQuestionsDialog
+            open={showImport}
+            onOpenChange={setShowImport}
+            onAdd={addImportedDrafts}
+          />
 
           {/* Draft questions — numbered, guided flow */}
           <div id="draft-editor" className="space-y-4">
