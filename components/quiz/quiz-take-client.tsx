@@ -668,91 +668,32 @@ function TeacherQuizView({ quiz, questions, setQuestions }: TeacherQuizViewProps
   };
 
   const gradeEssay = async (answerId: string, essayScore: number, feedback: string) => {
-    const supabase = createClient();
-    const { error } = await supabase.from("essay_answers").update({ score: essayScore, feedback }).eq("id", answerId);
-    if (error) { toast.error("Failed"); return; }
+    // All grading goes through the server route:
+    // - teacher-only auth check (Bug Fix 3: student can't write their own score)
+    // - reads mc_score_pct instead of attempt.score (Bug Fix 1: MC score preserved)
+    // - only notifies student when ALL essays are graded (Bug Fix 2)
+    const res = await fetch("/api/quiz/grade-essay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answerId, score: essayScore, feedback }),
+    });
 
-    toast.success("Graded!");
-    setEssayAnswers((p) => p.map((a) => a.id === answerId ? { ...a, score: essayScore, feedback } : a));
-
-    // Recalculate total score for this student and update quiz_attempts
-    const gradedAnswer = essayAnswers.find((a) => a.id === answerId);
-    if (!gradedAnswer) return;
-
-    const studentId = gradedAnswer.student_id || gradedAnswer.student?.id;
-    if (!studentId) return;
-
-    // Get all essay answers for this student in this quiz
-    const { data: allEssayAnswers } = await supabase
-      .from("essay_answers")
-      .select("score, question:quiz_questions(max_score)")
-      .eq("quiz_id", quiz.id)
-      .eq("student_id", studentId)
-      .not("score", "is", null);
-
-    // Get MC score from existing attempt
-    const { data: attempt } = await supabase
-      .from("quiz_attempts")
-      .select("id, score")
-      .eq("quiz_id", quiz.id)
-      .eq("student_id", studentId)
-      .maybeSingle();
-
-    if (!attempt) return;
-
-    // Points model: every question (MC & essay) carries a max_score weight.
-    // MC attempt.score is the % of weighted MC points earned; essays are
-    // graded directly in points. Final = earned ÷ total points × 100,
-    // so the combined score can never exceed 100.
-    const mcQuestions = questions.filter((q) => (q as any).question_type !== "essay");
-    const essayQuestions = questions.filter((q) => (q as any).question_type === "essay");
-    const mcMaxPoints = mcQuestions.reduce((sum, q) => sum + (Math.max(1, (q as any).max_score) || 10), 0);
-    const essayMaxPoints = essayQuestions.reduce((sum, q) => sum + (Math.max(1, (q as any).max_score) || 10), 0);
-    const totalPoints = mcMaxPoints + essayMaxPoints;
-
-    if (totalPoints === 0) return;
-
-    // Graded essays: sum of awarded points (clamped to each essay's max)
-    const essayEarnedPoints = (allEssayAnswers || []).reduce((sum, ea) => {
-      const maxScore = Math.max(1, (ea.question as any)?.max_score) || 10;
-      return sum + Math.min(Math.max(0, ea.score || 0), maxScore);
-    }, 0);
-
-    const mcEarnedPoints = mcMaxPoints > 0
-      ? ((attempt.score || 0) / 100) * mcMaxPoints
-      : 0;
-
-    const combinedScore = Math.round((mcEarnedPoints + essayEarnedPoints) / totalPoints * 100);
-
-    await supabase.from("quiz_attempts")
-      .update({ score: combinedScore })
-      .eq("id", attempt.id);
-
-    // Notify the student: in-app bell + web push (if enabled on their device)
-    try {
-      await supabase.from("notifications").insert({
-        user_id: studentId,
-        title: "📝 Assessment Graded",
-        message: `${quiz.title} — Score: ${combinedScore}`,
-        type: "grade",
-        link: `/quiz/${quiz.id}`,
-      });
-
-      await fetch("/api/push/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userIds: [studentId],
-          payload: {
-            title: "📝 Assessment Graded",
-            body: `${quiz.title} — Score: ${combinedScore}`,
-            url: `/quiz/${quiz.id}`,
-          },
-        }),
-      });
-    } catch {
-      // Push failure should not block grading
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data?.error || "Failed to save grade");
+      return;
     }
+
+    toast.success(
+      data.allGraded
+        ? `Graded! Final score: ${data.combinedScore} — student notified ✅`
+        : `Graded! ${data.ungradedCount} essay${data.ungradedCount !== 1 ? "s" : ""} still ungraded`
+    );
+
+    // Update local state so UI reflects immediately without a full refetch
+    setEssayAnswers((p) =>
+      p.map((a) => a.id === answerId ? { ...a, score: data.score, feedback } : a)
+    );
 
     refreshData();
   };

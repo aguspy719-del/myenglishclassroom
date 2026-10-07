@@ -120,6 +120,9 @@ export async function POST(request: NextRequest) {
         quiz_id: quizId,
         student_id: user.id,
         score: hasEssays ? null : mcScorePct,
+        // Bug Fix 1: Always store the raw MC % so the grading route can use it
+        // later without being corrupted by partial essay scores written to attempt.score
+        mc_score_pct: mcScorePct,
         started_at: submittedAt,
         completed_at: submittedAt,
         // Store MC answers so the student and teacher can review them later
